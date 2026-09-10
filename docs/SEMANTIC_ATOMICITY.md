@@ -24,7 +24,7 @@ All consequential terms are supplied and authorized before adjudication. The LLM
 | Commit/abort certificate | Exact decision envelope plus verifiable successful finalized transaction provenance; a JSON file alone is not a certificate |
 | Mission receipt | Frozen terms, decision, allocation entries, and separate payment-progress records |
 
-Canonical encoding must be specified before contract implementation. It must reject floats, duplicate keys, unknown fields, malformed addresses, ambiguous integer forms, and oversized inputs. Integers representing money are unsigned wei. Tests must establish identical bytes in Python and JavaScript. A concatenation with ambiguous separators is forbidden.
+Canonical encoding must be specified before contract implementation. It must reject floats, duplicate keys, unknown fields, malformed addresses, ambiguous integer forms, and oversized inputs. Integers representing money are unsigned wei. Tests must establish identical bytes in Python and JavaScript. A concatenation with ambiguous separators is forbidden. The current registry reference uses printable-ASCII length-prefixed fields and GenLayer's native Keccak-256 for `commit-intent-v1`, `commit-effect-leaf-v1`, and `commit-effect-root-v1`; the Python reference is tested against the same byte construction. JavaScript parity and production schema compatibility remain separate gates.
 
 ## Consequence binding
 

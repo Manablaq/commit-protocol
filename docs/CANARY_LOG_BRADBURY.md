@@ -11,6 +11,7 @@
 - Submitted: 2026-09-10 (local task time)
 - Status at first bounded receipt check: not yet accepted; CLI reported numeric status `1` (`PENDING`)
 - Status at second bounded receipt check: still not accepted; CLI reported numeric status `3` (`COMMITTING`)
+- Latest bounded receipt check: still not accepted; CLI reported numeric status `2` (`PROPOSING`) and timed out before the requested `ACCEPTED` state
 - Contract address: not available until deployment acceptance/finalization is verified
 
 This is a canary submission only. It does not establish deployment success, finalized self-message delivery, callback state mutation, or COMMIT custody safety. Do not cite it as a successful live demo until the receipt, deployed address, source identity, callback transaction, finality, and state are independently checked.

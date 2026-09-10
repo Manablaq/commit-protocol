@@ -68,6 +68,7 @@ The public hackathon page initially returned no readable rules through text retr
 - Probe runner: `py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng`.
 - Standard library dependency: `py-lib-genlayer-std:kzr02ndm9et4qkmbqpq5djjt5sme2yt76n7sz1qbzax0knt6mam0`.
 - Package syntax: `import genlayer as gl`, `gl.contract.Contract`, `gl.contract.get_at`, message stages `decided`/`finalized`.
+- The selected runner exposes `gl.vm.run_nondet` and `gl.vm.run_nondet_default`; a direct API probe showed no `gl.vm.run_nondet_unsafe`. Documentation that names the experimental suffix must not be copied into this pinned runtime without a compatibility check.
 
 The archive also contains legacy runners. The old `1jb45...` runtime header is not silently substituted for this probe. Published current docs using old names are not sufficient API evidence for this packaged runtime.
 

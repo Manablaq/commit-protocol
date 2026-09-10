@@ -18,7 +18,7 @@ External effects must be represented as reversible reservations, idempotent adap
 
 ## Current status
 
-The product thesis, protocol specification, accounting model, state machine, evidence model, and adversarial review are drafted. The deterministic settlement model passes 17 tests. The non-payable mission-registry lifecycle and zero-value finalized self-message probe pass GenVM lint and 30 direct-runtime tests against the pinned v0.6 runner. These are local results only: live finality delivery, failure recovery, custody, and runtime compatibility remain unproven. The COMMIT custody contract has not been deployed and no on-chain correctness claim exists yet.
+The product thesis, protocol specification, accounting model, state machine, evidence model, and adversarial review are drafted. The deterministic settlement and commitment models pass 20 tests. The non-payable mission-registry, finalized-message, and independent-evaluation probes pass GenVM lint and 39 direct-runtime tests against the pinned v0.6 runner. The registry computes the mission intent digest from stored terms and rejects effect preparation after the preparation deadline or above the declared budget; the evaluation probe independently re-reads both evidence sources and rejects forged or changed decisions. These are local results only: live finality delivery, failure recovery, custody, provenance enforcement, and runtime compatibility remain unproven. The COMMIT custody contract has not been deployed and no on-chain correctness claim exists yet.
 
 See [PRODUCT_THESIS.md](./docs/PRODUCT_THESIS.md), [ENVIRONMENT.md](./docs/ENVIRONMENT.md), and [VERIFICATION_POLICY.md](./docs/VERIFICATION_POLICY.md).
 

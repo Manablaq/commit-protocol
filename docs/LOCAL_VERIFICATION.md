@@ -30,8 +30,8 @@ git diff --check
 ## Result
 
 - GenVM lint: 3 checks passed.
-- Deterministic models: 17 tests passed.
-- Direct-runtime skeleton and callback probes: 30 tests passed from a cleared SDK cache.
+- Deterministic models and commitment references: 20 tests passed.
+- Direct-runtime registry, callback, and independent-evaluation probes: 39 tests passed from a cleared SDK cache.
 - Whitespace validation: passed.
 
-The contract tests establish non-payable mission creation, principal binding, deadline ordering, digest validation, duplicate rejection, sealed-state immutability, explicit deadline recovery, and honest capability disclosure. Expiry uses the transaction-pinned standard-library clock documented by GenLayer. The callback tests establish the generated zero-value `finalized` message payload and deterministic guards for sender authentication, identifier binding, and idempotence. They deliberately impersonate the self-message in direct mode and therefore do not establish that a live network delivered or finalized it.
+The contract tests establish non-payable mission creation, principal binding, on-chain intent commitment derivation, deadline ordering, preparation deadline enforcement, budget bounds, digest validation, duplicate rejection, sealed-state immutability, explicit deadline recovery, and honest capability disclosure. The reference commitment tests establish Python parity for the contract's Keccak-256, framed intent/effect encoding. Expiry uses the transaction-pinned standard-library clock documented by GenLayer. The callback tests establish the generated zero-value `finalized` message payload and deterministic guards for sender authentication, identifier binding, and idempotence. The independent-evaluation tests establish bounded decisions from two independently re-read sources, reject a forged leader result, and reject changed validator evidence. Direct mode executes the leader locally and simulates the validator separately; it does not establish live network consensus.
