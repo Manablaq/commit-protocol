@@ -28,18 +28,34 @@ successful final receipt are required before claiming live COMMIT compatibility.
 - Source: `probes/finalized_callback.py` with documented runner `1jb45...`
 - GenLayer transaction: `0x86c76b7dd80b64f9582ee1372f4a1386a6c2161d87bc7bd18c739eba0ce59df7`
 - Contract address reported by the receipt: `0xbb9D0E807521bf5412F1eb2f76e0E35589B4d037`
-- Receipt observed: `COMMITTING` (numeric status `3`)
-- Execution observed: `NOT_VOTED` (`txExecutionResult: 0`)
+- Receipt observed: `ACCEPTED` (numeric status `5`)
+- Consensus result: `AGREE`
+- Execution result: `FINISHED_WITH_RETURN`
 - Created timestamp: `1789003063`
 - Round-0 trace: `result_code: 0`, empty stdout/stderr
-- Bradbury code lookup at this observation: `contract code not found at address ...` (the receipt was not final)
+- Deployed source verification: live `gen_getContractCode` SHA-256 equals the local
+  `probes/finalized_callback.py` SHA-256 `f2b0ab8bf896264753547cf4f4cc74e01737c3c55da1daae624d0b340037eb9d`
+- Live view verification: `state()` returned `{ applications: 0, applied: false, pending: "" }`
 
 Interpretation: this corrected submission passed outer transaction admission and
 entered Bradbury consensus without the earlier `runner ... not found` error.
-Its round-0 leader trace completed successfully, but the receipt is still
-`COMMITTING`, the consensus result is not yet voted, and final code lookup is
-not available. Do not use the reported address as a live COMMIT endpoint until
-a later receipt proves successful execution and finality.
+Its receipt reached `ACCEPTED` with successful execution, and the source and
+initial state are independently matched. This proves compatibility for the
+zero-value legacy probe only; it does not yet prove finalized self-message
+delivery, the full COMMIT source, native-GEN custody, or external withdrawal
+recovery.
+
+## Live finalized self-message callback canary
+
+- Target: `0xbb9D0E807521bf5412F1eb2f76e0E35589B4d037`
+- Method: `request("callback-proof-20260910")`
+- Submitted GenLayer transaction: `0x221f9945947b7d1b0cbe5fcba7150f603f2523e43e35b77b030701b85c150101`
+- Submission result: transaction hash returned; consensus receipt not yet checked
+
+This transaction is the next live proof for the `on="finalized"` self-message.
+The callback is not considered proven until its receipt is successful and a
+subsequent `state()` call shows `applications: 1`, `applied: true`, and an empty
+`pending` value.
 
 ## Finalized self-message probe
 
@@ -55,6 +71,10 @@ a later receipt proves successful execution and finality.
 - Latest bounded receipt check: `COMMITTING`, with execution error recorded above
 - Contract address: `0xeBfF8F00770Bb1576b519858BB87005f1Fb0E2F7` (ghost address only; not a valid deployment)
 
-This is a canary submission only. It does not establish deployment success, finalized self-message delivery, callback state mutation, or COMMIT custody safety. Do not cite it as a successful live demo until the receipt, deployed address, source identity, callback transaction, finality, and state are independently checked.
+This is a canary submission only. It establishes a successful Bradbury
+deployment and initial state read for the legacy probe. It does not yet
+establish finalized self-message delivery, callback state mutation, or COMMIT
+custody safety. Do not cite it as a successful live demo until the callback
+transaction and its final state are independently checked.
 
 The worker balance was `10.611703293728233196 GEN` before submission and `10.611306336209951396 GEN` after the bounded receipt check. The difference is recorded as an observed balance change, not as a final fee accounting statement.

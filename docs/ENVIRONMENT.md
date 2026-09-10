@@ -1,6 +1,6 @@
 # Verified Environment Baseline
 
-Status: **Phase 2 partially closed: Bradbury-compatible source path locally verified; live deployment still unproven**
+Status: **Phase 2 partially closed: Bradbury-compatible canary deployed and source/state verified; full COMMIT deployment still unproven**
 Verified: 2026-09-10
 
 ## Protocol family
@@ -70,6 +70,7 @@ The public hackathon page initially returned no readable rules through text retr
 - The same verified manager archive contains the legacy runner and its dependency `py-lib-genlayer-std:11rhn002yfajawsz7fai6mykznbxkxs6l91iskj5cm82c92qhy3v`. COMMIT and its probes now use the documented `1jb45...` header and pass the local legacy-runtime suite.
 - The locally installed modern SDK remains useful for tooling and linter checks, but it is not evidence that the v0.6 runner is available on Bradbury. The production source header, package imports, message API, and consensus primitive must remain aligned with the target runner actually accepted by Bradbury.
 - Local legacy-runtime tests require the explicit adapter in `tests/runtime/conftest.py` because the installed `gltest-direct` package targets the newer package layout. This adapter is test infrastructure only; it is not part of the deployed contract.
+- A corrected legacy-runner canary was accepted by Bradbury with `AGREE / FINISHED_WITH_RETURN`; its live source hash matched the local probe and its view state was readable. This verifies the documented source path for that probe, not the full COMMIT contract or fund-bearing behavior.
 
 Release source: https://github.com/genlayerlabs/genvm-manager/releases/tag/v0.6.0-rc4
 
