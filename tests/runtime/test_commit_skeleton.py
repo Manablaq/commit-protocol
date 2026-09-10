@@ -1,4 +1,4 @@
-"""Direct-runtime checks for the deterministic, non-custodial skeleton."""
+"""Direct-runtime checks for the deterministic, non-custodial coordinator."""
 
 from pathlib import Path
 
@@ -52,13 +52,62 @@ def add_default_evidence(contract, probe_vm, *, recovery=FUTURE_RECOVERY):
     )
 
 
+def add_evaluable_evidence(contract, probe_vm, eligible_a=True, eligible_b=True):
+    import json
+    from eth_hash.auto import keccak
+
+    records = [
+        ("evidence-001", AUTHORITY_A, "https://publisher-a.example/records/mission-001", eligible_a),
+        ("evidence-002", AUTHORITY_B, "https://publisher-b.example/records/mission-001", eligible_b),
+    ]
+    probe_vm.sender = PRINCIPAL
+    for evidence_id, authority_id, url, eligible in records:
+        payload = {"eligible": eligible, "reason_code": "ok" if eligible else "revoked"}
+        canonical_payload = json.dumps(
+            payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")
+        )
+        record_hash = keccak(canonical_payload.encode("utf-8")).hex()
+        contract.register_evidence(
+            "mission-001", evidence_id, authority_id, url, record_hash,
+            "mission-001", FUTURE_RECOVERY,
+        )
+        probe_vm.mock_web(url, {
+            "status": 200,
+            "body": json.dumps({
+                "schema": "commit-evidence-v1",
+                "evidence_id": evidence_id,
+                "authority_id": authority_id,
+                "url": url,
+                "subject": "mission-001",
+                "expires_at": FUTURE_RECOVERY,
+                "payload": payload,
+            }),
+        })
+
+
+def seal_evaluable_mission(contract, probe_vm, eligible_a=True, eligible_b=True):
+    from gltest.direct import create_address
+
+    create_default(contract, budget=10)
+    probe_vm.sender = create_address("supplier")
+    contract.prepare_effect(
+        "mission-001", "effect-001", "cd" * 32, create_address("beneficiary"),
+        7, FUTURE_RECOVERY,
+    )
+    add_evaluable_evidence(contract, probe_vm, eligible_a, eligible_b)
+    contract.seal_mission(
+        "mission-001", contract.derive_effect_root("mission-001"),
+        contract.derive_evidence_root("mission-001"),
+    )
+
+
 def test_protocol_discloses_disabled_custody_and_evaluation(probe_vm):
     contract = load_contract(probe_vm)
     assert contract.protocol_info() == {
         "protocol": "commit",
-        "revision": "0.2.0-registry",
+        "revision": "0.3.0-evaluation",
         "custody_enabled": False,
-        "semantic_evaluation_enabled": False,
+        "semantic_evaluation_enabled": True,
         "mission_count": 0,
     }
 
@@ -302,6 +351,59 @@ def test_seal_requires_distinct_registered_evidence_authorities(probe_vm):
             "mission-001", contract.derive_effect_root("mission-001"),
             contract.derive_evidence_root("mission-001"),
         )
+
+
+def test_evaluation_reaches_commit_only_when_all_sources_are_eligible(probe_vm):
+    contract = load_contract(probe_vm)
+    seal_evaluable_mission(contract, probe_vm, True, True)
+
+    contract.evaluate_mission("mission-001")
+
+    mission = contract.get_mission("mission-001")
+    assert mission["decision"] == "COMMIT"
+    assert mission["reason_code"] == "all_sources_eligible"
+    assert mission["evaluation_count"] == 1
+    assert probe_vm.run_validator() is True
+
+
+def test_evaluation_aborts_when_one_source_is_ineligible(probe_vm):
+    contract = load_contract(probe_vm)
+    seal_evaluable_mission(contract, probe_vm, True, False)
+
+    contract.evaluate_mission("mission-001")
+
+    assert contract.get_mission("mission-001")["decision"] == "ABORT"
+    assert contract.get_mission("mission-001")["reason_code"] == "source_ineligible"
+
+
+def test_evaluation_validator_rejects_forged_decision_and_changed_source(probe_vm):
+    contract = load_contract(probe_vm)
+    seal_evaluable_mission(contract, probe_vm, True, True)
+    contract.evaluate_mission("mission-001")
+
+    assert probe_vm.run_validator(
+        leader_result={"decision": "ABORT", "reason_code": "source_ineligible"}
+    ) is False
+
+    import json
+
+    probe_vm.clear_mocks()
+    probe_vm.mock_web(
+        "https://publisher-a.example/records/mission-001",
+        {"status": 200, "body": json.dumps({"schema": "wrong"})},
+    )
+    assert probe_vm.run_validator() is False
+
+
+def test_evaluation_is_single_use_and_only_accepts_sealed_missions(probe_vm):
+    contract = load_contract(probe_vm)
+    with pytest.raises(Exception, match="mission not found"):
+        contract.evaluate_mission("absent")
+
+    seal_evaluable_mission(contract, probe_vm)
+    contract.evaluate_mission("mission-001")
+    with pytest.raises(Exception, match="already evaluated"):
+        contract.evaluate_mission("mission-001")
 
 
 def test_effect_root_binds_all_effects_in_preparation_order(probe_vm):

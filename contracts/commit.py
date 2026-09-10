@@ -1,19 +1,20 @@
 # { "Depends": "py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng" }
 """COMMIT deterministic mission registry.
 
-This revision is deliberately non-payable and contains no semantic evaluation or
-settlement path. Custody is added only after the live finality/payment canaries
-close their verification gates.
+This revision is deliberately non-payable and contains semantic evaluation but
+no custody or settlement path. Custody is added only after the live
+finality/payment canaries close their verification gates.
 """
 
 from datetime import datetime, timezone
+import json
 
 import genlayer as gl
 from genlayer.types import Keccak256
 
 
 PROTOCOL = "commit"
-REVISION = "0.2.0-registry"
+REVISION = "0.3.0-evaluation"
 STATE_PREPARING = "PREPARING"
 STATE_SEALED = "SEALED"
 STATE_ABORTED = "ABORTED"
@@ -37,6 +38,9 @@ class CommitProtocol(gl.contract.Contract):
     mission_prepared_value: gl.storage.TreeMap[str, gl.u256]
     mission_refund_beneficiary: gl.storage.TreeMap[str, gl.Address]
     mission_evidence_count: gl.storage.TreeMap[str, gl.u256]
+    mission_decision: gl.storage.TreeMap[str, str]
+    mission_reason_code: gl.storage.TreeMap[str, str]
+    mission_evaluation_count: gl.storage.TreeMap[str, gl.u256]
     mission_prepare_deadline: gl.storage.TreeMap[str, gl.u256]
     mission_recovery_deadline: gl.storage.TreeMap[str, gl.u256]
     mission_version: gl.storage.TreeMap[str, gl.u256]
@@ -264,6 +268,9 @@ class CommitProtocol(gl.contract.Contract):
         self.mission_prepared_value[mission_id] = gl.u256(0)
         self.mission_refund_beneficiary[mission_id] = refund_beneficiary
         self.mission_evidence_count[mission_id] = gl.u256(0)
+        self.mission_decision[mission_id] = ""
+        self.mission_reason_code[mission_id] = ""
+        self.mission_evaluation_count[mission_id] = gl.u256(0)
         self.mission_prepare_deadline[mission_id] = gl.u256(prepare_deadline)
         self.mission_recovery_deadline[mission_id] = gl.u256(recovery_deadline)
         self.mission_version[mission_id] = gl.u256(1)
@@ -349,6 +356,99 @@ class CommitProtocol(gl.contract.Contract):
         self.mission_state[mission_id] = STATE_ABORTED
 
     @gl.public.write
+    def evaluate_mission(self, mission_id: str) -> None:
+        self._require_principal(mission_id)
+        if self.mission_state[mission_id] != STATE_SEALED:
+            raise gl.vm.UserError("mission is not sealed")
+        if self.mission_decision[mission_id]:
+            raise gl.vm.UserError("mission already evaluated")
+        now = int(datetime.now(timezone.utc).timestamp())
+        if now >= int(self.mission_recovery_deadline[mission_id]):
+            raise gl.vm.UserError("recovery deadline has passed")
+
+        # Read all deterministic storage before entering nondeterministic code.
+        # GenLayer does not make contract storage available inside leader_fn or
+        # validator_fn, so the closures capture an immutable source manifest.
+        source_specs = []
+        for index in range(int(self.mission_evidence_count[mission_id])):
+            evidence_key = self.mission_evidence_key[mission_id + ":" + str(index)]
+            source_specs.append((
+                self.evidence_id[evidence_key],
+                self.evidence_authority[evidence_key],
+                self.evidence_url[evidence_key],
+                self.evidence_record_hash[evidence_key],
+                int(self.evidence_expires_at[evidence_key]),
+            ))
+        mission_id_snapshot = mission_id
+
+        def leader_fn() -> dict:
+            all_eligible = True
+            for evidence_id, authority_id, url, expected_hash, expected_expiry in source_specs:
+                response = gl.nondet.web.get(url)
+                if response.status != 200:
+                    raise gl.vm.UserError("evidence source unavailable")
+                record = json.loads(response.body.decode("utf-8"))
+                if not isinstance(record, dict):
+                    raise gl.vm.UserError("evidence record must be an object")
+                if record.get("schema") != "commit-evidence-v1":
+                    raise gl.vm.UserError("unsupported evidence schema")
+                if record.get("evidence_id") != evidence_id:
+                    raise gl.vm.UserError("evidence id mismatch")
+                if record.get("authority_id") != authority_id:
+                    raise gl.vm.UserError("evidence authority mismatch")
+                if record.get("url") != url:
+                    raise gl.vm.UserError("evidence URL mismatch")
+                if record.get("subject") != mission_id_snapshot:
+                    raise gl.vm.UserError("evidence subject mismatch")
+                if record.get("expires_at") != int(expected_expiry):
+                    raise gl.vm.UserError("evidence expiry mismatch")
+                payload = record.get("payload")
+                if not isinstance(payload, dict):
+                    raise gl.vm.UserError("evidence payload must be an object")
+                if set(payload.keys()) != {"eligible", "reason_code"}:
+                    raise gl.vm.UserError("unsupported evidence payload")
+                if type(payload.get("eligible")) is not bool:
+                    raise gl.vm.UserError("evidence eligibility missing")
+                if type(payload.get("reason_code")) is not str or not payload["reason_code"]:
+                    raise gl.vm.UserError("evidence reason missing")
+                canonical_payload = json.dumps(
+                    payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")
+                )
+                computed_hash = Keccak256(canonical_payload.encode("utf-8")).hexdigest()
+                if computed_hash != expected_hash:
+                    raise gl.vm.UserError("evidence payload hash mismatch")
+                if not payload["eligible"]:
+                    all_eligible = False
+            return {
+                "decision": "COMMIT" if all_eligible else "ABORT",
+                "reason_code": "all_sources_eligible" if all_eligible else "source_ineligible",
+            }
+
+        def validator_fn(leader_result) -> bool:
+            if not isinstance(leader_result, gl.vm.Return):
+                return False
+            try:
+                validator_data = leader_fn()
+            except Exception:
+                return False
+            leader_data = leader_result.calldata
+            if not isinstance(leader_data, dict):
+                return False
+            return (
+                leader_data.get("decision") == validator_data["decision"]
+                and leader_data.get("reason_code") == validator_data["reason_code"]
+            )
+
+        result = gl.vm.run_nondet(leader_fn, validator_fn)
+        if result["decision"] not in ("COMMIT", "ABORT"):
+            raise gl.vm.UserError("invalid consensus decision")
+        self.mission_decision[mission_id] = result["decision"]
+        self.mission_reason_code[mission_id] = result["reason_code"]
+        self.mission_evaluation_count[mission_id] = gl.u256(
+            int(self.mission_evaluation_count[mission_id]) + 1
+        )
+
+    @gl.public.write
     def expire_mission(self, mission_id: str) -> None:
         if not self.mission_exists.get(mission_id, False):
             raise gl.vm.UserError("mission not found")
@@ -365,7 +465,7 @@ class CommitProtocol(gl.contract.Contract):
             "protocol": PROTOCOL,
             "revision": REVISION,
             "custody_enabled": False,
-            "semantic_evaluation_enabled": False,
+            "semantic_evaluation_enabled": True,
             "mission_count": int(self.mission_count),
         }
 
@@ -470,6 +570,9 @@ class CommitProtocol(gl.contract.Contract):
             "refund_beneficiary": self.mission_refund_beneficiary[mission_id].as_hex,
             "effect_count": int(self.mission_effect_count[mission_id]),
             "evidence_count": int(self.mission_evidence_count[mission_id]),
+            "decision": self.mission_decision[mission_id],
+            "reason_code": self.mission_reason_code[mission_id],
+            "evaluation_count": int(self.mission_evaluation_count[mission_id]),
             "prepare_deadline": int(self.mission_prepare_deadline[mission_id]),
             "recovery_deadline": int(self.mission_recovery_deadline[mission_id]),
         }
