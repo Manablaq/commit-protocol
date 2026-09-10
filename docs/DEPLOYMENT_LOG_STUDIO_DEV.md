@@ -56,6 +56,7 @@ dependent; clients must estimate again for each concrete call.
 The following are not claimed by this log: published evidence fetch,
 `register_evidence`, `seal_mission`, `evaluate_mission`, finalized self-message
 delivery and allocation, `claim_mission`, external transfer reconciliation,
-and deadline recovery. The fixture records in `evidence/` are test evidence,
-not proof of independent real-world issuer identity. Final redirect
+and deadline recovery. The fixture records in `evidence/` are checked into the
+local repository but are not yet publicly hosted, and are test evidence rather
+than proof of independent real-world issuer identity. Final redirect
 verification and cryptographic issuer signatures remain outside this revision.
