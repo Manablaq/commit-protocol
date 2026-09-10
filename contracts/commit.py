@@ -1,76 +1,102 @@
-# { "Depends": "py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng" }
-"""COMMIT deterministic mission registry.
+# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
+"""COMMIT semantic-atomicity coordinator with native-GEN escrow.
 
-This revision is deliberately non-payable and contains semantic evaluation but
-no custody or settlement path. Custody is added only after the live
-finality/payment canaries close their verification gates.
+The contract binds a mission's intent, evidence, and effect graph; evaluates
+sealed evidence through independent GenLayer reads; applies the result only
+through a finalized self-message; and allocates escrow into claimable
+entitlements in one state transition. External withdrawals remain one-way
+until the network provides an authenticated delivery/non-delivery proof.
 """
 
 from datetime import datetime, timezone
 import json
 
-import genlayer as gl
-from genlayer.types import Keccak256
+from genlayer import *
 
 
 PROTOCOL = "commit"
-REVISION = "0.3.0-evaluation"
+REVISION = "0.4.0-semantic-escrow"
 STATE_PREPARING = "PREPARING"
 STATE_SEALED = "SEALED"
+STATE_DECISION_PENDING = "DECISION_PENDING"
+STATE_COMMITTED = "COMMITTED"
 STATE_ABORTED = "ABORTED"
+WITHDRAWAL_DISPATCHED = "DISPATCHED"
 MAX_TEXT = 512
 MAX_EFFECTS = 32
 MAX_EVIDENCE = 16
 
 
-class CommitProtocol(gl.contract.Contract):
+@gl.evm.contract_interface
+class _NativeRecipient:
+    class View:
+        pass
+
+    class Write:
+        pass
+
+
+class CommitProtocol(gl.Contract):
     owner: gl.Address
     mission_count: gl.u256
-    mission_exists: gl.storage.TreeMap[str, bool]
-    mission_principal: gl.storage.TreeMap[str, gl.Address]
-    mission_state: gl.storage.TreeMap[str, str]
-    mission_objective: gl.storage.TreeMap[str, str]
-    mission_policy_digest: gl.storage.TreeMap[str, str]
-    mission_intent_digest: gl.storage.TreeMap[str, str]
-    mission_effect_root: gl.storage.TreeMap[str, str]
-    mission_evidence_root: gl.storage.TreeMap[str, str]
-    mission_budget: gl.storage.TreeMap[str, gl.u256]
-    mission_prepared_value: gl.storage.TreeMap[str, gl.u256]
-    mission_refund_beneficiary: gl.storage.TreeMap[str, gl.Address]
-    mission_evidence_count: gl.storage.TreeMap[str, gl.u256]
-    mission_decision: gl.storage.TreeMap[str, str]
-    mission_reason_code: gl.storage.TreeMap[str, str]
-    mission_evaluation_count: gl.storage.TreeMap[str, gl.u256]
-    mission_prepare_deadline: gl.storage.TreeMap[str, gl.u256]
-    mission_recovery_deadline: gl.storage.TreeMap[str, gl.u256]
-    mission_version: gl.storage.TreeMap[str, gl.u256]
-    mission_effect_count: gl.storage.TreeMap[str, gl.u256]
-    effect_exists: gl.storage.TreeMap[str, bool]
-    effect_mission: gl.storage.TreeMap[str, str]
-    effect_supplier: gl.storage.TreeMap[str, gl.Address]
-    effect_id: gl.storage.TreeMap[str, str]
-    effect_digest: gl.storage.TreeMap[str, str]
-    effect_beneficiary: gl.storage.TreeMap[str, gl.Address]
-    effect_value: gl.storage.TreeMap[str, gl.u256]
-    effect_expiry: gl.storage.TreeMap[str, gl.u256]
-    mission_effect_key: gl.storage.TreeMap[str, str]
-    authority_exists: gl.storage.TreeMap[str, bool]
-    authority_host: gl.storage.TreeMap[str, str]
-    authority_path_prefix: gl.storage.TreeMap[str, str]
-    evidence_exists: gl.storage.TreeMap[str, bool]
-    evidence_mission: gl.storage.TreeMap[str, str]
-    evidence_id: gl.storage.TreeMap[str, str]
-    evidence_authority: gl.storage.TreeMap[str, str]
-    evidence_url: gl.storage.TreeMap[str, str]
-    evidence_record_hash: gl.storage.TreeMap[str, str]
-    evidence_subject: gl.storage.TreeMap[str, str]
-    evidence_expires_at: gl.storage.TreeMap[str, gl.u256]
-    mission_evidence_key: gl.storage.TreeMap[str, str]
+    mission_exists: TreeMap[str, bool]
+    mission_principal: TreeMap[str, Address]
+    mission_state: TreeMap[str, str]
+    mission_objective: TreeMap[str, str]
+    mission_policy_digest: TreeMap[str, str]
+    mission_intent_digest: TreeMap[str, str]
+    mission_effect_root: TreeMap[str, str]
+    mission_evidence_root: TreeMap[str, str]
+    mission_budget: TreeMap[str, u256]
+    mission_funded_value: TreeMap[str, u256]
+    mission_prepared_value: TreeMap[str, u256]
+    mission_refund_beneficiary: TreeMap[str, Address]
+    mission_refund_entitlement: TreeMap[str, u256]
+    mission_decision_nonce: TreeMap[str, str]
+    mission_allocation_applied: TreeMap[str, bool]
+    mission_evidence_count: TreeMap[str, u256]
+    mission_decision: TreeMap[str, str]
+    mission_reason_code: TreeMap[str, str]
+    mission_evaluation_count: TreeMap[str, u256]
+    mission_prepare_deadline: TreeMap[str, u256]
+    mission_recovery_deadline: TreeMap[str, u256]
+    mission_version: TreeMap[str, u256]
+    mission_effect_count: TreeMap[str, u256]
+    effect_exists: TreeMap[str, bool]
+    effect_mission: TreeMap[str, str]
+    effect_supplier: TreeMap[str, Address]
+    effect_id: TreeMap[str, str]
+    effect_digest: TreeMap[str, str]
+    effect_beneficiary: TreeMap[str, Address]
+    effect_value: TreeMap[str, u256]
+    effect_expiry: TreeMap[str, u256]
+    mission_effect_key: TreeMap[str, str]
+    authority_exists: TreeMap[str, bool]
+    authority_host: TreeMap[str, str]
+    authority_path_prefix: TreeMap[str, str]
+    evidence_exists: TreeMap[str, bool]
+    evidence_mission: TreeMap[str, str]
+    evidence_id: TreeMap[str, str]
+    evidence_authority: TreeMap[str, str]
+    evidence_url: TreeMap[str, str]
+    evidence_record_hash: TreeMap[str, str]
+    evidence_subject: TreeMap[str, str]
+    evidence_expires_at: TreeMap[str, u256]
+    mission_evidence_key: TreeMap[str, str]
+    mission_claimable: TreeMap[str, u256]
+    claimable_balance: TreeMap[str, u256]
+    withdrawal_count: u256
+    withdrawal_exists: TreeMap[str, bool]
+    withdrawal_mission: TreeMap[str, str]
+    withdrawal_beneficiary: TreeMap[str, Address]
+    withdrawal_amount: TreeMap[str, u256]
+    withdrawal_status: TreeMap[str, str]
 
     def __init__(self):
         self.owner = gl.message.sender_address
         self.mission_count = gl.u256(0)
-        # v0.6 storage collections are allocated by the contract runtime.
+        self.withdrawal_count = gl.u256(0)
+        # Legacy runner storage collections are allocated by the contract runtime.
 
     def _require_digest(self, value: str, label: str) -> None:
         if len(value) != 64:
@@ -265,8 +291,12 @@ class CommitProtocol(gl.contract.Contract):
         self.mission_effect_root[mission_id] = ""
         self.mission_evidence_root[mission_id] = ""
         self.mission_budget[mission_id] = gl.u256(budget)
+        self.mission_funded_value[mission_id] = gl.u256(0)
         self.mission_prepared_value[mission_id] = gl.u256(0)
         self.mission_refund_beneficiary[mission_id] = refund_beneficiary
+        self.mission_refund_entitlement[mission_id] = gl.u256(0)
+        self.mission_decision_nonce[mission_id] = ""
+        self.mission_allocation_applied[mission_id] = False
         self.mission_evidence_count[mission_id] = gl.u256(0)
         self.mission_decision[mission_id] = ""
         self.mission_reason_code[mission_id] = ""
@@ -276,6 +306,21 @@ class CommitProtocol(gl.contract.Contract):
         self.mission_version[mission_id] = gl.u256(1)
         self.mission_effect_count[mission_id] = gl.u256(0)
         self.mission_count = gl.u256(self.mission_count + 1)
+
+    @gl.public.write.payable
+    def fund_mission(self, mission_id: str) -> None:
+        self._require_principal(mission_id)
+        if self.mission_state[mission_id] != STATE_PREPARING:
+            raise gl.vm.UserError("mission is not preparing")
+        if int(datetime.now(timezone.utc).timestamp()) > int(self.mission_prepare_deadline[mission_id]):
+            raise gl.vm.UserError("preparation deadline has passed")
+        amount = int(gl.message.value)
+        if amount <= 0:
+            raise gl.vm.UserError("funding value must be positive")
+        funded = int(self.mission_funded_value[mission_id])
+        if funded + amount > int(self.mission_budget[mission_id]):
+            raise gl.vm.UserError("funding exceeds mission budget")
+        self.mission_funded_value[mission_id] = gl.u256(funded + amount)
 
     @gl.public.write
     def prepare_effect(
@@ -336,6 +381,8 @@ class CommitProtocol(gl.contract.Contract):
             raise gl.vm.UserError("mission has no prepared effects")
         if self.mission_evidence_count[mission_id] < 2:
             raise gl.vm.UserError("mission needs two evidence records")
+        if self.mission_funded_value[mission_id] < self.mission_prepared_value[mission_id]:
+            raise gl.vm.UserError("mission is underfunded")
         if not self._has_distinct_evidence_authorities(mission_id):
             raise gl.vm.UserError("evidence authorities must be distinct")
         self._require_digest(effect_root, "effect root")
@@ -353,7 +400,7 @@ class CommitProtocol(gl.contract.Contract):
         self._require_principal(mission_id)
         if self.mission_state[mission_id] != STATE_PREPARING:
             raise gl.vm.UserError("sealed mission cannot be cancelled")
-        self.mission_state[mission_id] = STATE_ABORTED
+        self._allocate_abort(mission_id)
 
     @gl.public.write
     def evaluate_mission(self, mission_id: str) -> None:
@@ -447,26 +494,109 @@ class CommitProtocol(gl.contract.Contract):
         self.mission_evaluation_count[mission_id] = gl.u256(
             int(self.mission_evaluation_count[mission_id]) + 1
         )
+        decision_nonce = Keccak256(
+            (
+                "commit-decision-v1"
+                + self._frame(mission_id)
+                + self._frame(str(int(self.mission_version[mission_id])))
+                + self._frame(result["decision"])
+                + self._frame(result["reason_code"])
+                + self._frame(self.mission_effect_root[mission_id])
+                + self._frame(self.mission_evidence_root[mission_id])
+            ).encode("utf-8")
+        ).hexdigest()
+        self.mission_decision_nonce[mission_id] = decision_nonce
+        self.mission_state[mission_id] = STATE_DECISION_PENDING
+        gl.get_contract_at(gl.message.contract_address).emit(on="finalized").apply_decision(
+            mission_id, decision_nonce
+        )
+
+    @gl.public.write
+    def apply_decision(self, mission_id: str, decision_nonce: str) -> None:
+        if gl.message.sender_address != gl.message.contract_address:
+            raise gl.vm.UserError("self message required")
+        if decision_nonce != self.mission_decision_nonce[mission_id]:
+            raise gl.vm.UserError("decision nonce mismatch")
+        if self.mission_allocation_applied[mission_id]:
+            return
+        if self.mission_state[mission_id] != STATE_DECISION_PENDING:
+            raise gl.vm.UserError("decision is not pending")
+        if self.mission_decision[mission_id] == "COMMIT":
+            self._allocate_commit(mission_id)
+        elif self.mission_decision[mission_id] == "ABORT":
+            self._allocate_abort(mission_id)
+        else:
+            raise gl.vm.UserError("invalid decision")
+
+    @gl.public.write
+    def claim_mission(self, mission_id: str) -> None:
+        if not self.mission_exists.get(mission_id, False):
+            raise gl.vm.UserError("mission not found")
+        if self.mission_state[mission_id] not in (STATE_COMMITTED, STATE_ABORTED):
+            raise gl.vm.UserError("mission is not allocated")
+        beneficiary = gl.message.sender_address
+        claim_key = mission_id + ":" + beneficiary.as_hex
+        amount = int(self.mission_claimable.get(claim_key, gl.u256(0)))
+        if amount <= 0:
+            raise gl.vm.UserError("no claimable balance")
+        withdrawal_id = str(int(self.withdrawal_count))
+        if self.withdrawal_exists.get(withdrawal_id, False):
+            raise gl.vm.UserError("withdrawal id collision")
+        self.mission_claimable[claim_key] = gl.u256(0)
+        global_key = beneficiary.as_hex
+        current_global = int(self.claimable_balance.get(global_key, gl.u256(0)))
+        if current_global < amount:
+            raise gl.vm.UserError("claimable balance underflow")
+        self.claimable_balance[global_key] = gl.u256(current_global - amount)
+        self.withdrawal_exists[withdrawal_id] = True
+        self.withdrawal_mission[withdrawal_id] = mission_id
+        self.withdrawal_beneficiary[withdrawal_id] = beneficiary
+        self.withdrawal_amount[withdrawal_id] = gl.u256(amount)
+        self.withdrawal_status[withdrawal_id] = WITHDRAWAL_DISPATCHED
+        self.withdrawal_count = gl.u256(self.withdrawal_count + 1)
+        # External GEN transfers are finalized child messages. The entitlement
+        # is consumed before dispatch and is never retried without a verified
+        # delivery/non-delivery proof, preventing double payment.
+        _NativeRecipient(beneficiary).emit_transfer(value=gl.u256(amount))
 
     @gl.public.write
     def expire_mission(self, mission_id: str) -> None:
         if not self.mission_exists.get(mission_id, False):
             raise gl.vm.UserError("mission not found")
-        if self.mission_state[mission_id] not in (STATE_PREPARING, STATE_SEALED):
+        if self.mission_state[mission_id] not in (
+            STATE_PREPARING, STATE_SEALED, STATE_DECISION_PENDING
+        ):
             raise gl.vm.UserError("mission is already terminal")
         now = int(datetime.now(timezone.utc).timestamp())
         if now < int(self.mission_recovery_deadline[mission_id]):
             raise gl.vm.UserError("recovery deadline has not passed")
-        self.mission_state[mission_id] = STATE_ABORTED
+        self._allocate_abort(mission_id)
 
     @gl.public.view
     def protocol_info(self) -> dict:
         return {
             "protocol": PROTOCOL,
             "revision": REVISION,
-            "custody_enabled": False,
+            "custody_enabled": True,
             "semantic_evaluation_enabled": True,
             "mission_count": int(self.mission_count),
+            "external_withdrawal_recovery": False,
+        }
+
+    @gl.public.view
+    def get_claimable(self, beneficiary: gl.Address) -> int:
+        return int(self.claimable_balance.get(beneficiary.as_hex, gl.u256(0)))
+
+    @gl.public.view
+    def get_withdrawal(self, withdrawal_id: str) -> dict:
+        if not self.withdrawal_exists.get(withdrawal_id, False):
+            raise gl.vm.UserError("withdrawal not found")
+        return {
+            "withdrawal_id": withdrawal_id,
+            "mission_id": self.withdrawal_mission[withdrawal_id],
+            "beneficiary": self.withdrawal_beneficiary[withdrawal_id].as_hex,
+            "amount": int(self.withdrawal_amount[withdrawal_id]),
+            "status": self.withdrawal_status[withdrawal_id],
         }
 
     @gl.public.view
@@ -488,6 +618,46 @@ class CommitProtocol(gl.contract.Contract):
             raise gl.vm.UserError("mission not found")
         if gl.message.sender_address != self.mission_principal[mission_id]:
             raise gl.vm.UserError("principal required")
+
+    def _credit_claimable(self, mission_id: str, beneficiary: gl.Address, amount: int) -> None:
+        if amount <= 0:
+            return
+        claim_key = mission_id + ":" + beneficiary.as_hex
+        mission_current = int(self.mission_claimable.get(claim_key, gl.u256(0)))
+        self.mission_claimable[claim_key] = gl.u256(mission_current + amount)
+        global_key = beneficiary.as_hex
+        global_current = int(self.claimable_balance.get(global_key, gl.u256(0)))
+        self.claimable_balance[global_key] = gl.u256(global_current + amount)
+
+    def _allocate_commit(self, mission_id: str) -> None:
+        funded = int(self.mission_funded_value[mission_id])
+        prepared = int(self.mission_prepared_value[mission_id])
+        if funded < prepared:
+            raise gl.vm.UserError("mission is underfunded")
+        for index in range(int(self.mission_effect_count[mission_id])):
+            effect_key = self.mission_effect_key[mission_id + ":" + str(index)]
+            amount = int(self.effect_value[effect_key])
+            self._credit_claimable(
+                mission_id, self.effect_beneficiary[effect_key], amount
+            )
+        refund = funded - prepared
+        self.mission_refund_entitlement[mission_id] = gl.u256(refund)
+        self._credit_claimable(
+            mission_id, self.mission_refund_beneficiary[mission_id], refund
+        )
+        self.mission_allocation_applied[mission_id] = True
+        self.mission_state[mission_id] = STATE_COMMITTED
+
+    def _allocate_abort(self, mission_id: str) -> None:
+        if self.mission_allocation_applied[mission_id]:
+            return
+        funded = int(self.mission_funded_value[mission_id])
+        self.mission_refund_entitlement[mission_id] = gl.u256(funded)
+        self._credit_claimable(
+            mission_id, self.mission_refund_beneficiary[mission_id], funded
+        )
+        self.mission_allocation_applied[mission_id] = True
+        self.mission_state[mission_id] = STATE_ABORTED
 
     def _has_distinct_evidence_authorities(self, mission_id: str) -> bool:
         first = self.evidence_authority[
@@ -566,12 +736,16 @@ class CommitProtocol(gl.contract.Contract):
             "effect_root": self.mission_effect_root[mission_id],
             "evidence_root": self.mission_evidence_root[mission_id],
             "budget": int(self.mission_budget[mission_id]),
+            "funded_value": int(self.mission_funded_value[mission_id]),
             "prepared_value": int(self.mission_prepared_value[mission_id]),
             "refund_beneficiary": self.mission_refund_beneficiary[mission_id].as_hex,
             "effect_count": int(self.mission_effect_count[mission_id]),
             "evidence_count": int(self.mission_evidence_count[mission_id]),
             "decision": self.mission_decision[mission_id],
             "reason_code": self.mission_reason_code[mission_id],
+            "decision_nonce": self.mission_decision_nonce[mission_id],
+            "allocation_applied": self.mission_allocation_applied[mission_id],
+            "refund_entitlement": int(self.mission_refund_entitlement[mission_id]),
             "evaluation_count": int(self.mission_evaluation_count[mission_id]),
             "prepare_deadline": int(self.mission_prepare_deadline[mission_id]),
             "recovery_deadline": int(self.mission_recovery_deadline[mission_id]),

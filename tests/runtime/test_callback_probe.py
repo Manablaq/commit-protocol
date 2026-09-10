@@ -16,8 +16,11 @@ def capture(vm):
     messages = []
 
     def hook(_vm, request):
-        if "EmitInternalMessage" in request:
-            messages.append(request["EmitInternalMessage"])
+        payload = request.get("EmitInternalMessage") or request.get("PostMessage")
+        if payload is not None:
+            # v0.3 names this operation EmitInternalMessage; the Bradbury
+            # documented 1jb runner names the equivalent operation PostMessage.
+            messages.append(payload)
             return {"ok": None}
         return None
 
@@ -35,7 +38,10 @@ def test_request_emits_zero_value_finalized_self_message(probe_vm):
     assert message["address"] == gl.message.contract_address
     assert message["on"] == "finalized"
     assert message["value"] == 0
-    assert message["calldata"] == {"": "apply", "args": ["mission-1"]}
+    assert message["calldata"] in (
+        {"": "apply", "args": ["mission-1"]},
+        {"method": "apply", "args": ["mission-1"]},
+    )
     assert contract.state() == {"pending": "mission-1", "applied": False, "applications": 0}
 
 

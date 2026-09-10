@@ -18,7 +18,7 @@ External effects must be represented as reversible reservations, idempotent adap
 
 ## Current status
 
-The product thesis, protocol specification, accounting model, state machine, evidence model, and adversarial review are drafted. The deterministic settlement, commitment, and provenance models pass 23 tests. The non-payable mission registry, finalized-message probe, provenance checks, and contract-integrated independent evaluation pass GenVM lint and 46 direct-runtime tests against the pinned v0.6 runner. The registry computes the mission intent digest from stored terms, bounds effects by preparation deadline and budget, and derives evidence roots from owner-registered HTTPS authorities and mission-bound records; the evaluator re-fetches the sealed sources, validates their exact schema and payload hashes, and writes only a bounded decision. These are local results only: live finality delivery, failure recovery, custody, redirect/final-destination enforcement, and runtime compatibility remain unproven. The COMMIT custody contract has not been deployed and no on-chain correctness claim exists yet.
+The product thesis, protocol specification, accounting model, state machine, evidence model, and adversarial review are drafted. The deterministic settlement, commitment, and provenance models pass 23 tests. The mission registry, payable native-GEN funding, finalized-message probe, finality-gated allocation, claimable entitlements, provenance checks, and contract-integrated independent evaluation pass GenVM lint and 53 direct-runtime tests against the Bradbury-documented legacy runner path. A Bradbury canary proved that the current v0.6 `5jyc...` runner is unavailable there, so the source and probes now use the documented `1jb45...` runner and legacy package imports. The registry computes the mission intent digest from stored terms, bounds effects by preparation deadline and budget, derives evidence roots from owner-registered HTTPS authorities and mission-bound records, and re-fetches sealed sources for an independently validated bounded decision. The corrected `1jb45...` canary is now in Bradbury consensus at `COMMITTING`; its round-0 trace returns `result_code: 0` with no stderr, but the receipt has not reached a successful final state and code lookup is not yet available. Native GEN custody, finality delivery, external-transfer failure recovery, redirect/final-destination enforcement, and full on-chain correctness remain unproven.
 
 See [PRODUCT_THESIS.md](./docs/PRODUCT_THESIS.md), [ENVIRONMENT.md](./docs/ENVIRONMENT.md), and [VERIFICATION_POLICY.md](./docs/VERIFICATION_POLICY.md).
 
@@ -41,9 +41,10 @@ Reproduce the current local checks with the exact commands and runtime digest in
 4. Deterministic tests and adversarial tests
 5. GenLayer consensus tests and fee profiling
 6. Preview-network deployment and full receipt verification
-7. Bradbury compatibility check and deployment, if the v0.6 stack is supported there
-8. Backend/indexer integration
-9. Frontend only after the backend gate passes
+7. Bradbury compatibility check and deployment using the runner accepted by Bradbury
+8. Native-GEN custody, finality-gated allocation, and claim dispatch
+9. Backend/indexer integration
+10. Frontend only after the backend gate passes
 
 ## Official references
 

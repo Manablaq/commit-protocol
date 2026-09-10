@@ -1,6 +1,6 @@
 # Accounting Model
 
-Status: proposed; payment adapter and rollback tests are required before implementation approval.
+Status: native-GEN funding, entitlement allocation, and one-way claim dispatch are implemented and directly tested; external payment rollback remains unverified.
 
 ## Conservation
 
@@ -21,10 +21,10 @@ All buckets are nonnegative integer wei. C and R are current balances, not histo
 
 | Operation | Accounting effect |
 | --- | --- |
-| Valid payable funding | F and L increase by the exact accepted call value |
+| Valid payable funding | F and L increase by the exact accepted call value; total funding cannot exceed the mission budget |
 | COMMIT allocation | L becomes zero; C increases by total agreed payouts; R receives the remainder |
 | ABORT allocation | L becomes zero; R increases by all remaining L |
-| Claim dispatch | Decrease that beneficiary's C or R; increase D; record immutable withdrawal ID, target, value |
+| Claim dispatch | Decrease that beneficiary's internal entitlement; increase D; record immutable withdrawal ID, target, value, and `DISPATCHED` status |
 | Verified payment success | Decrease D; increase W |
 | Verified non-payment and funds restored | Decrease D; restore the same beneficiary entitlement |
 | Ambiguous timeout | No monetary transition; keep D reserved |
@@ -43,4 +43,4 @@ Observed ghost balance must be reconciled against liabilities using network-spec
 
 Only the beneficiary can request a withdrawal of their entitlement. The target and amount become immutable when dispatched. No admin can change beneficiaries, sweep liabilities, or mark uncertain payments as failed. Address code/behavior can change; a claim that an address is an EOA does not itself prove transfers can never fail.
 
-The withdrawal adapter is a release blocker until failure, finalization rollback, duplicate delivery, and retry semantics are tested against the selected network implementation.
+The withdrawal adapter is a release blocker until failure, finalization rollback, duplicate delivery, and retry semantics are tested against the selected network implementation. COMMIT currently consumes the internal entitlement before dispatch and does not expose a retry or “mark failed” method; this is conservative against double payment but can leave a failed external child transfer unresolved until an authenticated recovery primitive is proven.

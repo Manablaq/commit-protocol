@@ -1,10 +1,10 @@
-# { "Depends": "py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng" }
+# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 """Zero-value runtime probe. This is not the COMMIT custody contract."""
 
-import genlayer as gl
+from genlayer import *
 
 
-class FinalizedCallbackProbe(gl.contract.Contract):
+class FinalizedCallbackProbe(gl.Contract):
     owner: gl.Address
     pending: str
     applied: bool
@@ -23,7 +23,7 @@ class FinalizedCallbackProbe(gl.contract.Contract):
         if self.pending or not identifier or len(identifier) > 64:
             raise gl.vm.UserError("invalid or duplicate request")
         self.pending = identifier
-        gl.contract.get_at(gl.message.contract_address).emit(on="finalized").apply(identifier)
+        gl.get_contract_at(gl.message.contract_address).emit(on="finalized").apply(identifier)
 
     @gl.public.write
     def apply(self, identifier: str) -> None:

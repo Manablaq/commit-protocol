@@ -1,4 +1,4 @@
-"""Direct-runtime checks for the deterministic, non-custodial coordinator."""
+"""Direct-runtime checks for the deterministic escrow coordinator."""
 
 from pathlib import Path
 
@@ -21,7 +21,7 @@ def load_contract(vm):
 
 
 def create_default(
-    contract, *, prepare=FUTURE_PREPARE, recovery=FUTURE_RECOVERY, budget=10
+    contract, probe_vm, *, prepare=FUTURE_PREPARE, recovery=FUTURE_RECOVERY, budget=10
 ):
     from gltest.direct import create_address
 
@@ -36,6 +36,13 @@ def create_default(
         prepare,
         recovery,
     )
+    # Payable funding is a distinct lifecycle step. The helper funds the
+    # default fixture so tests that reach sealing exercise a fully collateralized
+    # mission; dedicated tests cover underfunding and overfunding.
+    probe_vm.sender = PRINCIPAL
+    probe_vm.value = budget
+    contract.fund_mission("mission-001")
+    probe_vm.value = 0
 
 
 def add_default_evidence(contract, probe_vm, *, recovery=FUTURE_RECOVERY):
@@ -88,7 +95,7 @@ def add_evaluable_evidence(contract, probe_vm, eligible_a=True, eligible_b=True)
 def seal_evaluable_mission(contract, probe_vm, eligible_a=True, eligible_b=True):
     from gltest.direct import create_address
 
-    create_default(contract, budget=10)
+    create_default(contract, probe_vm, budget=10)
     probe_vm.sender = create_address("supplier")
     contract.prepare_effect(
         "mission-001", "effect-001", "cd" * 32, create_address("beneficiary"),
@@ -101,14 +108,15 @@ def seal_evaluable_mission(contract, probe_vm, eligible_a=True, eligible_b=True)
     )
 
 
-def test_protocol_discloses_disabled_custody_and_evaluation(probe_vm):
+def test_protocol_discloses_custody_and_evaluation(probe_vm):
     contract = load_contract(probe_vm)
     assert contract.protocol_info() == {
         "protocol": "commit",
-        "revision": "0.3.0-evaluation",
-        "custody_enabled": False,
+        "revision": "0.4.0-semantic-escrow",
+        "custody_enabled": True,
         "semantic_evaluation_enabled": True,
         "mission_count": 0,
+        "external_withdrawal_recovery": False,
     }
 
 
@@ -133,7 +141,7 @@ def test_authority_registry_is_owner_only_and_immutable(probe_vm):
 
 def test_create_mission_binds_principal_and_immutable_inputs(probe_vm):
     contract = load_contract(probe_vm)
-    create_default(contract)
+    create_default(contract, probe_vm)
     from gltest.direct import create_address
     from spec_model.onchain import intent_digest
 
@@ -198,9 +206,49 @@ def test_invalid_creation_is_rejected(
     assert contract.protocol_info()["mission_count"] == 0
 
 
+def test_payable_funding_is_bounded_and_recorded(probe_vm):
+    contract = load_contract(probe_vm)
+    from gltest.direct import create_address
+
+    contract.create_mission(
+        "mission-001", OBJECTIVE, DIGEST, 10, create_address(REFUND_LABEL),
+        FUTURE_PREPARE, FUTURE_RECOVERY,
+    )
+    probe_vm.sender = PRINCIPAL
+    probe_vm.value = 7
+    contract.fund_mission("mission-001")
+    assert contract.get_mission("mission-001")["funded_value"] == 7
+
+    probe_vm.value = 4
+    with pytest.raises(Exception, match="funding exceeds mission budget"):
+        contract.fund_mission("mission-001")
+    probe_vm.value = 0
+    assert contract.get_mission("mission-001")["funded_value"] == 7
+
+
+def test_zero_and_late_funding_are_rejected_without_mutation(probe_vm):
+    contract = load_contract(probe_vm)
+    from gltest.direct import create_address
+
+    probe_vm.warp("1970-01-01T00:00:50Z")
+    contract.create_mission(
+        "mission-001", OBJECTIVE, DIGEST, 10, create_address(REFUND_LABEL),
+        100, 200,
+    )
+    probe_vm.sender = PRINCIPAL
+    with pytest.raises(Exception, match="funding value must be positive"):
+        contract.fund_mission("mission-001")
+    probe_vm.warp("1970-01-01T00:01:41Z")
+    probe_vm.value = 1
+    with pytest.raises(Exception, match="preparation deadline has passed"):
+        contract.fund_mission("mission-001")
+    probe_vm.value = 0
+    assert contract.get_mission("mission-001")["funded_value"] == 0
+
+
 def test_duplicate_mission_is_rejected_without_mutation(probe_vm):
     contract = load_contract(probe_vm)
-    create_default(contract)
+    create_default(contract, probe_vm)
     with pytest.raises(Exception, match="mission already exists"):
         from gltest.direct import create_address
 
@@ -223,7 +271,7 @@ def test_unknown_mission_is_rejected(probe_vm):
 
 def test_supplier_prepares_effect_and_principal_seals_snapshot(probe_vm):
     contract = load_contract(probe_vm)
-    create_default(contract, budget=10)
+    create_default(contract, probe_vm, budget=10)
     from gltest.direct import create_address
 
     supplier = create_address("supplier")
@@ -267,9 +315,32 @@ def test_supplier_prepares_effect_and_principal_seals_snapshot(probe_vm):
     assert mission["evidence_root"] == contract.derive_evidence_root("mission-001")
 
 
+def test_seal_rejects_underfunded_effects(probe_vm):
+    contract = load_contract(probe_vm)
+    from gltest.direct import create_address
+
+    contract.register_authority(AUTHORITY_A, "publisher-a.example", "/records")
+    contract.register_authority(AUTHORITY_B, "publisher-b.example", "/records")
+    contract.create_mission(
+        "mission-001", OBJECTIVE, DIGEST, 10, create_address(REFUND_LABEL),
+        FUTURE_PREPARE, FUTURE_RECOVERY,
+    )
+    probe_vm.sender = create_address("supplier")
+    contract.prepare_effect(
+        "mission-001", "effect-001", "cd" * 32, create_address("beneficiary"),
+        7, FUTURE_RECOVERY,
+    )
+    add_default_evidence(contract, probe_vm)
+    with pytest.raises(Exception, match="mission is underfunded"):
+        contract.seal_mission(
+            "mission-001", contract.derive_effect_root("mission-001"),
+            contract.derive_evidence_root("mission-001"),
+        )
+
+
 def test_effect_and_cancel_are_locked_after_seal(probe_vm):
     contract = load_contract(probe_vm)
-    create_default(contract, budget=10)
+    create_default(contract, probe_vm, budget=10)
     from gltest.direct import create_address
 
     beneficiary = create_address("beneficiary")
@@ -289,7 +360,7 @@ def test_effect_and_cancel_are_locked_after_seal(probe_vm):
 
 def test_seal_rejects_effect_root_that_does_not_match(probe_vm):
     contract = load_contract(probe_vm)
-    create_default(contract, budget=10)
+    create_default(contract, probe_vm, budget=10)
     from gltest.direct import create_address
 
     contract.prepare_effect(
@@ -309,7 +380,7 @@ def test_seal_rejects_effect_root_that_does_not_match(probe_vm):
 
 def test_evidence_url_and_subject_are_bound_before_seal(probe_vm):
     contract = load_contract(probe_vm)
-    create_default(contract, budget=10)
+    create_default(contract, probe_vm, budget=10)
 
     invalid = [
         ("outside", "https://publisher-a.example.evil/records/mission-001", "outside authority"),
@@ -329,7 +400,7 @@ def test_evidence_url_and_subject_are_bound_before_seal(probe_vm):
 
 def test_seal_requires_distinct_registered_evidence_authorities(probe_vm):
     contract = load_contract(probe_vm)
-    create_default(contract, budget=10)
+    create_default(contract, probe_vm, budget=10)
     from gltest.direct import create_address
 
     contract.prepare_effect(
@@ -362,8 +433,95 @@ def test_evaluation_reaches_commit_only_when_all_sources_are_eligible(probe_vm):
     mission = contract.get_mission("mission-001")
     assert mission["decision"] == "COMMIT"
     assert mission["reason_code"] == "all_sources_eligible"
+    assert mission["state"] == "DECISION_PENDING"
+    assert mission["allocation_applied"] is False
     assert mission["evaluation_count"] == 1
     assert probe_vm.run_validator() is True
+
+    from genlayer import gl
+
+    probe_vm.sender = gl.message.contract_address
+    contract.apply_decision("mission-001", mission["decision_nonce"])
+    assert contract.get_mission("mission-001")["state"] == "COMMITTED"
+
+
+def test_finalized_allocation_credits_effect_and_refund_entitlements(probe_vm):
+    contract = load_contract(probe_vm)
+    seal_evaluable_mission(contract, probe_vm, True, True)
+    contract.evaluate_mission("mission-001")
+    mission = contract.get_mission("mission-001")
+    from genlayer import gl
+
+    probe_vm.sender = gl.message.contract_address
+    contract.apply_decision("mission-001", mission["decision_nonce"])
+    effect = contract.get_effect("mission-001", "effect-001")
+    from gltest.direct import create_address
+
+    assert contract.get_claimable(create_address("beneficiary")) == 7
+    assert contract.get_claimable(create_address(REFUND_LABEL)) == 3
+    assert contract.get_mission("mission-001")["allocation_applied"] is True
+    assert effect["beneficiary"] != "0x" + "00" * 20
+
+
+def test_decision_callback_requires_exact_nonce_and_is_idempotent(probe_vm):
+    contract = load_contract(probe_vm)
+    seal_evaluable_mission(contract, probe_vm, True, True)
+    contract.evaluate_mission("mission-001")
+    mission = contract.get_mission("mission-001")
+    from genlayer import gl
+    from gltest.direct import create_address
+
+    probe_vm.sender = gl.message.contract_address
+    with pytest.raises(Exception, match="decision nonce mismatch"):
+        contract.apply_decision("mission-001", "00" * 32)
+    contract.apply_decision("mission-001", mission["decision_nonce"])
+    contract.apply_decision("mission-001", mission["decision_nonce"])
+    assert contract.get_claimable(create_address("beneficiary")) == 7
+
+
+def test_recovery_wins_against_a_late_decision_callback(probe_vm):
+    contract = load_contract(probe_vm)
+    seal_evaluable_mission(contract, probe_vm, True, True)
+    contract.evaluate_mission("mission-001")
+    mission = contract.get_mission("mission-001")
+    from genlayer import gl
+    from gltest.direct import create_address
+
+    probe_vm.warp("2065-01-24T05:21:41Z")
+    probe_vm.sender = create_address("recovery-keeper")
+    contract.expire_mission("mission-001")
+    assert contract.get_mission("mission-001")["state"] == "ABORTED"
+    assert contract.get_claimable(create_address(REFUND_LABEL)) == 10
+
+    probe_vm.sender = gl.message.contract_address
+    contract.apply_decision("mission-001", mission["decision_nonce"])
+    assert contract.get_mission("mission-001")["state"] == "ABORTED"
+    assert contract.get_claimable(create_address(REFUND_LABEL)) == 10
+
+
+def test_claim_dispatch_consumes_one_entitlement_and_records_withdrawal(probe_vm):
+    contract = load_contract(probe_vm)
+    seal_evaluable_mission(contract, probe_vm, True, True)
+    contract.evaluate_mission("mission-001")
+    mission = contract.get_mission("mission-001")
+    from genlayer import gl
+    from gltest.direct import create_address
+
+    probe_vm.sender = gl.message.contract_address
+    contract.apply_decision("mission-001", mission["decision_nonce"])
+    beneficiary = create_address("beneficiary")
+    probe_vm.sender = beneficiary
+    contract.claim_mission("mission-001")
+    assert contract.get_claimable(beneficiary) == 0
+    assert contract.get_withdrawal("0") == {
+        "withdrawal_id": "0",
+        "mission_id": "mission-001",
+        "beneficiary": beneficiary.as_hex,
+        "amount": 7,
+        "status": "DISPATCHED",
+    }
+    with pytest.raises(Exception, match="no claimable balance"):
+        contract.claim_mission("mission-001")
 
 
 def test_evaluation_aborts_when_one_source_is_ineligible(probe_vm):
@@ -372,8 +530,15 @@ def test_evaluation_aborts_when_one_source_is_ineligible(probe_vm):
 
     contract.evaluate_mission("mission-001")
 
-    assert contract.get_mission("mission-001")["decision"] == "ABORT"
-    assert contract.get_mission("mission-001")["reason_code"] == "source_ineligible"
+    mission = contract.get_mission("mission-001")
+    assert mission["decision"] == "ABORT"
+    assert mission["reason_code"] == "source_ineligible"
+    assert mission["state"] == "DECISION_PENDING"
+    from genlayer import gl
+
+    probe_vm.sender = gl.message.contract_address
+    contract.apply_decision("mission-001", mission["decision_nonce"])
+    assert contract.get_mission("mission-001")["state"] == "ABORTED"
 
 
 def test_evaluation_validator_rejects_forged_decision_and_changed_source(probe_vm):
@@ -402,13 +567,13 @@ def test_evaluation_is_single_use_and_only_accepts_sealed_missions(probe_vm):
 
     seal_evaluable_mission(contract, probe_vm)
     contract.evaluate_mission("mission-001")
-    with pytest.raises(Exception, match="already evaluated"):
+    with pytest.raises(Exception, match="mission is not sealed"):
         contract.evaluate_mission("mission-001")
 
 
 def test_effect_root_binds_all_effects_in_preparation_order(probe_vm):
     contract = load_contract(probe_vm)
-    create_default(contract, budget=10)
+    create_default(contract, probe_vm, budget=10)
     from gltest.direct import create_address
 
     contract.prepare_effect(
@@ -431,7 +596,7 @@ def test_effect_root_binds_all_effects_in_preparation_order(probe_vm):
 
 def test_only_principal_can_seal_or_cancel(probe_vm):
     contract = load_contract(probe_vm)
-    create_default(contract, budget=10)
+    create_default(contract, probe_vm, budget=10)
     from gltest.direct import create_address
 
     probe_vm.sender = create_address("outsider")
@@ -445,7 +610,7 @@ def test_only_principal_can_seal_or_cancel(probe_vm):
 
 def test_cannot_seal_without_prepared_effect(probe_vm):
     contract = load_contract(probe_vm)
-    create_default(contract, budget=10)
+    create_default(contract, probe_vm, budget=10)
     with pytest.raises(Exception, match="no prepared effects"):
         contract.seal_mission("mission-001", "ef" * 32, "12" * 32)
 
@@ -464,7 +629,7 @@ def test_cannot_seal_without_prepared_effect(probe_vm):
 def test_invalid_effect_is_rejected(probe_vm, effect_id, digest, value, expiry, error):
     contract = load_contract(probe_vm)
     probe_vm.warp("1970-01-01T00:00:50Z")
-    create_default(contract, prepare=100, recovery=200, budget=10)
+    create_default(contract, probe_vm, prepare=100, recovery=200, budget=10)
     from gltest.direct import create_address
 
     with pytest.raises(Exception, match=error):
@@ -476,7 +641,7 @@ def test_invalid_effect_is_rejected(probe_vm, effect_id, digest, value, expiry, 
 
 def test_duplicate_effect_does_not_mutate_original(probe_vm):
     contract = load_contract(probe_vm)
-    create_default(contract, budget=10)
+    create_default(contract, probe_vm, budget=10)
     from gltest.direct import create_address
 
     beneficiary = create_address("beneficiary")
@@ -493,7 +658,7 @@ def test_duplicate_effect_does_not_mutate_original(probe_vm):
 
 def test_prepared_effects_cannot_exceed_declared_budget(probe_vm):
     contract = load_contract(probe_vm)
-    create_default(contract, budget=7)
+    create_default(contract, probe_vm, budget=7)
     from gltest.direct import create_address
 
     contract.prepare_effect(
@@ -513,7 +678,7 @@ def test_prepared_effects_cannot_exceed_declared_budget(probe_vm):
 def test_preparation_deadline_blocks_late_effects_without_mutation(probe_vm):
     probe_vm.warp("1970-01-01T00:00:50Z")
     contract = load_contract(probe_vm)
-    create_default(contract, prepare=100, recovery=200, budget=10)
+    create_default(contract, probe_vm, prepare=100, recovery=200, budget=10)
     probe_vm.warp("1970-01-01T00:01:41Z")
     from gltest.direct import create_address
 
@@ -528,7 +693,7 @@ def test_preparation_deadline_blocks_late_effects_without_mutation(probe_vm):
 def test_anyone_can_recover_after_recovery_deadline(probe_vm):
     probe_vm.warp("1970-01-01T00:00:50Z")
     contract = load_contract(probe_vm)
-    create_default(contract, prepare=100, recovery=200, budget=10)
+    create_default(contract, probe_vm, prepare=100, recovery=200, budget=10)
     from gltest.direct import create_address
 
     contract.prepare_effect(
@@ -548,7 +713,7 @@ def test_anyone_can_recover_after_recovery_deadline(probe_vm):
 def test_expiry_can_abort_a_sealed_mission(probe_vm):
     probe_vm.warp("1970-01-01T00:00:50Z")
     contract = load_contract(probe_vm)
-    create_default(contract, prepare=100, recovery=200, budget=10)
+    create_default(contract, probe_vm, prepare=100, recovery=200, budget=10)
     from gltest.direct import create_address
 
     contract.prepare_effect(

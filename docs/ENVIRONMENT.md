@@ -1,6 +1,6 @@
 # Verified Environment Baseline
 
-Status: **Phase 2 incomplete: published candidates verified; runtime compatibility unproven**
+Status: **Phase 2 partially closed: Bradbury-compatible source path locally verified; live deployment still unproven**
 Verified: 2026-09-10
 
 ## Protocol family
@@ -59,18 +59,17 @@ Phase 2 was previously described as completed too early. Published package versi
 
 The public hackathon page initially returned no readable rules through text retrieval. Subsequent browser inspection on 2026-09-09 resolved this: the actual submission form supports Studio, Bradbury or Asimov address links, requires a website, and requires a public repository belonging to the linked GitHub account. No exclusive Bradbury requirement appears. The reference track is Agentic Commerce Infrastructure. Source: https://portal.genlayer.foundation/agent-tank/hackathon/submit
 
-## Isolated probe runtime
+## Isolated probe runtime and Bradbury compatibility
 
 - Host interpreter: Python 3.12.14 (the test suite requires Python >=3.12).
 - GenVM manager release: `v0.6.0-rc4`, published 2026-09-09.
 - Archive: `genvm-universal.tar.xz`.
 - Published and locally verified SHA-256: `bd30580f911338d5533460eca8ed714dec371de5803c04e41dbb96430aea7b6e`.
-- Probe runner: `py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng`.
-- Standard library dependency: `py-lib-genlayer-std:kzr02ndm9et4qkmbqpq5djjt5sme2yt76n7sz1qbzax0knt6mam0`.
-- Package syntax: `import genlayer as gl`, `gl.contract.Contract`, `gl.contract.get_at`, message stages `decided`/`finalized`.
-- The selected runner exposes `gl.vm.run_nondet` and `gl.vm.run_nondet_default`; a direct API probe showed no `gl.vm.run_nondet_unsafe`. Documentation that names the experimental suffix must not be copied into this pinned runtime without a compatibility check.
-
-The archive also contains legacy runners. The old `1jb45...` runtime header is not silently substituted for this probe. Published current docs using old names are not sufficient API evidence for this packaged runtime.
+- The first local probe used the current v0.6 runner `py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng`. A bounded Bradbury canary proved that runner is not available on Bradbury: the transaction trace returned `runner ...5jyc... not found`.
+- Bradbury’s documented first-contract path specifies `py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6`, the legacy `from genlayer import *` package layout, `gl.Contract`, and `gl.get_contract_at`.
+- The same verified manager archive contains the legacy runner and its dependency `py-lib-genlayer-std:11rhn002yfajawsz7fai6mykznbxkxs6l91iskj5cm82c92qhy3v`. COMMIT and its probes now use the documented `1jb45...` header and pass the local legacy-runtime suite.
+- The locally installed modern SDK remains useful for tooling and linter checks, but it is not evidence that the v0.6 runner is available on Bradbury. The production source header, package imports, message API, and consensus primitive must remain aligned with the target runner actually accepted by Bradbury.
+- Local legacy-runtime tests require the explicit adapter in `tests/runtime/conftest.py` because the installed `gltest-direct` package targets the newer package layout. This adapter is test infrastructure only; it is not part of the deployed contract.
 
 Release source: https://github.com/genlayerlabs/genvm-manager/releases/tag/v0.6.0-rc4
 
@@ -88,6 +87,7 @@ Release source: https://github.com/genlayerlabs/genvm-manager/releases/tag/v0.6.
 ## Sources
 
 - [Networks](https://docs.genlayer.com/developers/networks)
+- [First Intelligent Contract](https://docs.genlayer.com/developers/intelligent-contracts/first-contract)
 - [Consensus v0.6 migration](https://docs.genlayer.com/developers/consensus-v06-migration)
 - [GenLayerJS](https://docs.genlayer.com/api-references/genlayer-js)
 - [GenLayerPY](https://docs.genlayer.com/api-references/genlayer-py)

@@ -1,6 +1,6 @@
 # Threat Model and Required Tests
 
-Status: design review. Controls below are requirements, not verified implementation claims.
+Status: implementation review. Locally verified controls are backed by the direct-runtime suite; live/network-dependent controls remain unverified.
 
 | Threat | Required control / recovery | Test obligation |
 | --- | --- | --- |
@@ -28,7 +28,7 @@ Status: design review. Controls below are requirements, not verified implementat
 
 ## Open high-severity findings
 
-H-01: Withdrawal failure recovery and proof of non-payment are unverified. A naïve claim implementation can destroy a valid entitlement or double-pay. Gate: real adapter failure tests and authenticated retry semantics.
+H-01: Withdrawal failure recovery and proof of non-payment are unverified. COMMIT consumes an entitlement before dispatch and intentionally exposes no blind retry, which prevents double payment but can leave a failed external child unresolved. Gate: real adapter failure tests and authenticated retry semantics.
 
 H-02: Timestamp eligibility does not enforce real-world expiry at finality. Gate: explicit supplier hold-until-outcome terms or a verified reservation adapter.
 
@@ -36,4 +36,4 @@ H-03: Finalization callback authentication, replay protection, and transaction o
 
 H-04: Publisher redirect/path enforcement depends on the actual fetch API. Gate: source inspection and adversarial fetch tests, or verified issuer signatures.
 
-No fund-bearing contract is approved for deployment while these remain open.
+No live fund-bearing deployment is approved while these network-dependent findings remain open.
