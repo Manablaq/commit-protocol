@@ -1,6 +1,6 @@
 """Pure-Python reference for COMMIT's current on-chain commitments.
 
-The contract uses GenLayer's native ``Keccak256`` helper.  Client and test
+    The contract uses GenLayer's native ``Keccak256`` helper.  Client and test
 code uses ``eth_hash`` so the byte construction can be compared without
 reimplementing the contract runtime.  Text is restricted to printable ASCII
 by the contract before these functions are called; addresses are compared in
@@ -26,6 +26,8 @@ def _digest(payload: str) -> str:
 
 def intent_digest(
     *,
+    chain_id: int = 61997,
+    coordinator: str = "0x" + "00" * 20,
     mission_id: str,
     objective: str,
     policy_digest: str,
@@ -35,7 +37,11 @@ def intent_digest(
     recovery_deadline: int,
 ) -> str:
     fields = (
-        "1",
+        "2",
+        "commit",
+        "0.5.0-authorized-graph",
+        str(chain_id),
+        coordinator,
         mission_id,
         objective,
         policy_digest,
@@ -44,7 +50,7 @@ def intent_digest(
         str(prepare_deadline),
         str(recovery_deadline),
     )
-    return _digest("commit-intent-v1" + "".join(frame(field) for field in fields))
+    return _digest("commit-intent-v2" + "".join(frame(field) for field in fields))
 
 
 def effect_leaf(
@@ -55,10 +61,12 @@ def effect_leaf(
     beneficiary: str,
     value: int,
     expiry: int,
+    dependency_id: str = "",
 ) -> str:
     fields = (
         effect_id,
         effect_digest,
+        dependency_id,
         supplier,
         beneficiary,
         str(value),
@@ -72,6 +80,7 @@ def effect_root(effects: Iterable[dict[str, object]]) -> str:
         effect_leaf(
             effect_id=str(effect["effect_id"]),
             effect_digest=str(effect["digest"]),
+            dependency_id=str(effect.get("dependency_id", "")),
             supplier=str(effect["supplier"]),
             beneficiary=str(effect["beneficiary"]),
             value=int(effect["value"]),

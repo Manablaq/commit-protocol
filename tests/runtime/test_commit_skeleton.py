@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-DIGEST = "ab" * 32
+DIGEST = "983307fac383ac4a92be6c0c361ea8f3c9d9efa20ad5e6e8bc8dee932f2a6103"
 OBJECTIVE = "Procure a verified sensor package"
 REFUND_LABEL = "refund-beneficiary"
 FUTURE_PREPARE = 3_000_000_000
@@ -43,6 +43,7 @@ def create_default(
     probe_vm.value = budget
     contract.fund_mission("mission-001")
     probe_vm.value = 0
+    contract.authorize_supplier("mission-001", create_address("supplier"))
 
 
 def add_default_evidence(contract, probe_vm, *, recovery=FUTURE_RECOVERY):
@@ -69,7 +70,11 @@ def add_evaluable_evidence(contract, probe_vm, eligible_a=True, eligible_b=True)
     ]
     probe_vm.sender = PRINCIPAL
     for evidence_id, authority_id, url, eligible in records:
-        payload = {"eligible": eligible, "reason_code": "ok" if eligible else "revoked"}
+        payload = {
+            "eligible": eligible,
+            "reason_code": "ok" if eligible else "revoked",
+            "effect_claims": {"effect-001": eligible},
+        }
         canonical_payload = json.dumps(
             payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")
         )
@@ -81,12 +86,18 @@ def add_evaluable_evidence(contract, probe_vm, eligible_a=True, eligible_b=True)
         probe_vm.mock_web(url, {
             "status": 200,
             "body": json.dumps({
-                "schema": "commit-evidence-v1",
+                "schema": "commit-evidence-v2",
                 "evidence_id": evidence_id,
                 "authority_id": authority_id,
                 "url": url,
                 "subject": "mission-001",
                 "expires_at": FUTURE_RECOVERY,
+                "mission_id": "mission-001",
+                "objective": OBJECTIVE,
+                "policy_digest": DIGEST,
+                "policy_rule": "all-evidence-and-effects-v1",
+                "intent_digest": contract.get_mission("mission-001")["intent_digest"],
+                "effect_root": contract.derive_effect_root("mission-001"),
                 "payload": payload,
             }),
         })
@@ -112,11 +123,17 @@ def test_protocol_discloses_custody_and_evaluation(probe_vm):
     contract = load_contract(probe_vm)
     assert contract.protocol_info() == {
         "protocol": "commit",
-        "revision": "0.4.0-semantic-escrow",
+        "revision": "0.5.0-authorized-graph",
         "custody_enabled": True,
         "semantic_evaluation_enabled": True,
         "mission_count": 0,
         "external_withdrawal_recovery": False,
+        "supplier_authorization_required": True,
+        "effect_graph": "single-parent-acyclic",
+        "evidence_schema": "commit-evidence-v2",
+        "policy_rule": "all-evidence-and-effects-v1",
+        "policy_digest": DIGEST,
+        "remote_body_limit": 16384,
     }
 
 
@@ -125,6 +142,7 @@ def test_authority_registry_is_owner_only_and_immutable(probe_vm):
     contract.register_authority("publisher-a", "publisher-a.example", "/records")
     assert contract.get_authority("publisher-a") == {
         "authority_id": "publisher-a",
+        "active": True,
         "host": "publisher-a.example",
         "path_prefix": "/records",
     }
@@ -137,6 +155,97 @@ def test_authority_registry_is_owner_only_and_immutable(probe_vm):
     probe_vm.sender = PRINCIPAL
     with pytest.raises(Exception, match="authority already exists"):
         contract.register_authority("publisher-a", "changed.example", "/other")
+
+
+@pytest.mark.parametrize(
+    "authority_id,host,path,error",
+    [
+        ("bad-space", "publisher .example", "/records", "authority host"),
+        ("bad-label", "-publisher.example", "/records", "authority host"),
+        ("bad-label", "publisher-.example", "/records", "authority host"),
+        ("bad-path", "publisher.example", "/records/", "authority path prefix"),
+    ],
+)
+def test_authority_registration_rejects_noncanonical_origin_parts(
+    probe_vm, authority_id, host, path, error
+):
+    contract = load_contract(probe_vm)
+    with pytest.raises(Exception, match=error):
+        contract.register_authority(authority_id, host, path)
+
+
+def test_root_authority_matches_only_canonical_root_paths(probe_vm):
+    contract = load_contract(probe_vm)
+    from gltest.direct import create_address
+
+    contract.register_authority("root", "publisher-root.example", "/")
+    contract.register_authority(AUTHORITY_B, "publisher-b.example", "/records")
+    contract.create_mission(
+        "mission-001", OBJECTIVE, DIGEST, 10, create_address(REFUND_LABEL),
+        FUTURE_PREPARE, FUTURE_RECOVERY,
+    )
+    contract.register_evidence(
+        "mission-001", "evidence-001", "root",
+        "https://publisher-root.example/", "12" * 32,
+        "mission-001", FUTURE_RECOVERY,
+    )
+    with pytest.raises(Exception, match="outside authority"):
+        contract.register_evidence(
+            "mission-001", "evidence-002", "root",
+            "https://publisher-root.example/records//mission-001", "34" * 32,
+            "mission-001", FUTURE_RECOVERY,
+        )
+
+
+def test_deactivated_authority_cannot_be_used_for_new_evidence(probe_vm):
+    contract = load_contract(probe_vm)
+    contract.register_authority(AUTHORITY_A, "publisher-a.example", "/records")
+    contract.register_authority(AUTHORITY_B, "publisher-b.example", "/records")
+    from gltest.direct import create_address
+
+    contract.create_mission(
+        "mission-001", OBJECTIVE, DIGEST, 10, create_address(REFUND_LABEL),
+        FUTURE_PREPARE, FUTURE_RECOVERY,
+    )
+    contract.deactivate_authority(AUTHORITY_A)
+    with pytest.raises(Exception, match="authority is inactive"):
+        contract.register_evidence(
+            "mission-001", "evidence-001", AUTHORITY_A,
+            "https://publisher-a.example/records/mission-001", "12" * 32,
+            "mission-001", FUTURE_RECOVERY,
+        )
+    assert contract.get_mission("mission-001")["evidence_count"] == 0
+
+
+def test_principal_cannot_revoke_its_required_authorization(probe_vm):
+    contract = load_contract(probe_vm)
+    create_default(contract, probe_vm)
+    import genlayer as gl
+
+    with pytest.raises(Exception, match="principal cannot be revoked"):
+        contract.revoke_supplier("mission-001", gl.message.sender_address)
+    assert contract.is_supplier_authorized("mission-001", gl.message.sender_address) is True
+
+
+def test_deactivated_authority_invalidates_sealed_evaluation(probe_vm):
+    contract = load_contract(probe_vm)
+    seal_evaluable_mission(contract, probe_vm)
+    contract.deactivate_authority(AUTHORITY_A)
+    with pytest.raises(Exception, match="authority is inactive"):
+        contract.evaluate_mission("mission-001")
+    assert contract.get_mission("mission-001")["state"] == "SEALED"
+
+
+def test_unknown_policy_rule_is_rejected(probe_vm):
+    contract = load_contract(probe_vm)
+    from gltest.direct import create_address
+
+    with pytest.raises(Exception, match="unsupported policy rule"):
+        contract.create_mission(
+            "mission-001", OBJECTIVE, "ab" * 32, 10,
+            create_address(REFUND_LABEL), FUTURE_PREPARE, FUTURE_RECOVERY,
+        )
+    assert contract.protocol_info()["mission_count"] == 0
 
 
 def test_create_mission_binds_principal_and_immutable_inputs(probe_vm):
@@ -152,8 +261,12 @@ def test_create_mission_binds_principal_and_immutable_inputs(probe_vm):
     assert mission["version"] == 1
     assert mission["objective"] == OBJECTIVE
     assert mission["policy_digest"] == DIGEST
+    assert mission["policy_rule"] == "all-evidence-and-effects-v1"
     assert mission["intent_digest"] == contract.derive_intent_digest("mission-001")
+    import genlayer as gl
     assert mission["intent_digest"] == intent_digest(
+        chain_id=int(gl.message.chain_id),
+        coordinator=gl.message.contract_address.as_hex,
         mission_id="mission-001",
         objective=OBJECTIVE,
         policy_digest=DIGEST,
@@ -170,7 +283,11 @@ def test_create_mission_binds_principal_and_immutable_inputs(probe_vm):
     assert mission["prepared_value"] == 0
     assert mission["refund_beneficiary"] != "0x" + "00" * 20
     assert mission["evidence_count"] == 0
+    assert mission["supplier_count"] == 2
     assert contract.protocol_info()["mission_count"] == 1
+    assert contract.get_mission_by_index(0)["mission_id"] == "mission-001"
+    with pytest.raises(Exception, match="mission index out of range"):
+        contract.get_mission_by_index(1)
 
 
 @pytest.mark.parametrize(
@@ -204,6 +321,32 @@ def test_invalid_creation_is_rejected(
             recovery,
         )
     assert contract.protocol_info()["mission_count"] == 0
+
+
+@pytest.mark.parametrize(
+    "field,value,error",
+    [
+        ("budget", True, "mission budget"),
+        ("prepare", True, "preparation deadline"),
+        ("recovery", True, "recovery deadline"),
+    ],
+)
+def test_boolean_numeric_inputs_are_rejected(probe_vm, field, value, error):
+    contract = load_contract(probe_vm)
+    from gltest.direct import create_address
+
+    kwargs = {
+        "budget": 10,
+        "prepare_deadline": FUTURE_PREPARE,
+        "recovery_deadline": FUTURE_RECOVERY,
+    }
+    kwargs[{"budget": "budget", "prepare": "prepare_deadline", "recovery": "recovery_deadline"}[field]] = value
+    with pytest.raises(Exception, match=error):
+        contract.create_mission(
+            "mission-001", OBJECTIVE, DIGEST, kwargs["budget"],
+            create_address(REFUND_LABEL), kwargs["prepare_deadline"],
+            kwargs["recovery_deadline"],
+        )
 
 
 def test_payable_funding_is_bounded_and_recorded(probe_vm):
@@ -253,7 +396,7 @@ def test_duplicate_mission_is_rejected_without_mutation(probe_vm):
         from gltest.direct import create_address
 
         contract.create_mission(
-            "mission-001", "different", "cd" * 32, 5,
+            "mission-001", "different", DIGEST, 5,
             create_address("other-refund"), 300, 400,
         )
     mission = contract.get_mission("mission-001")
@@ -288,6 +431,8 @@ def test_supplier_prepares_effect_and_principal_seals_snapshot(probe_vm):
     assert effect["beneficiary"] == beneficiary.as_hex
     assert effect["value"] == 7
     assert effect["expiry"] == FUTURE_RECOVERY
+    assert contract.get_effect_by_index("mission-001", 0)["effect_id"] == "effect-001"
+    assert contract.is_supplier_authorized("mission-001", supplier) is True
     assert contract.get_mission("mission-001")["prepared_value"] == 7
 
     from spec_model.onchain import effect_root
@@ -297,6 +442,7 @@ def test_supplier_prepares_effect_and_principal_seals_snapshot(probe_vm):
     evidence = contract.get_evidence("mission-001", "evidence-001")
     assert evidence["authority_id"] == AUTHORITY_A
     assert evidence["subject"] == "mission-001"
+    assert contract.get_evidence_by_index("mission-001", 0)["evidence_id"] == "evidence-001"
     from spec_model.provenance import evidence_root
     assert contract.derive_evidence_root("mission-001") == evidence_root([
         evidence,
@@ -315,6 +461,58 @@ def test_supplier_prepares_effect_and_principal_seals_snapshot(probe_vm):
     assert mission["evidence_root"] == contract.derive_evidence_root("mission-001")
 
 
+def test_unauthorized_supplier_cannot_prepare_effect(probe_vm):
+    contract = load_contract(probe_vm)
+    create_default(contract, probe_vm, budget=10)
+    from gltest.direct import create_address
+
+    probe_vm.sender = create_address("unapproved-supplier")
+    with pytest.raises(Exception, match="supplier is not authorized"):
+        contract.prepare_effect(
+            "mission-001", "effect-001", "cd" * 32,
+            create_address("beneficiary"), 7, FUTURE_RECOVERY,
+        )
+    assert contract.get_mission("mission-001")["effect_count"] == 0
+
+
+def test_dependency_is_bound_and_graph_is_acyclic(probe_vm):
+    contract = load_contract(probe_vm)
+    create_default(contract, probe_vm, budget=10)
+    from gltest.direct import create_address
+
+    supplier = create_address("supplier")
+    beneficiary = create_address("beneficiary")
+    probe_vm.sender = supplier
+    contract.prepare_effect(
+        "mission-001", "effect-001", "cd" * 32, beneficiary, 4, FUTURE_RECOVERY
+    )
+    contract.prepare_effect_with_dependency(
+        "mission-001", "effect-002", "34" * 32, beneficiary, 3,
+        FUTURE_RECOVERY, "effect-001",
+    )
+    assert contract.get_effect("mission-001", "effect-002")["dependency_id"] == "effect-001"
+    add_default_evidence(contract, probe_vm)
+    contract.seal_mission(
+        "mission-001", contract.derive_effect_root("mission-001"),
+        contract.derive_evidence_root("mission-001"),
+    )
+    assert contract.get_mission("mission-001")["state"] == "SEALED"
+
+
+def test_missing_dependency_is_rejected_without_mutation(probe_vm):
+    contract = load_contract(probe_vm)
+    create_default(contract, probe_vm, budget=10)
+    from gltest.direct import create_address
+
+    probe_vm.sender = create_address("supplier")
+    with pytest.raises(Exception, match="dependency effect not found"):
+        contract.prepare_effect_with_dependency(
+            "mission-001", "effect-002", "34" * 32,
+            create_address("beneficiary"), 3, FUTURE_RECOVERY, "missing",
+        )
+    assert contract.get_mission("mission-001")["effect_count"] == 0
+
+
 def test_seal_rejects_underfunded_effects(probe_vm):
     contract = load_contract(probe_vm)
     from gltest.direct import create_address
@@ -325,7 +523,10 @@ def test_seal_rejects_underfunded_effects(probe_vm):
         "mission-001", OBJECTIVE, DIGEST, 10, create_address(REFUND_LABEL),
         FUTURE_PREPARE, FUTURE_RECOVERY,
     )
-    probe_vm.sender = create_address("supplier")
+    supplier = create_address("supplier")
+    probe_vm.sender = PRINCIPAL
+    contract.authorize_supplier("mission-001", supplier)
+    probe_vm.sender = supplier
     contract.prepare_effect(
         "mission-001", "effect-001", "cd" * 32, create_address("beneficiary"),
         7, FUTURE_RECOVERY,
@@ -424,6 +625,32 @@ def test_seal_requires_distinct_registered_evidence_authorities(probe_vm):
         )
 
 
+def test_seal_rejects_two_ids_for_the_same_registered_origin(probe_vm):
+    contract = load_contract(probe_vm)
+    create_default(contract, probe_vm, budget=10)
+    from gltest.direct import create_address
+
+    contract.register_authority("publisher-c", "publisher-a.example", "/records")
+    contract.prepare_effect(
+        "mission-001", "effect-001", "cd" * 32, create_address("beneficiary"),
+        7, FUTURE_RECOVERY,
+    )
+    for evidence_id, authority_id, suffix, digest in (
+        ("evidence-001", AUTHORITY_A, "a", "12" * 32),
+        ("evidence-002", "publisher-c", "b", "34" * 32),
+    ):
+        contract.register_evidence(
+            "mission-001", evidence_id, authority_id,
+            "https://publisher-a.example/records/mission-001/" + suffix,
+            digest, "mission-001", FUTURE_RECOVERY,
+        )
+    with pytest.raises(Exception, match="authorities must be distinct"):
+        contract.seal_mission(
+            "mission-001", contract.derive_effect_root("mission-001"),
+            contract.derive_evidence_root("mission-001"),
+        )
+
+
 def test_evaluation_reaches_commit_only_when_all_sources_are_eligible(probe_vm):
     contract = load_contract(probe_vm)
     seal_evaluable_mission(contract, probe_vm, True, True)
@@ -432,13 +659,13 @@ def test_evaluation_reaches_commit_only_when_all_sources_are_eligible(probe_vm):
 
     mission = contract.get_mission("mission-001")
     assert mission["decision"] == "COMMIT"
-    assert mission["reason_code"] == "all_sources_eligible"
+    assert mission["reason_code"] == "all_sources_and_effects_eligible"
     assert mission["state"] == "DECISION_PENDING"
     assert mission["allocation_applied"] is False
     assert mission["evaluation_count"] == 1
     assert probe_vm.run_validator() is True
 
-    from genlayer import gl
+    import genlayer as gl
 
     probe_vm.sender = gl.message.contract_address
     contract.apply_decision("mission-001", mission["decision_nonce"])
@@ -450,7 +677,7 @@ def test_finalized_allocation_credits_effect_and_refund_entitlements(probe_vm):
     seal_evaluable_mission(contract, probe_vm, True, True)
     contract.evaluate_mission("mission-001")
     mission = contract.get_mission("mission-001")
-    from genlayer import gl
+    import genlayer as gl
 
     probe_vm.sender = gl.message.contract_address
     contract.apply_decision("mission-001", mission["decision_nonce"])
@@ -468,7 +695,7 @@ def test_decision_callback_requires_exact_nonce_and_is_idempotent(probe_vm):
     seal_evaluable_mission(contract, probe_vm, True, True)
     contract.evaluate_mission("mission-001")
     mission = contract.get_mission("mission-001")
-    from genlayer import gl
+    import genlayer as gl
     from gltest.direct import create_address
 
     probe_vm.sender = gl.message.contract_address
@@ -484,7 +711,7 @@ def test_recovery_wins_against_a_late_decision_callback(probe_vm):
     seal_evaluable_mission(contract, probe_vm, True, True)
     contract.evaluate_mission("mission-001")
     mission = contract.get_mission("mission-001")
-    from genlayer import gl
+    import genlayer as gl
     from gltest.direct import create_address
 
     probe_vm.warp("2065-01-24T05:21:41Z")
@@ -494,7 +721,9 @@ def test_recovery_wins_against_a_late_decision_callback(probe_vm):
     assert contract.get_claimable(create_address(REFUND_LABEL)) == 10
 
     probe_vm.sender = gl.message.contract_address
-    contract.apply_decision("mission-001", mission["decision_nonce"])
+    # Recovery invalidates the economic outcome; a late callback, even with
+    # stale calldata, must be harmless and cannot allocate a second outcome.
+    contract.apply_decision("mission-001", "00" * 32)
     assert contract.get_mission("mission-001")["state"] == "ABORTED"
     assert contract.get_claimable(create_address(REFUND_LABEL)) == 10
 
@@ -504,7 +733,7 @@ def test_claim_dispatch_consumes_one_entitlement_and_records_withdrawal(probe_vm
     seal_evaluable_mission(contract, probe_vm, True, True)
     contract.evaluate_mission("mission-001")
     mission = contract.get_mission("mission-001")
-    from genlayer import gl
+    import genlayer as gl
     from gltest.direct import create_address
 
     probe_vm.sender = gl.message.contract_address
@@ -520,6 +749,10 @@ def test_claim_dispatch_consumes_one_entitlement_and_records_withdrawal(probe_vm
         "amount": 7,
         "status": "DISPATCHED",
     }
+    assert contract.get_withdrawal_count() == 1
+    assert contract.get_withdrawal_by_index(0)["withdrawal_id"] == "0"
+    with pytest.raises(Exception, match="withdrawal index out of range"):
+        contract.get_withdrawal_by_index(1)
     with pytest.raises(Exception, match="no claimable balance"):
         contract.claim_mission("mission-001")
 
@@ -532,9 +765,9 @@ def test_evaluation_aborts_when_one_source_is_ineligible(probe_vm):
 
     mission = contract.get_mission("mission-001")
     assert mission["decision"] == "ABORT"
-    assert mission["reason_code"] == "source_ineligible"
+    assert mission["reason_code"] == "policy_or_source_ineligible"
     assert mission["state"] == "DECISION_PENDING"
-    from genlayer import gl
+    import genlayer as gl
 
     probe_vm.sender = gl.message.contract_address
     contract.apply_decision("mission-001", mission["decision_nonce"])
@@ -547,7 +780,7 @@ def test_evaluation_validator_rejects_forged_decision_and_changed_source(probe_v
     contract.evaluate_mission("mission-001")
 
     assert probe_vm.run_validator(
-        leader_result={"decision": "ABORT", "reason_code": "source_ineligible"}
+        leader_result={"decision": "ABORT", "reason_code": "policy_or_source_ineligible"}
     ) is False
 
     import json
@@ -558,6 +791,105 @@ def test_evaluation_validator_rejects_forged_decision_and_changed_source(probe_v
         {"status": 200, "body": json.dumps({"schema": "wrong"})},
     )
     assert probe_vm.run_validator() is False
+
+
+def test_evaluation_rejects_oversized_remote_evidence(probe_vm):
+    contract = load_contract(probe_vm)
+    seal_evaluable_mission(contract, probe_vm, True, True)
+    import json
+
+    probe_vm.clear_mocks()
+    probe_vm.mock_web(
+        "https://publisher-a.example/records/mission-001",
+        {"status": 200, "body": json.dumps({"padding": "x" * 17000})},
+    )
+    with pytest.raises(Exception, match="evidence record is too large"):
+        contract.evaluate_mission("mission-001")
+    assert contract.get_mission("mission-001")["state"] == "SEALED"
+    assert contract.get_mission("mission-001")["evaluation_count"] == 0
+
+
+@pytest.mark.parametrize(
+    "body,error",
+    [
+        (None, "evidence response body missing"),
+        (b"not-json", "invalid evidence JSON"),
+    ],
+)
+def test_evaluation_rejects_missing_or_malformed_remote_body(probe_vm, body, error):
+    contract = load_contract(probe_vm)
+    seal_evaluable_mission(contract, probe_vm, True, True)
+    probe_vm.clear_mocks()
+    probe_vm.mock_web(
+        "https://publisher-a.example/records/mission-001",
+        {"status": 200, "body": body},
+    )
+    with pytest.raises(Exception, match=error):
+        contract.evaluate_mission("mission-001")
+    assert contract.get_mission("mission-001")["state"] == "SEALED"
+
+
+def _valid_record(contract, evidence_id, authority_id, url, eligible=True):
+    import json
+
+    payload = {
+        "eligible": eligible,
+        "reason_code": "ok" if eligible else "revoked",
+        "effect_claims": {"effect-001": eligible},
+    }
+    return {
+        "schema": "commit-evidence-v2",
+        "evidence_id": evidence_id,
+        "authority_id": authority_id,
+        "url": url,
+        "subject": "mission-001",
+        "expires_at": FUTURE_RECOVERY,
+        "mission_id": "mission-001",
+        "objective": OBJECTIVE,
+        "policy_digest": DIGEST,
+        "policy_rule": "all-evidence-and-effects-v1",
+        "intent_digest": contract.get_mission("mission-001")["intent_digest"],
+        "effect_root": contract.derive_effect_root("mission-001"),
+        "payload": payload,
+    }
+
+
+@pytest.mark.parametrize("variant,error", [("duplicate", "duplicate evidence key"), ("constant", "invalid evidence JSON")])
+def test_evaluation_rejects_ambiguous_or_nonstandard_json(probe_vm, variant, error):
+    contract = load_contract(probe_vm)
+    seal_evaluable_mission(contract, probe_vm, True, True)
+    import json
+
+    url = "https://publisher-a.example/records/mission-001"
+    body = json.dumps(_valid_record(contract, "evidence-001", AUTHORITY_A, url))
+    if variant == "duplicate":
+        body = body.replace(
+            '"schema": "commit-evidence-v2"',
+            '"schema": "commit-evidence-v2", "schema": "commit-evidence-v2"',
+            1,
+        )
+    else:
+        body = body.replace('"eligible": true', '"eligible": NaN', 1)
+    probe_vm.clear_mocks()
+    probe_vm.mock_web(url, {"status": 200, "body": body})
+    with pytest.raises(Exception, match=error):
+        contract.evaluate_mission("mission-001")
+    assert contract.get_mission("mission-001")["state"] == "SEALED"
+
+
+def test_evaluation_rejects_unknown_record_fields(probe_vm):
+    contract = load_contract(probe_vm)
+    seal_evaluable_mission(contract, probe_vm, True, True)
+    import json
+
+    url = "https://publisher-a.example/records/mission-001"
+    record = _valid_record(contract, "evidence-001", AUTHORITY_A, url)
+    record["unbound_metadata"] = "must-not-be-ignored"
+    probe_vm.clear_mocks()
+    probe_vm.mock_web(url, {"status": 200, "body": json.dumps(record)})
+    with pytest.raises(Exception, match="unsupported evidence record"):
+        contract.evaluate_mission("mission-001")
+    assert contract.get_mission("mission-001")["state"] == "SEALED"
 
 
 def test_evaluation_is_single_use_and_only_accepts_sealed_missions(probe_vm):

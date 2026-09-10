@@ -32,13 +32,29 @@ class ProvenanceTests(unittest.TestCase):
     def test_authority_registration_rejects_ambiguous_inputs(self):
         for args in (
             ("publisher", "Publisher.example", "/records"),
+            ("publisher", "publisher .example", "/records"),
+            ("publisher", "-publisher.example", "/records"),
+            ("publisher", "publisher-.example", "/records"),
             ("publisher", "publisher.example", "/records/../private"),
             ("publisher", "publisher.example", "/records//private"),
+            ("publisher", "publisher.example", "/records/"),
             ("publisher", "publisher.example", "/records?x=1"),
         ):
             with self.subTest(args=args):
                 with self.assertRaises(ProvenanceError):
                     validate_authority(*args)
+
+    def test_root_authority_has_a_canonical_root_match(self):
+        validate_authority("publisher", "publisher.example", "/")
+        self.assertTrue(url_matches_authority(
+            "https://publisher.example/", "publisher.example", "/"
+        ))
+        self.assertTrue(url_matches_authority(
+            "https://publisher.example/records/mission-001", "publisher.example", "/"
+        ))
+        self.assertFalse(url_matches_authority(
+            "https://publisher.example/records//mission-001", "publisher.example", "/"
+        ))
 
     def test_evidence_root_changes_when_any_bound_field_changes(self):
         record = dict(

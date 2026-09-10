@@ -18,7 +18,7 @@ External effects must be represented as reversible reservations, idempotent adap
 
 ## Current status
 
-The product thesis, protocol specification, accounting model, state machine, evidence model, and adversarial review are drafted. The deterministic settlement, commitment, and provenance models pass 23 tests. The mission registry, payable native-GEN funding, finalized-message probe, finality-gated allocation, claimable entitlements, provenance checks, and contract-integrated independent evaluation pass GenVM lint and 53 direct-runtime tests against the Bradbury-documented legacy runner path. A Bradbury canary proved that the current v0.6 `5jyc...` runner is unavailable there, so the source and probes now use the documented `1jb45...` runner and legacy package imports. The registry computes the mission intent digest from stored terms, bounds effects by preparation deadline and budget, derives evidence roots from owner-registered HTTPS authorities and mission-bound records, and re-fetches sealed sources for an independently validated bounded decision. The corrected `1jb45...` canary reached `ACCEPTED / AGREE / FINISHED_WITH_RETURN`; its deployed source hash matched the local probe and its initial view state was readable. A live callback canary is submitted and remains unverified. Native GEN custody, finalized self-message delivery, external-transfer failure recovery, redirect/final-destination enforcement, and full COMMIT on-chain correctness remain unproven.
+The product thesis, protocol specification, accounting model, state machine, evidence model, and adversarial review are drafted. The contract now requires explicit supplier authorization, rejects duplicate authority labels for the same registered origin/path, validates canonical DNS-style hosts and path prefixes, rejects boolean/out-of-range uint inputs, uses a bounded single-parent effect graph with seal-time cycle checks, accepts only the explicit `all-evidence-and-effects-v1` policy, binds every fetched record to the mission/objective/policy/intent/effect snapshot, rejects missing or malformed bodies, rejects ambiguous/non-standard JSON, and limits remote evidence bodies to 16 KiB. The Studio Dev-targeted source and probes use the verified v0.6 package layout and pass GenVM lint plus 98 direct-runtime tests against the extracted v0.6 RC runner. The historical Bradbury canary proved that this v0.6 runner is unavailable on Bradbury; its separate legacy probe is not evidence for the current source. Studio Dev deployment, full COMMIT on-chain execution, native-GEN fee profiling, external-transfer failure recovery, and final redirect/issuer authentication remain unproven.
 
 See [PRODUCT_THESIS.md](./docs/PRODUCT_THESIS.md), [ENVIRONMENT.md](./docs/ENVIRONMENT.md), and [VERIFICATION_POLICY.md](./docs/VERIFICATION_POLICY.md).
 
@@ -40,11 +40,11 @@ Reproduce the current local checks with the exact commands and runtime digest in
 3. Intelligent Contract implementation
 4. Deterministic tests and adversarial tests
 5. GenLayer consensus tests and fee profiling
-6. Preview-network deployment and full receipt verification
-7. Bradbury compatibility check and deployment using the runner accepted by Bradbury
-8. Native-GEN custody, finality-gated allocation, and claim dispatch
-9. Backend/indexer integration
-10. Frontend only after the backend gate passes
+6. Studio Dev deployment and full receipt verification with the matching v0.6 RC stack
+7. Native-GEN custody, finality-gated allocation, and claim dispatch on Studio Dev
+8. Backend/indexer integration
+9. Frontend only after the backend gate passes
+10. Bradbury compatibility check and persistent production-like validation
 
 ## Official references
 

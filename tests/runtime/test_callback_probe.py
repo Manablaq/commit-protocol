@@ -18,8 +18,8 @@ def capture(vm):
     def hook(_vm, request):
         payload = request.get("EmitInternalMessage") or request.get("PostMessage")
         if payload is not None:
-            # v0.3 names this operation EmitInternalMessage; the Bradbury
-            # documented 1jb runner names the equivalent operation PostMessage.
+            # The direct harness exposes the v0.6 operation; accept the
+            # historical spelling only so this assertion remains diagnostic.
             messages.append(payload)
             return {"ok": None}
         return None

@@ -1,12 +1,18 @@
 # Semantic Atomicity Specification
 
-Revision: design draft 0.1, 2026-09-09. This is a proposed protocol, not a statement of deployed functionality. Runtime assumptions are tracked in [OPEN_QUESTIONS.md](./OPEN_QUESTIONS.md).
+Revision: implementation draft 0.2, 2026-09-10. This describes the hardened
+v0.5 source, not a statement of live deployment. Runtime assumptions are
+tracked in [OPEN_QUESTIONS.md](./OPEN_QUESTIONS.md).
 
 ## Transaction and authority domain
 
 A semantic transaction is a tuple `(domain, mission, version, intent, policy, graph, evidence, funding, decision)`. The domain includes protocol revision, chain ID, coordinator address, and a deployment-specific namespace. Mission identity includes the principal and a never-reused nonce. All hashes use an explicit object-type domain separator.
 
-All consequential terms are supplied and authorized before adjudication. The LLM may decide whether the prepared package satisfies those terms; it cannot invent a recipient, amount, obligation, or permission.
+All consequential terms are supplied and authorized before adjudication. The
+current evaluator implements the explicit
+`all-evidence-and-effects-v1` rule: it does not interpret an arbitrary policy
+document or invoke an LLM. It cannot invent a recipient, amount, obligation,
+or permission.
 
 ## Objects
 
@@ -15,8 +21,8 @@ All consequential terms are supplied and authorized before adjudication. The LLM
 | Mission | Identity, principal, intent, hard constraints, budget, refund beneficiary, allowed roles, evidence policy, time policy |
 | Mission version | Monotonic revision of mutable preparation; no revision changes an already sealed snapshot |
 | Effect | Unique ID, type, supplier, recipient, integer GEN amount, exact payload digest, prerequisites, authority scope, nonce, reservation terms |
-| Effect graph | Canonically ordered effects and edges; unique IDs, no cycles, every dependency exists |
-| Prepare receipt | Supplier-authorized commitment to the exact mission/version/effect digest and reservation/compensation terms |
+| Effect graph | Canonically ordered effects with one optional earlier dependency; unique IDs, no cycles, every dependency exists |
+| Prepare receipt | Authenticated on-chain call from the principal or an explicitly authorized supplier, bound into the effect root |
 | Evidence record | Registered authority, stable record ID/version, source reference, publication time, observed digest, expiry, subject and claim bindings |
 | Evidence root | Digest of the ordered validated evidence manifest; availability and truth are separate from hashing |
 | Commit decision | Fixed decision envelope plus COMMIT, justified by all hard constraints and independent semantic evaluation |
@@ -24,7 +30,11 @@ All consequential terms are supplied and authorized before adjudication. The LLM
 | Commit/abort certificate | Exact decision envelope plus verifiable successful finalized transaction provenance; a JSON file alone is not a certificate |
 | Mission receipt | Frozen terms, decision, allocation entries, and separate payment-progress records |
 
-Canonical encoding must be specified before contract implementation. It must reject floats, duplicate keys, unknown fields, malformed addresses, ambiguous integer forms, and oversized inputs. Integers representing money are unsigned wei. Tests must establish identical bytes in Python and JavaScript. A concatenation with ambiguous separators is forbidden. The current registry reference uses printable-ASCII length-prefixed fields and GenLayer's native Keccak-256 for `commit-intent-v1`, `commit-effect-leaf-v1`, and `commit-effect-root-v1`; the Python reference is tested against the same byte construction. JavaScript parity and production schema compatibility remain separate gates.
+Canonical encoding is implemented with printable-ASCII length-prefixed fields
+and GenLayer's native Keccak-256 for `commit-intent-v2`,
+`commit-effect-leaf-v1`, and `commit-effect-root-v1`; the Python reference is
+tested against the same byte construction. JavaScript parity and production
+schema compatibility remain separate gates.
 
 ## Consequence binding
 

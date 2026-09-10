@@ -29,10 +29,19 @@ def validate_authority(authority_id: str, host: str, path_prefix: str) -> None:
         raise ProvenanceError("invalid authority host")
     if host.startswith(".") or host.endswith(".") or ".." in host:
         raise ProvenanceError("invalid authority host")
+    for label in host.split("."):
+        if not 1 <= len(label) <= 63:
+            raise ProvenanceError("invalid authority host")
+        if label[0] == "-" or label[-1] == "-":
+            raise ProvenanceError("invalid authority host")
+        if any(char not in "abcdefghijklmnopqrstuvwxyz0123456789-" for char in label):
+            raise ProvenanceError("invalid authority host")
     _ascii(path_prefix, "authority path prefix", 512)
     if not path_prefix.startswith("/") or "//" in path_prefix or any(
         marker in path_prefix for marker in ("?", "#", "%", "\\")
     ):
+        raise ProvenanceError("invalid authority path prefix")
+    if path_prefix != "/" and path_prefix.endswith("/"):
         raise ProvenanceError("invalid authority path prefix")
     if any(segment in (".", "..") for segment in path_prefix.split("/")):
         raise ProvenanceError("invalid authority path prefix")
@@ -51,9 +60,13 @@ def url_matches_authority(url: str, host: str, path_prefix: str) -> bool:
         return False
     if any(marker in remainder for marker in ("?", "#", "%", "\\")):
         return False
+    if remainder == "/":
+        return path_prefix == "/"
     segments = remainder.split("/")
     if any(segment in ("", ".", "..") for segment in segments[1:]):
         return False
+    if path_prefix == "/":
+        return True
     if remainder == path_prefix:
         return True
     boundary = path_prefix if path_prefix.endswith("/") else path_prefix + "/"

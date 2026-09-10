@@ -1,4 +1,4 @@
-# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
+# { "Depends": "py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng" }
 """Minimal GenLayer consensus probe for independent evidence evaluation.
 
 This is not the production COMMIT contract. It isolates the v0.6 API and
@@ -9,10 +9,10 @@ registered-authority and provenance enforcement first.
 
 import json
 
-from genlayer import *
+import genlayer as gl
 
 
-class IndependentEvaluationProbe(gl.Contract):
+class IndependentEvaluationProbe(gl.contract.Contract):
     last_decision: str
     last_reason_code: str
     evaluation_count: gl.u256
@@ -64,10 +64,8 @@ class IndependentEvaluationProbe(gl.Contract):
                 and leader_data.get("reason_code") == validator_data["reason_code"]
             )
 
-        # The pinned v0.6 runner exposes the custom leader/validator primitive
-        # as run_nondet. The newer documentation also refers to an
-        # experimental run_nondet_unsafe name; do not call an API absent from
-        # the selected runtime.
+        # The linter recognizes this primitive as the enclosing equivalence
+        # block for the web reads; validator errors are handled explicitly.
         result = gl.vm.run_nondet(leader_fn, validator_fn)
         if result["decision"] not in ("COMMIT", "ABORT"):
             raise gl.vm.UserError("invalid consensus decision")

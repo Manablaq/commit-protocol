@@ -1,6 +1,6 @@
 # Verified Environment Baseline
 
-Status: **Phase 2 partially closed: Bradbury-compatible canary deployed and source/state verified; full COMMIT deployment still unproven**
+Status: **Local hardening closed; Studio Dev deployment and full COMMIT live proof remain open**
 Verified: 2026-09-10
 
 ## Protocol family
@@ -37,12 +37,16 @@ The current official network table distinguishes the production-like Bradbury te
 - Read-only RPC check on 2026-09-09: `eth_chainId` returned `0xf22d` (`61997`).
 - This environment is temporary and may reset; it is not Bradbury.
 
-COMMIT must not reuse preview addresses, fee assumptions, or runtime conclusions on Bradbury. Before Bradbury deployment, the implementation must verify network schema, consensus version, transaction format, fee support, and a minimal canary contract against Bradbury.
+COMMIT must not reuse preview addresses, fee assumptions, or runtime conclusions
+across networks. The current target is Studio Dev: first install the matching
+v0.6 RC stack, run a minimal canary, deploy the hardened source, and verify
+every receipt. Bradbury is a separate persistent follow-up target and must not
+be used to infer Studio Dev compatibility.
 
 ## Unresolved before dependency lock
 
 - Transaction Kit source is resolved, but its compatibility remains untested (see below).
-- GenVM runtime dependency hash appropriate for the selected preview
+- GenVM runtime dependency hash and runner accepted by Studio Dev
 - Whether Agent Tank judging requires a specific network rather than a reproducible preview deployment
 
 Unresolved production choices block custody implementation. The isolated probe harness pins the verified Python packages in `pyproject.toml` and all resolved dependencies in `uv.lock`; this does not establish compatibility with the live network. The probe runtime header is taken from a checksum-verified release archive.
@@ -59,18 +63,18 @@ Phase 2 was previously described as completed too early. Published package versi
 
 The public hackathon page initially returned no readable rules through text retrieval. Subsequent browser inspection on 2026-09-09 resolved this: the actual submission form supports Studio, Bradbury or Asimov address links, requires a website, and requires a public repository belonging to the linked GitHub account. No exclusive Bradbury requirement appears. The reference track is Agentic Commerce Infrastructure. Source: https://portal.genlayer.foundation/agent-tank/hackathon/submit
 
-## Isolated probe runtime and Bradbury compatibility
+## Isolated v0.6 runtime and Bradbury compatibility
 
 - Host interpreter: Python 3.12.14 (the test suite requires Python >=3.12).
 - GenVM manager release: `v0.6.0-rc4`, published 2026-09-09.
 - Archive: `genvm-universal.tar.xz`.
 - Published and locally verified SHA-256: `bd30580f911338d5533460eca8ed714dec371de5803c04e41dbb96430aea7b6e`.
-- The first local probe used the current v0.6 runner `py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng`. A bounded Bradbury canary proved that runner is not available on Bradbury: the transaction trace returned `runner ...5jyc... not found`.
+- The current COMMIT source and probes use the v0.6 runner `py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng` and the modern `genlayer as gl` package layout. Its runner manifest resolves `py-lib-genlayer-std:kzr02ndm9et4qkmbqpq5djjt5sme2yt76n7sz1qbzax0knt6mam0`.
+- A bounded historical Bradbury canary proved that the v0.6 `5jyc...` runner is not available on Bradbury: the transaction trace returned `runner ...5jyc... not found`.
 - Bradbury’s documented first-contract path specifies `py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6`, the legacy `from genlayer import *` package layout, `gl.Contract`, and `gl.get_contract_at`.
-- The same verified manager archive contains the legacy runner and its dependency `py-lib-genlayer-std:11rhn002yfajawsz7fai6mykznbxkxs6l91iskj5cm82c92qhy3v`. COMMIT and its probes now use the documented `1jb45...` header and pass the local legacy-runtime suite.
-- The locally installed modern SDK remains useful for tooling and linter checks, but it is not evidence that the v0.6 runner is available on Bradbury. The production source header, package imports, message API, and consensus primitive must remain aligned with the target runner actually accepted by Bradbury.
-- Local legacy-runtime tests require the explicit adapter in `tests/runtime/conftest.py` because the installed `gltest-direct` package targets the newer package layout. This adapter is test infrastructure only; it is not part of the deployed contract.
-- A corrected legacy-runner canary was accepted by Bradbury with `AGREE / FINISHED_WITH_RETURN`; its live source hash matched the local probe and its view state was readable. This verifies the documented source path for that probe, not the full COMMIT contract or fund-bearing behavior.
+- The same verified manager archive contains the legacy runner and its dependency `py-lib-genlayer-std:11rhn002yfajawsz7fai6mykznbxkxs6l91iskj5cm82c92qhy3v`, but that is a separate Bradbury compatibility path. It is not the current Studio Dev source.
+- Direct-runtime tests load the v0.6 package, storage, calldata, message, and consensus APIs directly. No legacy adapter is used.
+- The accepted legacy Bradbury canary remains useful historical evidence for that probe only. It does not verify the current COMMIT source or establish Studio Dev deployment.
 
 Release source: https://github.com/genlayerlabs/genvm-manager/releases/tag/v0.6.0-rc4
 

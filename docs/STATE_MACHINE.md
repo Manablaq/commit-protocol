@@ -1,37 +1,48 @@
 # State Machine and Privileges
 
-Status: implemented and directly tested; live finality delivery and external transfer behavior still require network proof.
+Status: implemented and directly tested locally; Studio Dev consensus, live
+finality delivery, fee behavior, and external transfer behavior remain open.
 
-Contract state and transaction consensus status are separate. An accepted transaction may expose provisional state. A stored word such as COMMITTED is never standalone proof of finality.
+Contract state and transaction consensus status are separate. An accepted
+transaction may expose provisional state. A stored word such as COMMITTED is
+not standalone proof of finality.
 
 | From | Action / caller | Guards | Result |
 | --- | --- | --- | --- |
-| Absent | create / principal | Unique nonce; valid immutable authority/time policies | PREPARING |
-| PREPARING | fund / principal | Payable positive value; preparation deadline; budget cap | PREPARING with increased native-GEN escrow |
-| PREPARING | propose / scoped agent or principal | Authorized role; valid graph; before preparation deadline | New revision; affected approvals invalidated |
-| PREPARING | prepare / supplier | Exact effect digest, revision, reservation terms | Supplier receipt |
-| PREPARING | seal / principal | Funded; every effect approved; acyclic graph; complete policy/evidence references | SEALED immutable snapshot |
-| PREPARING | cancel / principal | No sealed obligations | Abort allocation |
-| SEALED | evaluate / anyone | Eligible time; exact snapshot | Decision candidate or REPAIR_REQUIRED |
-| REPAIR_REQUIRED | repair / principal plus affected suppliers | New revision; fresh authorization; original absolute recovery deadline retained | PREPARING |
-| SEALED | valid evaluation completes | Independent semantic result; exact snapshot; recovery deadline not passed | DECISION_PENDING; emit zero-value finalization message |
-| DECISION_PENDING | apply decision / authenticated coordinator self-message | Exact current decision identity; finalized-parent delivery; allocation not already applied | COMMITTED or ABORTED allocation |
-| Unallocated states | recover / anyone | Recovery deadline reached; no terminal allocation; invalidate pending decision nonce | ABORTED allocation and refund entitlement |
-| Allocated | claim / beneficiary | Available mission entitlement; fresh withdrawal ID | Withdrawal record DISPATCHED and finalized external GEN transfer requested |
-| DISPATCHED | reconcile / verified network mechanism | Proven delivery or proven non-payment/restoration | DELIVERED or entitlement restored |
+| Absent | `create_mission` / principal | Unique mission ID; supported policy digest; valid immutable terms and deadlines | `PREPARING` |
+| PREPARING | `fund_mission` / principal | Payable positive value; preparation deadline; budget cap | Increased native-GEN escrow |
+| PREPARING | `authorize_supplier` / principal | Exact nonzero supplier; before preparation deadline | Supplier may prepare effects |
+| PREPARING | `revoke_supplier` / principal | No prepared effect owned by that supplier | Supplier authorization disabled |
+| PREPARING | `prepare_effect` / principal or authorized supplier | Exact digest; positive bounded value; valid beneficiary/expiry | Root effect |
+| PREPARING | `prepare_effect_with_dependency` / principal or authorized supplier | Same checks plus existing earlier dependency | Child effect in bounded single-parent graph |
+| PREPARING | `register_evidence` / principal | Active registered authority; exact HTTPS origin/path; mission subject; expiry through recovery boundary | Evidence manifest entry |
+| PREPARING | `seal_mission` / principal | Funding, effects, two distinct registered origin/path pairs, matching roots, acyclic graph | Immutable `SEALED` snapshot |
+| PREPARING | `cancel_mission` / principal | No sealed obligations | Abort allocation and refund entitlement |
+| SEALED | `evaluate_mission` / principal | Recovery deadline not reached; exact v2 records independently re-read | `DECISION_PENDING`; zero-value finalized self-message emitted |
+| DECISION_PENDING | `apply_decision` / authenticated coordinator self-message | Exact decision nonce; allocation not already applied | `COMMITTED` or `ABORTED` allocation |
+| PREPARING / SEALED / DECISION_PENDING | `expire_mission` / anyone | Recovery deadline reached; no terminal allocation | `ABORTED` allocation and refund entitlement |
+| Allocated | `claim_mission` / beneficiary | Available beneficiary entitlement; fresh withdrawal ID | `DISPATCHED` withdrawal and finalized external GEN transfer requested |
 
-The apply-decision mechanism uses self-message sender authentication plus `on='finalized'` delivery. The callback itself has its own consensus lifecycle. Only its successful finalized state is presented as durable allocation. External claim dispatch is intentionally one-way until the network exposes an authenticated delivery/non-delivery proof; the contract never offers a blind retry.
+The current supported policy is deliberately explicit:
+`all-evidence-and-effects-v1`. Every evidence record must bind the exact
+mission, objective, policy rule/digest, intent digest, effect root, authority,
+URL, subject, expiry, and a complete boolean claim for every sealed effect.
+COMMIT is returned only when every independently fetched record and every effect
+claim is eligible. The contract does not currently invoke an LLM or interpret
+an arbitrary policy document.
 
-## Races
+The apply-decision mechanism authenticates the self-message sender, binds the
+exact decision nonce, and is idempotent. If deadline recovery wins first, a
+late authenticated callback is harmless even with stale calldata. This race
+still requires a live target-network proof.
 
-- Allocation and recovery serialize through one coordinator. If recovery wins, it invalidates the pending decision, and the delayed callback does nothing. If allocation wins, recovery cannot refund the same escrow.
-- A failed evaluation leaves the prior snapshot recoverable. A timeout is not a semantic ABORT verdict.
-- Repair cannot reopen a successful terminal decision, extend the original recovery deadline, or retain approvals for changed terms.
-- Pending callback recovery must be tested against the network's actual transaction ordering; it is not assumed that later transactions can always overtake unresolved ones.
-- Duplicate callbacks are idempotent and cannot change allocation or create new withdrawals.
+External claim dispatch is intentionally not blindly retried. The entitlement
+is consumed before dispatch to prevent double payment, and remains recorded as
+`DISPATCHED` until an authenticated delivery/non-delivery mechanism exists.
+The current contract does not provide that reconciliation mechanism.
 
-## Privileges
-
-Principal defines intent, delegates bounded preparation, funds, authorizes the final snapshot, and cancels before sealing. Agents can propose within scope but cannot allocate funds or attest to other suppliers. Suppliers authorize only their own precise effects. Anyone may pay to request evaluation or valid recovery; that confers no discretion over outcomes. Beneficiaries claim only their own allocations.
-
-No upgrade/admin escape hatch may rewrite sealed missions or redirect custody. Nested delegation can only narrow the parent scope, budget, recipients, effect types, and deadline. Cycles and reuse of child allocations are rejected.
+No upgrade/admin escape hatch can rewrite a sealed mission or redirect custody.
+The owner can register or deactivate publisher authorities; deactivation blocks
+new evidence and does not rewrite already stored history. Supplier
+authorization is mission-scoped and cannot be revoked after that supplier has
+prepared an effect.
