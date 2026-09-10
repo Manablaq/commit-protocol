@@ -10,6 +10,9 @@ OBJECTIVE = "Procure a verified sensor package"
 REFUND_LABEL = "refund-beneficiary"
 FUTURE_PREPARE = 3_000_000_000
 FUTURE_RECOVERY = 3_000_000_100
+PRINCIPAL = bytes.fromhex("11" * 20)
+AUTHORITY_A = "publisher-a"
+AUTHORITY_B = "publisher-b"
 
 
 def load_contract(vm):
@@ -22,6 +25,8 @@ def create_default(
 ):
     from gltest.direct import create_address
 
+    contract.register_authority(AUTHORITY_A, "publisher-a.example", "/records")
+    contract.register_authority(AUTHORITY_B, "publisher-b.example", "/records")
     contract.create_mission(
         "mission-001",
         OBJECTIVE,
@@ -30,6 +35,20 @@ def create_default(
         create_address(REFUND_LABEL),
         prepare,
         recovery,
+    )
+
+
+def add_default_evidence(contract, probe_vm, *, recovery=FUTURE_RECOVERY):
+    probe_vm.sender = PRINCIPAL
+    contract.register_evidence(
+        "mission-001", "evidence-001", AUTHORITY_A,
+        "https://publisher-a.example/records/mission-001",
+        "12" * 32, "mission-001", recovery,
+    )
+    contract.register_evidence(
+        "mission-001", "evidence-002", AUTHORITY_B,
+        "https://publisher-b.example/records/mission-001",
+        "34" * 32, "mission-001", recovery,
     )
 
 
@@ -42,6 +61,25 @@ def test_protocol_discloses_disabled_custody_and_evaluation(probe_vm):
         "semantic_evaluation_enabled": False,
         "mission_count": 0,
     }
+
+
+def test_authority_registry_is_owner_only_and_immutable(probe_vm):
+    contract = load_contract(probe_vm)
+    contract.register_authority("publisher-a", "publisher-a.example", "/records")
+    assert contract.get_authority("publisher-a") == {
+        "authority_id": "publisher-a",
+        "host": "publisher-a.example",
+        "path_prefix": "/records",
+    }
+    from gltest.direct import create_address
+
+    probe_vm.sender = create_address("outsider")
+    with pytest.raises(Exception, match="owner required"):
+        contract.register_authority("publisher-b", "publisher-b.example", "/records")
+
+    probe_vm.sender = PRINCIPAL
+    with pytest.raises(Exception, match="authority already exists"):
+        contract.register_authority("publisher-a", "changed.example", "/other")
 
 
 def test_create_mission_binds_principal_and_immutable_inputs(probe_vm):
@@ -74,6 +112,7 @@ def test_create_mission_binds_principal_and_immutable_inputs(probe_vm):
     assert mission["budget"] == 10
     assert mission["prepared_value"] == 0
     assert mission["refund_beneficiary"] != "0x" + "00" * 20
+    assert mission["evidence_count"] == 0
     assert contract.protocol_info()["mission_count"] == 1
 
 
@@ -157,14 +196,26 @@ def test_supplier_prepares_effect_and_principal_seals_snapshot(probe_vm):
     from spec_model.onchain import effect_root
     assert contract.derive_effect_root("mission-001") == effect_root([effect])
 
-    probe_vm.sender = bytes.fromhex("11" * 20)
+    add_default_evidence(contract, probe_vm)
+    evidence = contract.get_evidence("mission-001", "evidence-001")
+    assert evidence["authority_id"] == AUTHORITY_A
+    assert evidence["subject"] == "mission-001"
+    from spec_model.provenance import evidence_root
+    assert contract.derive_evidence_root("mission-001") == evidence_root([
+        evidence,
+        contract.get_evidence("mission-001", "evidence-002"),
+    ])
+
+    probe_vm.sender = PRINCIPAL
     effect_root = contract.derive_effect_root("mission-001")
-    contract.seal_mission("mission-001", effect_root, "12" * 32)
+    contract.seal_mission(
+        "mission-001", effect_root, contract.derive_evidence_root("mission-001")
+    )
     mission = contract.get_mission("mission-001")
     assert mission["state"] == "SEALED"
     assert mission["effect_count"] == 1
     assert mission["effect_root"] == effect_root
-    assert mission["evidence_root"] == "12" * 32
+    assert mission["evidence_root"] == contract.derive_evidence_root("mission-001")
 
 
 def test_effect_and_cancel_are_locked_after_seal(probe_vm):
@@ -176,7 +227,11 @@ def test_effect_and_cancel_are_locked_after_seal(probe_vm):
     contract.prepare_effect(
         "mission-001", "effect-001", "cd" * 32, beneficiary, 7, FUTURE_RECOVERY
     )
-    contract.seal_mission("mission-001", contract.derive_effect_root("mission-001"), "12" * 32)
+    add_default_evidence(contract, probe_vm)
+    contract.seal_mission(
+        "mission-001", contract.derive_effect_root("mission-001"),
+        contract.derive_evidence_root("mission-001"),
+    )
     with pytest.raises(Exception, match="mission is not preparing"):
         contract.prepare_effect("mission-001", "effect-002", "34" * 32, beneficiary, 2, 150)
     with pytest.raises(Exception, match="sealed mission"):
@@ -192,12 +247,61 @@ def test_seal_rejects_effect_root_that_does_not_match(probe_vm):
         "mission-001", "effect-001", "cd" * 32, create_address("beneficiary"),
         7, FUTURE_RECOVERY,
     )
+    add_default_evidence(contract, probe_vm)
     with pytest.raises(Exception, match="effect root does not match"):
-        contract.seal_mission("mission-001", "ef" * 32, "12" * 32)
+        contract.seal_mission(
+            "mission-001", "ef" * 32, contract.derive_evidence_root("mission-001")
+        )
     mission = contract.get_mission("mission-001")
     assert mission["state"] == "PREPARING"
     assert mission["effect_root"] == ""
     assert mission["evidence_root"] == ""
+
+
+def test_evidence_url_and_subject_are_bound_before_seal(probe_vm):
+    contract = load_contract(probe_vm)
+    create_default(contract, budget=10)
+
+    invalid = [
+        ("outside", "https://publisher-a.example.evil/records/mission-001", "outside authority"),
+        ("prefix", "https://publisher-a.example/records-other/mission-001", "outside authority"),
+        ("query", "https://publisher-a.example/records/mission-001?x=1", "outside authority"),
+        ("subject", "https://publisher-a.example/records/mission-001", "subject mismatch"),
+    ]
+    for evidence_id, url, error in invalid:
+        with pytest.raises(Exception, match=error):
+            contract.register_evidence(
+                "mission-001", evidence_id, AUTHORITY_A, url,
+                "12" * 32, "other-mission" if evidence_id == "subject" else "mission-001",
+                FUTURE_RECOVERY,
+            )
+    assert contract.get_mission("mission-001")["evidence_count"] == 0
+
+
+def test_seal_requires_distinct_registered_evidence_authorities(probe_vm):
+    contract = load_contract(probe_vm)
+    create_default(contract, budget=10)
+    from gltest.direct import create_address
+
+    contract.prepare_effect(
+        "mission-001", "effect-001", "cd" * 32, create_address("beneficiary"),
+        7, FUTURE_RECOVERY,
+    )
+    contract.register_evidence(
+        "mission-001", "evidence-001", AUTHORITY_A,
+        "https://publisher-a.example/records/mission-001/a", "12" * 32,
+        "mission-001", FUTURE_RECOVERY,
+    )
+    contract.register_evidence(
+        "mission-001", "evidence-002", AUTHORITY_A,
+        "https://publisher-a.example/records/mission-001/b", "34" * 32,
+        "mission-001", FUTURE_RECOVERY,
+    )
+    with pytest.raises(Exception, match="authorities must be distinct"):
+        contract.seal_mission(
+            "mission-001", contract.derive_effect_root("mission-001"),
+            contract.derive_evidence_root("mission-001"),
+        )
 
 
 def test_effect_root_binds_all_effects_in_preparation_order(probe_vm):
@@ -216,7 +320,10 @@ def test_effect_root_binds_all_effects_in_preparation_order(probe_vm):
     )
     second_root = contract.derive_effect_root("mission-001")
     assert first_root != second_root
-    contract.seal_mission("mission-001", second_root, "12" * 32)
+    add_default_evidence(contract, probe_vm)
+    contract.seal_mission(
+        "mission-001", second_root, contract.derive_evidence_root("mission-001")
+    )
     assert contract.get_mission("mission-001")["effect_count"] == 2
 
 
@@ -345,7 +452,11 @@ def test_expiry_can_abort_a_sealed_mission(probe_vm):
     contract.prepare_effect(
         "mission-001", "effect-001", "cd" * 32, create_address("beneficiary"), 7, 200
     )
-    contract.seal_mission("mission-001", contract.derive_effect_root("mission-001"), "12" * 32)
+    add_default_evidence(contract, probe_vm, recovery=200)
+    contract.seal_mission(
+        "mission-001", contract.derive_effect_root("mission-001"),
+        contract.derive_evidence_root("mission-001"),
+    )
     probe_vm.warp("1970-01-01T00:03:20Z")
     contract.expire_mission("mission-001")
     assert contract.get_mission("mission-001")["state"] == "ABORTED"

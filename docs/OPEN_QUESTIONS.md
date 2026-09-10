@@ -12,7 +12,7 @@ Updated 2026-09-10. This ledger distinguishes completed investigation from remai
 | FIN-01 | Does a zero-value finalized self-message authenticate and recover safely? | Pinned v0.6 direct-runtime probe confirms emitted stage/value/calldata plus self-sender, identifier, and replay guards; it does not execute network finality | Execute live callback plus failure and recovery-race cases; inspect final receipts and state |
 | PAY-01 | Can failed external payment be proven and retried without loss or duplication? | Docs describe delayed messages; no tested external failure recovery | Inspect deployed ghost/consensus behavior; verify failure and retry |
 | TIME-01 | Can reservations remain binding through variable finality? | Contract expiry uses the documented transaction-pinned standard-library clock and passes warped direct-runtime tests; reservation holdability through live finality remains unverified | Verify timestamp behavior and supplier reservation enforcement on the target network; test expiry against unresolved finality |
-| EVID-01 | Can fetch enforce redirect and publisher path constraints? | Inspected API exposes status, headers and body, not final URL; URL-only provenance unproven | Verify issuer-signature alternative in packaged runtime, or prove redirect behavior |
+| EVID-01 | Can fetch enforce redirect and publisher path constraints? | Structural authority/path checks, mission-bound evidence, and distinct-authority sealing pass local runtime tests; inspected fetch API exposes status, headers and body, not final URL | Verify issuer-signature alternative in packaged runtime, or prove redirect behavior on the target network |
 
 ## Work permitted while gates remain open
 

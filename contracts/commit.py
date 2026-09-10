@@ -18,6 +18,8 @@ STATE_PREPARING = "PREPARING"
 STATE_SEALED = "SEALED"
 STATE_ABORTED = "ABORTED"
 MAX_TEXT = 512
+MAX_EFFECTS = 32
+MAX_EVIDENCE = 16
 
 
 class CommitProtocol(gl.contract.Contract):
@@ -34,6 +36,7 @@ class CommitProtocol(gl.contract.Contract):
     mission_budget: gl.storage.TreeMap[str, gl.u256]
     mission_prepared_value: gl.storage.TreeMap[str, gl.u256]
     mission_refund_beneficiary: gl.storage.TreeMap[str, gl.Address]
+    mission_evidence_count: gl.storage.TreeMap[str, gl.u256]
     mission_prepare_deadline: gl.storage.TreeMap[str, gl.u256]
     mission_recovery_deadline: gl.storage.TreeMap[str, gl.u256]
     mission_version: gl.storage.TreeMap[str, gl.u256]
@@ -47,6 +50,18 @@ class CommitProtocol(gl.contract.Contract):
     effect_value: gl.storage.TreeMap[str, gl.u256]
     effect_expiry: gl.storage.TreeMap[str, gl.u256]
     mission_effect_key: gl.storage.TreeMap[str, str]
+    authority_exists: gl.storage.TreeMap[str, bool]
+    authority_host: gl.storage.TreeMap[str, str]
+    authority_path_prefix: gl.storage.TreeMap[str, str]
+    evidence_exists: gl.storage.TreeMap[str, bool]
+    evidence_mission: gl.storage.TreeMap[str, str]
+    evidence_id: gl.storage.TreeMap[str, str]
+    evidence_authority: gl.storage.TreeMap[str, str]
+    evidence_url: gl.storage.TreeMap[str, str]
+    evidence_record_hash: gl.storage.TreeMap[str, str]
+    evidence_subject: gl.storage.TreeMap[str, str]
+    evidence_expires_at: gl.storage.TreeMap[str, gl.u256]
+    mission_evidence_key: gl.storage.TreeMap[str, str]
 
     def __init__(self):
         self.owner = gl.message.sender_address
@@ -71,6 +86,53 @@ class CommitProtocol(gl.contract.Contract):
         self._require_ascii_text(value, "mission id")
         if ":" in value:
             raise gl.vm.UserError("invalid mission id")
+
+    def _require_identifier(self, value: str, label: str, limit: int) -> None:
+        self._require_ascii_text(value, label, limit)
+        for char in value:
+            if char not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_":
+                raise gl.vm.UserError(f"invalid {label}")
+
+    def _require_authority_host(self, value: str) -> None:
+        self._require_ascii_text(value, "authority host", 253)
+        if value != value.lower() or any(char in value for char in "/?:#@%\\"):
+            raise gl.vm.UserError("invalid authority host")
+        if value.startswith(".") or value.endswith(".") or ".." in value:
+            raise gl.vm.UserError("invalid authority host")
+
+    def _require_path_prefix(self, value: str) -> None:
+        self._require_ascii_text(value, "authority path prefix", MAX_TEXT)
+        if not value.startswith("/") or "//" in value or any(
+            marker in value for marker in ("?", "#", "%", "\\")
+        ):
+            raise gl.vm.UserError("invalid authority path prefix")
+        if any(segment in (".", "..") for segment in value.split("/")):
+            raise gl.vm.UserError("invalid authority path prefix")
+
+    def _url_matches_authority(self, url: str, host: str, path_prefix: str) -> bool:
+        try:
+            self._require_ascii_text(url, "evidence url", 2048)
+        except Exception:
+            return False
+        origin = "https://" + host
+        if not url.startswith(origin):
+            return False
+        remainder = url[len(origin):]
+        if not remainder.startswith("/") or any(
+            marker in remainder for marker in ("?", "#", "%", "\\")
+        ):
+            return False
+        segments = remainder.split("/")
+        if any(segment in ("", ".", "..") for segment in segments[1:]):
+            return False
+        if remainder == path_prefix:
+            return True
+        boundary = path_prefix if path_prefix.endswith("/") else path_prefix + "/"
+        return remainder.startswith(boundary)
+
+    def _require_authority(self, authority_id: str) -> None:
+        if not self.authority_exists.get(authority_id, False):
+            raise gl.vm.UserError("authority not found")
 
     def _require_nonzero_address(self, value: gl.Address, label: str) -> None:
         if value.as_hex == "0x" + "00" * 20:
@@ -98,6 +160,67 @@ class CommitProtocol(gl.contract.Contract):
         )
         payload = "commit-intent-v1" + "".join(self._frame(field) for field in fields)
         return Keccak256(payload.encode("utf-8")).hexdigest()
+
+    @gl.public.write
+    def register_authority(self, authority_id: str, host: str, path_prefix: str) -> None:
+        if gl.message.sender_address != self.owner:
+            raise gl.vm.UserError("owner required")
+        self._require_identifier(authority_id, "authority id", 64)
+        if self.authority_exists.get(authority_id, False):
+            raise gl.vm.UserError("authority already exists")
+        self._require_authority_host(host)
+        self._require_path_prefix(path_prefix)
+        self.authority_exists[authority_id] = True
+        self.authority_host[authority_id] = host
+        self.authority_path_prefix[authority_id] = path_prefix
+
+    @gl.public.write
+    def register_evidence(
+        self,
+        mission_id: str,
+        evidence_id: str,
+        authority_id: str,
+        url: str,
+        record_hash: str,
+        subject: str,
+        expires_at: int,
+    ) -> None:
+        self._require_principal(mission_id)
+        if self.mission_state[mission_id] != STATE_PREPARING:
+            raise gl.vm.UserError("mission is not preparing")
+        if int(datetime.now(timezone.utc).timestamp()) > int(self.mission_prepare_deadline[mission_id]):
+            raise gl.vm.UserError("preparation deadline has passed")
+        self._require_identifier(evidence_id, "evidence id", MAX_TEXT)
+        evidence_key = mission_id + ":" + evidence_id
+        if self.evidence_exists.get(evidence_key, False):
+            raise gl.vm.UserError("evidence already exists")
+        evidence_index = int(self.mission_evidence_count[mission_id])
+        if evidence_index >= MAX_EVIDENCE:
+            raise gl.vm.UserError("evidence limit exceeded")
+        self._require_authority(authority_id)
+        if not self._url_matches_authority(
+            url,
+            self.authority_host[authority_id],
+            self.authority_path_prefix[authority_id],
+        ):
+            raise gl.vm.UserError("evidence URL is outside authority")
+        self._require_digest(record_hash, "record hash")
+        self._require_ascii_text(subject, "evidence subject")
+        if subject != mission_id:
+            raise gl.vm.UserError("evidence subject mismatch")
+        if expires_at < int(self.mission_recovery_deadline[mission_id]):
+            raise gl.vm.UserError("invalid evidence expiry")
+
+        self.evidence_exists[evidence_key] = True
+        self.evidence_mission[evidence_key] = mission_id
+        self.evidence_id[evidence_key] = evidence_id
+        self.evidence_authority[evidence_key] = authority_id
+        self.evidence_url[evidence_key] = url
+        self.evidence_record_hash[evidence_key] = record_hash
+        self.evidence_subject[evidence_key] = subject
+        self.evidence_expires_at[evidence_key] = gl.u256(expires_at)
+        self.mission_evidence_key[mission_id + ":" + str(evidence_index)] = evidence_key
+        self.mission_evidence_count[mission_id] = gl.u256(evidence_index + 1)
 
     @gl.public.write
     def create_mission(
@@ -140,6 +263,7 @@ class CommitProtocol(gl.contract.Contract):
         self.mission_budget[mission_id] = gl.u256(budget)
         self.mission_prepared_value[mission_id] = gl.u256(0)
         self.mission_refund_beneficiary[mission_id] = refund_beneficiary
+        self.mission_evidence_count[mission_id] = gl.u256(0)
         self.mission_prepare_deadline[mission_id] = gl.u256(prepare_deadline)
         self.mission_recovery_deadline[mission_id] = gl.u256(recovery_deadline)
         self.mission_version[mission_id] = gl.u256(1)
@@ -168,6 +292,9 @@ class CommitProtocol(gl.contract.Contract):
         effect_key = mission_id + ":" + effect_id
         if self.effect_exists.get(effect_key, False):
             raise gl.vm.UserError("effect already exists")
+        effect_index = int(self.mission_effect_count[mission_id])
+        if effect_index >= MAX_EFFECTS:
+            raise gl.vm.UserError("effect limit exceeded")
         self._require_digest(effect_digest, "effect digest")
         if value <= 0:
             raise gl.vm.UserError("effect value must be positive")
@@ -188,7 +315,6 @@ class CommitProtocol(gl.contract.Contract):
         self.mission_prepared_value[mission_id] = gl.u256(
             int(self.mission_prepared_value[mission_id]) + value
         )
-        effect_index = int(self.mission_effect_count[mission_id])
         self.mission_effect_key[mission_id + ":" + str(effect_index)] = effect_key
         self.mission_effect_count[mission_id] = gl.u256(effect_index + 1)
 
@@ -201,10 +327,16 @@ class CommitProtocol(gl.contract.Contract):
             raise gl.vm.UserError("preparation deadline has passed")
         if self.mission_effect_count[mission_id] <= 0:
             raise gl.vm.UserError("mission has no prepared effects")
+        if self.mission_evidence_count[mission_id] < 2:
+            raise gl.vm.UserError("mission needs two evidence records")
+        if not self._has_distinct_evidence_authorities(mission_id):
+            raise gl.vm.UserError("evidence authorities must be distinct")
         self._require_digest(effect_root, "effect root")
         self._require_digest(evidence_root, "evidence root")
         if effect_root != self.derive_effect_root(mission_id):
             raise gl.vm.UserError("effect root does not match prepared effects")
+        if evidence_root != self.derive_evidence_root(mission_id):
+            raise gl.vm.UserError("evidence root does not match registered evidence")
         self.mission_effect_root[mission_id] = effect_root
         self.mission_evidence_root[mission_id] = evidence_root
         self.mission_state[mission_id] = STATE_SEALED
@@ -257,6 +389,17 @@ class CommitProtocol(gl.contract.Contract):
         if gl.message.sender_address != self.mission_principal[mission_id]:
             raise gl.vm.UserError("principal required")
 
+    def _has_distinct_evidence_authorities(self, mission_id: str) -> bool:
+        first = self.evidence_authority[
+            self.mission_evidence_key[mission_id + ":0"]
+        ]
+        count = int(self.mission_evidence_count[mission_id])
+        for index in range(1, count):
+            key = self.mission_evidence_key[mission_id + ":" + str(index)]
+            if self.evidence_authority[key] != first:
+                return True
+        return False
+
     def _frame(self, value: str) -> str:
         return str(len(value)) + ":" + value
 
@@ -272,6 +415,20 @@ class CommitProtocol(gl.contract.Contract):
         payload = "commit-effect-leaf-v1" + "".join(self._frame(field) for field in fields)
         return Keccak256(payload.encode("utf-8")).hexdigest()
 
+    def _evidence_leaf(self, evidence_key: str) -> str:
+        fields = (
+            self.evidence_id[evidence_key],
+            self.evidence_authority[evidence_key],
+            self.evidence_url[evidence_key],
+            self.evidence_record_hash[evidence_key],
+            self.evidence_subject[evidence_key],
+            str(int(self.evidence_expires_at[evidence_key])),
+        )
+        payload = "commit-evidence-leaf-v1" + "".join(
+            self._frame(field) for field in fields
+        )
+        return Keccak256(payload.encode("utf-8")).hexdigest()
+
     @gl.public.view
     def derive_effect_root(self, mission_id: str) -> str:
         if not self.mission_exists.get(mission_id, False):
@@ -281,6 +438,17 @@ class CommitProtocol(gl.contract.Contract):
         for index in range(count):
             effect_key = self.mission_effect_key[mission_id + ":" + str(index)]
             payload += self._frame(self._effect_leaf(effect_key))
+        return Keccak256(payload.encode("utf-8")).hexdigest()
+
+    @gl.public.view
+    def derive_evidence_root(self, mission_id: str) -> str:
+        if not self.mission_exists.get(mission_id, False):
+            raise gl.vm.UserError("mission not found")
+        count = int(self.mission_evidence_count[mission_id])
+        payload = "commit-evidence-root-v1" + self._frame(str(count))
+        for index in range(count):
+            evidence_key = self.mission_evidence_key[mission_id + ":" + str(index)]
+            payload += self._frame(self._evidence_leaf(evidence_key))
         return Keccak256(payload.encode("utf-8")).hexdigest()
 
     @gl.public.view
@@ -301,6 +469,7 @@ class CommitProtocol(gl.contract.Contract):
             "prepared_value": int(self.mission_prepared_value[mission_id]),
             "refund_beneficiary": self.mission_refund_beneficiary[mission_id].as_hex,
             "effect_count": int(self.mission_effect_count[mission_id]),
+            "evidence_count": int(self.mission_evidence_count[mission_id]),
             "prepare_deadline": int(self.mission_prepare_deadline[mission_id]),
             "recovery_deadline": int(self.mission_recovery_deadline[mission_id]),
         }
@@ -320,4 +489,30 @@ class CommitProtocol(gl.contract.Contract):
             "beneficiary": self.effect_beneficiary[effect_key].as_hex,
             "value": int(self.effect_value[effect_key]),
             "expiry": int(self.effect_expiry[effect_key]),
+        }
+
+    @gl.public.view
+    def get_authority(self, authority_id: str) -> dict:
+        self._require_authority(authority_id)
+        return {
+            "authority_id": authority_id,
+            "host": self.authority_host[authority_id],
+            "path_prefix": self.authority_path_prefix[authority_id],
+        }
+
+    @gl.public.view
+    def get_evidence(self, mission_id: str, evidence_id: str) -> dict:
+        evidence_key = mission_id + ":" + evidence_id
+        if not self.evidence_exists.get(evidence_key, False):
+            raise gl.vm.UserError("evidence not found")
+        if self.evidence_mission[evidence_key] != mission_id:
+            raise gl.vm.UserError("evidence mission mismatch")
+        return {
+            "mission_id": mission_id,
+            "evidence_id": evidence_id,
+            "authority_id": self.evidence_authority[evidence_key],
+            "url": self.evidence_url[evidence_key],
+            "record_hash": self.evidence_record_hash[evidence_key],
+            "subject": self.evidence_subject[evidence_key],
+            "expires_at": int(self.evidence_expires_at[evidence_key]),
         }

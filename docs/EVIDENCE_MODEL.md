@@ -1,12 +1,14 @@
 # Evidence and Consensus Model
 
-Status: design specification. All enforcement and negative tests remain to be implemented.
+Status: structural authority/path enforcement is implemented and covered by local tests; live redirect provenance, issuer authentication, and consensus integration remain open.
 
 ## Authority
 
 The principal authorizes an immutable publisher policy when sealing. A publisher record binds authority ID, HTTPS origin, allowed path segments, subject scope, and policy version. Authority ownership must be established separately; registration is not proof that a publisher is honest or independent.
 
-URLs are parsed structurally. Exact scheme, normalized host, effective port, and path-segment boundaries are checked. Userinfo, fragments, ambiguous encoded separators, dot traversal, conflicting normalization, and unsupported schemes are rejected. Shared hosting requires account/repository path scope; matching `githubusercontent.com` alone is insufficient. Redirects require enforcement on every hop and final destination. If the GenLayer fetch API cannot establish this, that source pattern is disallowed until a signature-based alternative is verified.
+The current registry validates each evidence URL structurally against an owner-registered HTTPS host and path prefix. Exact lowercase host, implicit HTTPS origin, and path-segment boundaries are checked. Userinfo, ports, queries, fragments, encoded separators, dot traversal, empty path segments, conflicting normalization, and unsupported schemes are rejected. The evidence subject must equal the mission ID, expiry must reach the recovery boundary, and sealing requires records from two distinct registered authority IDs. The derived evidence root binds authority ID, URL, record hash, subject, and expiry. Registration is a policy root, not proof that an authority is honest or independently controlled.
+
+Shared hosting requires account/repository path scope; matching `githubusercontent.com` alone is insufficient. Redirects require enforcement on every hop and final destination. The current GenLayer fetch API evidence does not establish a final URL in this local proof, and no signature verifier has been added. Therefore the contract must not claim redirect-safe provenance or issuer cryptographic authentication until a target-runtime canary closes one of those gates.
 
 A signature alternative must verify the precise canonical record with the registered public key, including key version, subject, mission/effect binding, nonce, and expiry. A nonempty signature string or self-generated digest is not authentication.
 
