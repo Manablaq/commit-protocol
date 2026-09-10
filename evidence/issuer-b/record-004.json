@@ -1,0 +1,21 @@
+{
+  "schema": "commit-evidence-v2",
+  "evidence_id": "evidence-b-004",
+  "authority_id": "studio-issuer-b",
+  "url": "https://raw.githubusercontent.com/Manablaq/commit-protocol/main/evidence/issuer-b/record-004.json",
+  "subject": "live-mission-004",
+  "expires_at": 1789242210,
+  "mission_id": "live-mission-004",
+  "objective": "Autonomous procurement package with verified semantic atomicity",
+  "policy_digest": "983307fac383ac4a92be6c0c361ea8f3c9d9efa20ad5e6e8bc8dee932f2a6103",
+  "policy_rule": "all-evidence-and-effects-v1",
+  "intent_digest": "57cad0dbeae27b12179e8f2fd4b38d78e5f15f22205e51704b5e0c44b94d1d97",
+  "effect_root": "b8ebfa5c0f2d1c87f401b3c2b6b5c9ee66ac6790d67f20cd72e3769e05a2c585",
+  "payload": {
+    "eligible": true,
+    "reason_code": "studio_dev_mission_004_issuer_b_accepts",
+    "effect_claims": {
+      "effect-procurement": true
+    }
+  }
+}
