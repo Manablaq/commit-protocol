@@ -1,6 +1,6 @@
 # Verified Environment Baseline
 
-Status: **Local hardening closed; Studio Dev deployment and full COMMIT live proof remain open**
+Status: **Local hardening closed; Studio Dev deployment and custody setup proven; full lifecycle proof remains open**
 Verified: 2026-09-10
 
 ## Protocol family
@@ -38,10 +38,10 @@ The current official network table distinguishes the production-like Bradbury te
 - This environment is temporary and may reset; it is not Bradbury.
 
 COMMIT must not reuse preview addresses, fee assumptions, or runtime conclusions
-across networks. The current target is Studio Dev: first install the matching
-v0.6 RC stack, run a minimal canary, deploy the hardened source, and verify
-every receipt. Bradbury is a separate persistent follow-up target and must not
-be used to infer Studio Dev compatibility.
+across networks. The current target is Studio Dev. A matching v0.6 canary and
+the full COMMIT source are deployed and source-matched there. Bradbury is a
+separate persistent follow-up target and must not be used to infer Studio Dev
+compatibility.
 
 ## Unresolved before dependency lock
 
@@ -49,7 +49,12 @@ be used to infer Studio Dev compatibility.
 - GenVM runtime dependency hash and runner accepted by Studio Dev
 - Whether Agent Tank judging requires a specific network rather than a reproducible preview deployment
 
-Unresolved production choices block custody implementation. The isolated probe harness pins the verified Python packages in `pyproject.toml` and all resolved dependencies in `uv.lock`; this does not establish compatibility with the live network. The probe runtime header is taken from a checksum-verified release archive.
+The isolated probe harness pins the verified Python packages in `pyproject.toml`
+and all resolved dependencies in `uv.lock`; this does not by itself establish
+compatibility with the live network. Studio Dev has now proven a bounded
+fund-bearing setup path, but not the complete evaluation, finality, or
+withdrawal lifecycle. The probe runtime header is taken from a
+checksum-verified release archive.
 
 ## Transaction Kit investigation
 

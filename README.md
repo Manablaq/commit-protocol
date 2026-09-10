@@ -18,7 +18,7 @@ External effects must be represented as reversible reservations, idempotent adap
 
 ## Current status
 
-The product thesis, protocol specification, accounting model, state machine, evidence model, and adversarial review are drafted. The contract now requires explicit supplier authorization, rejects duplicate authority labels for the same registered origin/path, validates canonical DNS-style hosts and path prefixes, rejects boolean/out-of-range uint inputs, uses a bounded single-parent effect graph with seal-time cycle checks, accepts only the explicit `all-evidence-and-effects-v1` policy, binds every fetched record to the mission/objective/policy/intent/effect snapshot, rejects missing or malformed bodies, rejects ambiguous/non-standard JSON, and limits remote evidence bodies to 16 KiB. The Studio Dev-targeted source and probes use the verified v0.6 package layout and pass GenVM lint plus 98 direct-runtime tests against the extracted v0.6 RC runner. The historical Bradbury canary proved that this v0.6 runner is unavailable on Bradbury; its separate legacy probe is not evidence for the current source. Studio Dev deployment, full COMMIT on-chain execution, native-GEN fee profiling, external-transfer failure recovery, and final redirect/issuer authentication remain unproven.
+The product thesis, protocol specification, accounting model, state machine, evidence model, and adversarial review are drafted. The contract now requires explicit supplier authorization, rejects duplicate authority labels for the same registered origin/path, validates canonical DNS-style hosts and path prefixes, rejects boolean/out-of-range uint inputs, uses a bounded single-parent effect graph with seal-time cycle checks, accepts only the explicit `all-evidence-and-effects-v1` policy, binds every fetched record to the mission/objective/policy/intent/effect snapshot, rejects missing or malformed bodies, rejects ambiguous/non-standard JSON, and limits remote evidence bodies to 16 KiB. The Studio Dev-targeted source and probes use the verified v0.6 package layout and pass GenVM lint plus the direct-runtime suite. The exact source is deployed and source-matched on Studio Dev; live authority registration, mission creation, payable native-GEN funding, and effect preparation have also executed successfully. Evidence registration/fetch, semantic evaluation, finalized callback allocation, claim dispatch, and external-transfer recovery remain live gates. The historical Bradbury canary proved that this v0.6 runner is unavailable on Bradbury; its separate legacy probe is not evidence for the current source.
 
 See [PRODUCT_THESIS.md](./docs/PRODUCT_THESIS.md), [ENVIRONMENT.md](./docs/ENVIRONMENT.md), and [VERIFICATION_POLICY.md](./docs/VERIFICATION_POLICY.md).
 
@@ -40,8 +40,8 @@ Reproduce the current local checks with the exact commands and runtime digest in
 3. Intelligent Contract implementation
 4. Deterministic tests and adversarial tests
 5. GenLayer consensus tests and fee profiling
-6. Studio Dev deployment and full receipt verification with the matching v0.6 RC stack
-7. Native-GEN custody, finality-gated allocation, and claim dispatch on Studio Dev
+6. Studio Dev deployment and source/receipt verification with the matching v0.6 RC stack — complete for canary and full source
+7. Native-GEN custody, finality-gated allocation, and claim dispatch on Studio Dev — setup is live; allocation and claims remain to be proven
 8. Backend/indexer integration
 9. Frontend only after the backend gate passes
 10. Bradbury compatibility check and persistent production-like validation

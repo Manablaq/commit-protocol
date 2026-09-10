@@ -1,0 +1,21 @@
+{
+  "schema": "commit-evidence-v2",
+  "evidence_id": "evidence-b",
+  "authority_id": "studio-issuer-b",
+  "url": "https://raw.githubusercontent.com/Manablaq/commit-protocol/main/evidence/issuer-b/record.json",
+  "subject": "live-mission-001",
+  "expires_at": 1789058773,
+  "mission_id": "live-mission-001",
+  "objective": "Studio Dev live mission",
+  "policy_digest": "983307fac383ac4a92be6c0c361ea8f3c9d9efa20ad5e6e8bc8dee932f2a6103",
+  "policy_rule": "all-evidence-and-effects-v1",
+  "intent_digest": "374d4e0cb7bbe8878f9ddbcf7ccdd4a21e17035d33bb688f9d87b9712b0a87c9",
+  "effect_root": "e1b6972122f1becccb9041a45f2bcb8bb7eec2720ac22fd2e7c3cc8d7a38be4e",
+  "payload": {
+    "eligible": true,
+    "reason_code": "studio_dev_issuer_b_accepts",
+    "effect_claims": {
+      "effect-a": true
+    }
+  }
+}
