@@ -1,0 +1,21 @@
+{
+  "schema": "commit-evidence-v2",
+  "evidence_id": "evidence-a-002",
+  "authority_id": "studio-issuer-a",
+  "url": "https://raw.githubusercontent.com/Manablaq/commit-protocol/main/evidence/issuer-a/record-002.json",
+  "subject": "live-mission-002",
+  "expires_at": 1789063176,
+  "mission_id": "live-mission-002",
+  "objective": "Studio Dev bounded lifecycle",
+  "policy_digest": "983307fac383ac4a92be6c0c361ea8f3c9d9efa20ad5e6e8bc8dee932f2a6103",
+  "policy_rule": "all-evidence-and-effects-v1",
+  "intent_digest": "478a1014f5abe5daca0cf2fcc334fa3be55e229e70e4df8dc5e29a4a9b71e4dd",
+  "effect_root": "7758e89105f15f90b9e6a2debb4bb73d71ce6ed8c6c53529ca87bfd7b36897c3",
+  "payload": {
+    "eligible": true,
+    "reason_code": "studio_dev_mission_002_issuer_a_accepts",
+    "effect_claims": {
+      "effect-b": true
+    }
+  }
+}
