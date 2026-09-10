@@ -1,8 +1,9 @@
 # Threat Model and Verification Status
 
-Status: hardened source and direct-runtime tests pass locally. Network-
-dependent controls remain unverified and are not presented as production
-guarantees.
+Status: hardened source and direct-runtime tests pass locally. Mission-004
+proves the Studio Dev evaluation, finality-gated allocation, and finalized
+one-way dispatch path; external delivery/recovery and some provenance controls
+remain unverified and are not presented as production guarantees.
 
 | Threat | Current control | Remaining limitation / proof |
 | --- | --- | --- |
@@ -14,9 +15,9 @@ guarantees.
 | Authority failure | Owner can deactivate an authority for new evidence; sealing rejects duplicate origin/path labels | Origin/path equality still does not prove independent organizations; deactivation can strand a sealed mission until recovery |
 | Prompt injection | Evidence is parsed as fixed data; only the configured web reads are used | No LLM reasoning is currently used; arbitrary natural-language policy is not supported |
 | Leader manipulation | Validator re-reads evidence and compares the bound decision envelope | Live validator consensus proof is still required |
-| Replay / double allocation | Exact nonce, self-sender check, terminal allocation flag, harmless late callback | Live finality and cross-network ordering are unverified |
+| Replay / double allocation | Exact nonce, self-sender check, terminal allocation flag, harmless late callback | Mission-004 proves one live finalized callback and claim consumption; live deadline-race ordering remains unverified |
 | Trapped mission funds | Permissionless recovery after the recovery deadline | Recovery still requires network liveness, a funded caller, and a successful transaction |
-| Failed external payment | Entitlement is consumed before dispatch to prevent double payment | No authenticated delivery/non-delivery proof or retry exists; `DISPATCHED` value can remain unresolved |
+| Failed external payment | Entitlement is consumed before dispatch to prevent double payment; mission-004 finalized the exact external message | No authenticated delivery/non-delivery proof or retry exists; dispatched value can remain unresolved |
 | Fee exhaustion | Mission budget and funding are bounded independently from effect amounts | Target-network fee profile and separate fee reserve are not implemented |
 | Oversized remote input | 16 KiB body cap and 128-character reason cap | Full target-network resource/fee measurements are still required |
 
@@ -29,11 +30,9 @@ remain a separate payment-progress state.
 
 ## Release blockers
 
-1. Deploy the exact source to Studio Dev using its matching v0.6 RC toolchain.
-2. Prove `FINISHED_WITH_RETURN` for creation, funding, evaluation, finalized
-   callback allocation, claims, and recovery.
-3. Profile and record fees for every write and child-message branch.
-4. Close redirect provenance with a verified final-URL capability or implement
+1. Profile and record fees for every remaining write and child-message branch.
+2. Close redirect provenance with a verified final-URL capability or implement
    and test issuer-key signatures.
-5. Add an authenticated external-transfer reconciliation mechanism before
+3. Add an authenticated external-transfer reconciliation mechanism before
    treating native-GEN custody as production-ready.
+4. Execute live deadline-recovery and stale-callback race tests.

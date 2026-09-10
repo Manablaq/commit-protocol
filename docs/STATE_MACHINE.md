@@ -1,7 +1,9 @@
 # State Machine and Privileges
 
-Status: implemented and directly tested locally; Studio Dev consensus, live
-finality delivery, fee behavior, and external transfer behavior remain open.
+Status: implemented and directly tested locally; Studio Dev semantic consensus,
+finalized callback allocation, and finalized claim dispatch are proven by
+mission-004. External delivery reconciliation, recovery, and live deadline
+races remain open.
 
 Contract state and transaction consensus status are separate. An accepted
 transaction may expose provisional state. A stored word such as COMMITTED is
@@ -37,9 +39,10 @@ late authenticated callback is harmless even with stale calldata. This race
 still requires a live target-network proof.
 
 External claim dispatch is intentionally not blindly retried. The entitlement
-is consumed before dispatch to prevent double payment, and remains recorded as
-`DISPATCHED` until an authenticated delivery/non-delivery mechanism exists.
-The current contract does not provide that reconciliation mechanism.
+is consumed before dispatch to prevent double payment, and remains represented
+by the finalized external message because an authenticated delivery/non-
+delivery mechanism is not exposed by the current contract. The current
+revision does not provide reconciliation or retry.
 
 No upgrade/admin escape hatch can rewrite a sealed mission or redirect custody.
 The owner can register or deactivate publisher authorities; deactivation blocks

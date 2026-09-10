@@ -1,9 +1,9 @@
 # Evidence and Consensus Model
 
 Status: structural authority/path enforcement, snapshot binding, bounded
-remote input, and v2 schema checks are implemented and locally tested. Live
-redirect provenance, issuer cryptographic authentication, and target-network
-consensus remain open.
+remote input, and v2 schema checks are implemented and locally tested. Mission
+004 proves the semantic evaluation path on Studio Dev. Live redirect
+provenance and issuer cryptographic authentication remain open.
 
 ## Authority
 

@@ -1,8 +1,9 @@
 # Semantic Atomicity Specification
 
 Revision: implementation draft 0.2, 2026-09-10. This describes the hardened
-v0.5 source, not a statement of live deployment. Runtime assumptions are
-tracked in [OPEN_QUESTIONS.md](./OPEN_QUESTIONS.md).
+v0.5 source and its verified mission-004 Studio Dev behavior; it is not a
+claim that every production or external-payment property is complete. Runtime
+assumptions are tracked in [OPEN_QUESTIONS.md](./OPEN_QUESTIONS.md).
 
 ## Transaction and authority domain
 

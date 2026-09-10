@@ -1,6 +1,6 @@
 # Verified Environment Baseline
 
-Status: **Local hardening closed; Studio Dev deployment and custody setup proven; full lifecycle proof remains open**
+Status: **Local hardening closed; Studio Dev semantic settlement and finalized claim dispatch proven; external delivery/recovery remains open**
 Verified: 2026-09-10
 
 ## Protocol family
@@ -51,9 +51,10 @@ compatibility.
 
 The isolated probe harness pins the verified Python packages in `pyproject.toml`
 and all resolved dependencies in `uv.lock`; this does not by itself establish
-compatibility with the live network. Studio Dev has now proven a bounded
-fund-bearing setup path, but not the complete evaluation, finality, or
-withdrawal lifecycle. The probe runtime header is taken from a
+compatibility with the live network. Studio Dev has now proven the mission-004
+evaluation, finalized callback allocation, and finalized one-way claim
+dispatch. It has not proven authenticated external delivery, failed-payment
+recovery, or deadline recovery. The probe runtime header is taken from a
 checksum-verified release archive.
 
 ## Transaction Kit investigation
@@ -64,7 +65,7 @@ Its [manifest at that commit](https://github.com/genlayerlabs/genlayer-transacti
 
 ## Corrections to the initial progress report
 
-Phase 2 was previously described as completed too early. Published package versions and documented network settings do not verify the deployed Studio/consensus versions, runtime hash, hackathon network requirement, or withdrawal failure semantics. Those remain open. Conceptual specification may proceed, but no fund-bearing implementation or deployment gate has passed.
+Phase 2 was previously described as completed too early. Published package versions and documented network settings did not verify the deployed Studio/consensus versions, runtime hash, hackathon network requirement, or withdrawal failure semantics. Mission-004 closes the deployment, evaluation, finality-gated allocation, and one-way dispatch portions on Studio Dev; withdrawal delivery/recovery semantics remain open.
 
 The public hackathon page initially returned no readable rules through text retrieval. Subsequent browser inspection on 2026-09-09 resolved this: the actual submission form supports Studio, Bradbury or Asimov address links, requires a website, and requires a public repository belonging to the linked GitHub account. No exclusive Bradbury requirement appears. The reference track is Agentic Commerce Infrastructure. Source: https://portal.genlayer.foundation/agent-tank/hackathon/submit
 
