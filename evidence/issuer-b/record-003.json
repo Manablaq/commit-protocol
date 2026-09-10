@@ -1,0 +1,21 @@
+{
+  "schema": "commit-evidence-v2",
+  "evidence_id": "evidence-b-003",
+  "authority_id": "studio-issuer-b",
+  "url": "https://raw.githubusercontent.com/Manablaq/commit-protocol/main/evidence/issuer-b/record-003.json",
+  "subject": "live-mission-003",
+  "expires_at": 1789068802,
+  "mission_id": "live-mission-003",
+  "objective": "Studio Dev semantic atomicity lifecycle",
+  "policy_digest": "983307fac383ac4a92be6c0c361ea8f3c9d9efa20ad5e6e8bc8dee932f2a6103",
+  "policy_rule": "all-evidence-and-effects-v1",
+  "intent_digest": "77750f19ee0a292a765278d589bf51d9ebde16a4bdee5c4e6b184b8e7416a462",
+  "effect_root": "595bddf0db5038e4d43726549c202c0655817d1f9c6476c0701f051dc08cc10d",
+  "payload": {
+    "eligible": true,
+    "reason_code": "studio_dev_mission_003_issuer_b_accepts",
+    "effect_claims": {
+      "effect-c": true
+    }
+  }
+}
