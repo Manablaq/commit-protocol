@@ -1,0 +1,80 @@
+{
+  "schema": "commit-fee-profile-policy-v1",
+  "protocol": "commit",
+  "candidate": "v0.8-reviewer-hard-gates",
+  "contract": {
+    "path": "contracts/commit.py",
+    "sha256": "a30ad68c62b589edf68d641092a39a0fa4a3a5c19a3c2993cd68cd6f48df0d37"
+  },
+  "runtime": {
+    "version": "v0.6.0-rc3",
+    "archive_sha256": "bd30580f911338d5533460eca8ed714dec371de5803c04e41dbb96430aea7b6e"
+  },
+  "measurement": {
+    "status": "TARGET_NETWORK_REQUIRED",
+    "numeric_fee_values_committed": false,
+    "local_direct_mode_is_fee_evidence": false,
+    "required_estimator": "estimateTransactionFeesForWrite",
+    "required_submission_fields": [
+      "distribution",
+      "messageAllocations",
+      "feeValue"
+    ]
+  },
+  "message_paths": [
+    {
+      "method": "evaluate_mission",
+      "message_kind": "FINALIZED_INTERNAL_CALLBACK",
+      "child_method": "apply_decision",
+      "value": 0,
+      "measurement_requirement": "ESTIMATE_EXACT_CALL_ON_TARGET_NETWORK"
+    },
+    {
+      "method": "claim_mission",
+      "message_kind": "FINALIZED_EXTERNAL_GEN_TRANSFER",
+      "value_source": "EXACT_CONSUMED_MISSION_ENTITLEMENT",
+      "measurement_requirement": "ESTIMATE_EXACT_CALL_ON_TARGET_NETWORK"
+    }
+  ],
+  "accounting": {
+    "mission_principal_pays_protocol_fees": false,
+    "mission_budget_is_purchase_principal": true,
+    "protocol_fee_measurement_is_separate": true,
+    "contract_fee_reserve_enabled": false
+  },
+  "required_live_measurement_record": [
+    "network",
+    "chain_id",
+    "contract_address",
+    "contract_source_sha256",
+    "runtime_version",
+    "runtime_archive_sha256",
+    "method",
+    "arguments_digest",
+    "distribution",
+    "messageAllocations",
+    "feeValue",
+    "transaction_id",
+    "consensus_status",
+    "txExecutionResultName",
+    "post_state_verification",
+    "measured_at"
+  ],
+  "profile_invalidation_conditions": [
+    "contract_address_changed",
+    "contract_source_changed",
+    "method_changed",
+    "arguments_changed",
+    "message_shape_changed",
+    "network_changed",
+    "network_fee_policy_changed"
+  ],
+  "successful_execution_requirement": "FINISHED_WITH_RETURN",
+  "prohibited_assumptions": [
+    "DO_NOT_REUSE_FIXED_NUMERIC_FEE_VALUES_ACROSS_NETWORKS",
+    "DO_NOT_TREAT_DIRECT_MODE_AS_TARGET_NETWORK_FEE_MEASUREMENT",
+    "DO_NOT_SUBTRACT_PROTOCOL_FEES_FROM_MISSION_PRINCIPAL",
+    "DO_NOT_OMIT_MESSAGE_ALLOCATIONS_FOR_MESSAGE_PRODUCING_WRITES",
+    "DO_NOT_TREAT_CONSENSUS_ACCEPTANCE_ALONE_AS_EXECUTION_SUCCESS"
+  ]
+}
