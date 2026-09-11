@@ -8,26 +8,38 @@ semantic paths with independent remote records. The new
 `get_mission_manifest` read exposes the frozen mission terms, exact ordered
 effect/evidence inputs, sealed roots, current decision/allocation state, and
 registered authority metadata for reviewer inspection in one bounded response.
-Live
-redirect provenance and issuer cryptographic authentication remain open.
+Live redirect provenance and cryptographic binding between a registered
+GenLayer issuer account and an external real-world organizational identity
+remain open. Transaction-level issuer authentication is implemented for
+on-chain attestations.
 
 ## Authority
 
-The contract owner registers a unique authority ID with a lowercase HTTPS host
-and path prefix. Host labels are ASCII DNS-style labels (1–63 characters,
-letters, digits, and internal hyphens); path prefixes are canonical and do not
-end in a slash except for `/`. The registry rejects userinfo, ports, queries,
-fragments, percent-encoding, backslashes, dot traversal, empty non-root path
-segments, and unsupported schemes. Evidence registration requires an active
-authority and an exact origin/path boundary match. Deactivation blocks new
-evidence without rewriting stored history.
+The contract owner registers a unique immutable authority ID with a lowercase
+HTTPS host, canonical path prefix, one exact GenLayer issuer account address,
+and a positive authority version. The authority ID cannot be rewritten or
+reactivated after deactivation. A new issuer identity or authority version must
+therefore use a new authority ID.
 
-This is structural allowlisting, not proof that the owner controls the DNS
-name, that the publisher is honest, or that two registered origins represent
-two independent organizations. Sealing requires two distinct registered
-origin/path pairs; two labels for the same origin cannot satisfy corroboration.
-The contract still does not cryptographically establish organizational
-independence.
+The approved issuer authenticates an evidence attestation by submitting the
+attestation transaction itself. The contract requires
+`gl.message.sender_address` to equal the registered issuer address and binds
+the authority/version, stable record ID/version, mission/version, immutable
+URL, exact record hash, publication timestamp, and expiry. The mission
+principal can attach only an existing authenticated attestation.
+
+Host labels remain ASCII DNS-style labels (1–63 characters, letters, digits,
+and internal hyphens); path prefixes are canonical and do not end in a slash
+except for `/`. The registry rejects userinfo, ports, queries, fragments,
+percent-encoding, backslashes, dot traversal, empty non-root path segments,
+and unsupported schemes. Deactivation blocks new attestations without
+rewriting previously stored evidence.
+
+Corroboration requires distinct authenticated issuer addresses, not merely
+different authority labels or origins. This authenticates control of the
+registered GenLayer account address; it does not by itself prove ownership of
+a DNS name, honesty of an organization, or independence between real-world
+organizations.
 
 ## Evidence v2
 
@@ -60,10 +72,12 @@ was sealed without relying on an off-chain database.
 The inspected GenLayer fetch response exposes status, headers, and body but
 does not expose a verified final URL in the current local proof. The contract
 therefore cannot claim that a successful response remained on the registered
-origin after redirects. No signature verifier has been added. A future
-cryptographic route must verify the precise canonical record with a registered
-issuer public key, including key version, subject, mission/effect binding,
-nonce, and expiry. A non-empty signature string or self-generated digest is not
+origin after redirects. No external-content signature verifier has been added. The implemented
+authentication proves that the attestation transaction came from the exact
+registered GenLayer issuer address. A future external-signature route, if
+required, must verify the precise canonical record with an explicitly trusted
+issuer key and version plus the consequential mission/effect bindings and
+expiry. A non-empty signature string or self-generated digest is not
 authentication.
 
 ## Failure and freshness

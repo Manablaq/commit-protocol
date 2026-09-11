@@ -77,21 +77,35 @@ def evidence_leaf(
     *,
     evidence_id: str,
     authority_id: str,
+    authority_version: int,
+    issuer_address: str,
+    record_id: str,
+    record_version: int,
+    mission_id: str,
+    mission_version: int,
     url: str,
     record_hash: str,
     subject: str,
+    published_at: int,
     expires_at: int,
 ) -> str:
-    payload = "commit-evidence-leaf-v1" + "".join(
-        frame(value)
-        for value in (
-            evidence_id,
-            authority_id,
-            url,
-            record_hash,
-            subject,
-            str(expires_at),
-        )
+    fields = (
+        evidence_id,
+        authority_id,
+        str(authority_version),
+        issuer_address,
+        record_id,
+        str(record_version),
+        mission_id,
+        str(mission_version),
+        url,
+        record_hash,
+        subject,
+        str(published_at),
+        str(expires_at),
+    )
+    payload = "commit-evidence-leaf-v2" + "".join(
+        frame(value) for value in fields
     )
     return keccak(payload.encode("utf-8")).hex()
 
@@ -101,13 +115,20 @@ def evidence_root(evidence_records: Iterable[dict[str, object]]) -> str:
         evidence_leaf(
             evidence_id=str(record["evidence_id"]),
             authority_id=str(record["authority_id"]),
+            authority_version=int(record["authority_version"]),
+            issuer_address=str(record["issuer_address"]),
+            record_id=str(record["record_id"]),
+            record_version=int(record["record_version"]),
+            mission_id=str(record["mission_id"]),
+            mission_version=int(record["mission_version"]),
             url=str(record["url"]),
             record_hash=str(record["record_hash"]),
             subject=str(record["subject"]),
+            published_at=int(record["published_at"]),
             expires_at=int(record["expires_at"]),
         )
         for record in evidence_records
     ]
-    payload = "commit-evidence-root-v1" + frame(str(len(leaves)))
+    payload = "commit-evidence-root-v2" + frame(str(len(leaves)))
     payload += "".join(frame(leaf) for leaf in leaves)
     return keccak(payload.encode("utf-8")).hex()

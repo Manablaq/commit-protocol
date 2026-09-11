@@ -75,6 +75,7 @@ class CommitProtocol(gl.contract.Contract):
     mission_evaluation_count: TreeMap[str, u256]
     mission_prepare_deadline: TreeMap[str, u256]
     mission_recovery_deadline: TreeMap[str, u256]
+    mission_created_at: TreeMap[str, u256]
     mission_version: TreeMap[str, u256]
     mission_effect_count: TreeMap[str, u256]
     effect_exists: TreeMap[str, bool]
@@ -91,6 +92,8 @@ class CommitProtocol(gl.contract.Contract):
     authority_active: TreeMap[str, bool]
     authority_host: TreeMap[str, str]
     authority_path_prefix: TreeMap[str, str]
+    authority_issuer: TreeMap[str, Address]
+    authority_version: TreeMap[str, u256]
     supplier_authorized: TreeMap[str, bool]
     supplier_count: TreeMap[str, u256]
     evidence_exists: TreeMap[str, bool]
@@ -101,7 +104,26 @@ class CommitProtocol(gl.contract.Contract):
     evidence_record_hash: TreeMap[str, str]
     evidence_subject: TreeMap[str, str]
     evidence_expires_at: TreeMap[str, u256]
+    evidence_authority_version: TreeMap[str, u256]
+    evidence_issuer: TreeMap[str, Address]
+    evidence_record_id: TreeMap[str, str]
+    evidence_record_version: TreeMap[str, u256]
+    evidence_mission_version: TreeMap[str, u256]
+    evidence_published_at: TreeMap[str, u256]
     mission_evidence_key: TreeMap[str, str]
+
+    attestation_exists: TreeMap[str, bool]
+    attestation_authority: TreeMap[str, str]
+    attestation_authority_version: TreeMap[str, u256]
+    attestation_issuer: TreeMap[str, Address]
+    attestation_record_id: TreeMap[str, str]
+    attestation_record_version: TreeMap[str, u256]
+    attestation_mission: TreeMap[str, str]
+    attestation_mission_version: TreeMap[str, u256]
+    attestation_url: TreeMap[str, str]
+    attestation_record_hash: TreeMap[str, str]
+    attestation_published_at: TreeMap[str, u256]
+    attestation_expires_at: TreeMap[str, u256]
     mission_claimable: TreeMap[str, u256]
     claimable_balance: TreeMap[str, u256]
     withdrawal_count: u256
@@ -240,7 +262,14 @@ class CommitProtocol(gl.contract.Contract):
         return Keccak256(payload.encode("utf-8")).hexdigest()
 
     @gl.public.write
-    def register_authority(self, authority_id: str, host: str, path_prefix: str) -> None:
+    def register_authority(
+        self,
+        authority_id: str,
+        host: str,
+        path_prefix: str,
+        issuer_address: gl.Address,
+        authority_version: int,
+    ) -> None:
         if gl.message.sender_address != self.owner:
             raise gl.vm.UserError("owner required")
         self._require_identifier(authority_id, "authority id", 64)
@@ -248,10 +277,18 @@ class CommitProtocol(gl.contract.Contract):
             raise gl.vm.UserError("authority already exists")
         self._require_authority_host(host)
         self._require_path_prefix(path_prefix)
+        self._require_nonzero_address(issuer_address, "issuer")
+        self._require_uint(
+            authority_version,
+            "authority version",
+            positive=True,
+        )
         self.authority_exists[authority_id] = True
         self.authority_active[authority_id] = True
         self.authority_host[authority_id] = host
         self.authority_path_prefix[authority_id] = path_prefix
+        self.authority_issuer[authority_id] = issuer_address
+        self.authority_version[authority_id] = authority_version
 
     @gl.public.write
     def deactivate_authority(self, authority_id: str) -> None:
@@ -299,56 +336,178 @@ class CommitProtocol(gl.contract.Contract):
         if current_count > 0:
             self.supplier_count[mission_id] = (current_count - 1)
 
-    @gl.public.write
-    def register_evidence(
+    def _attestation_key(
         self,
-        mission_id: str,
-        evidence_id: str,
         authority_id: str,
+        record_id: str,
+        record_version: int,
+    ) -> str:
+        return authority_id + ":" + record_id + ":" + str(record_version)
+
+    @gl.public.write
+    def attest_evidence(
+        self,
+        authority_id: str,
+        authority_version: int,
+        record_id: str,
+        record_version: int,
+        mission_id: str,
+        mission_version: int,
         url: str,
         record_hash: str,
-        subject: str,
+        published_at: int,
         expires_at: int,
     ) -> None:
-        self._require_principal(mission_id)
-        if self.mission_state[mission_id] != STATE_PREPARING:
-            raise gl.vm.UserError("mission is not preparing")
-        if int(datetime.now(timezone.utc).timestamp()) > int(self.mission_prepare_deadline[mission_id]):
-            raise gl.vm.UserError("preparation deadline has passed")
-        self._require_identifier(evidence_id, "evidence id", MAX_TEXT)
-        evidence_key = mission_id + ":" + evidence_id
-        if self.evidence_exists.get(evidence_key, False):
-            raise gl.vm.UserError("evidence already exists")
-        evidence_index = int(self.mission_evidence_count[mission_id])
-        if evidence_index >= MAX_EVIDENCE:
-            raise gl.vm.UserError("evidence limit exceeded")
         self._require_authority(authority_id)
         if not self.authority_active.get(authority_id, False):
             raise gl.vm.UserError("authority is inactive")
+        self._require_uint(
+            authority_version,
+            "authority version",
+            positive=True,
+        )
+        if authority_version != int(self.authority_version[authority_id]):
+            raise gl.vm.UserError("authority version mismatch")
+        if gl.message.sender_address != self.authority_issuer[authority_id]:
+            raise gl.vm.UserError("issuer required")
+
+        self._require_identifier(record_id, "record id", MAX_TEXT)
+        self._require_uint(record_version, "record version", positive=True)
+
+        if not self.mission_exists.get(mission_id, False):
+            raise gl.vm.UserError("mission not found")
+        self._require_uint(mission_version, "mission version", positive=True)
+        if mission_version != int(self.mission_version[mission_id]):
+            raise gl.vm.UserError("mission version mismatch")
+
         if not self._url_matches_authority(
             url,
             self.authority_host[authority_id],
             self.authority_path_prefix[authority_id],
         ):
             raise gl.vm.UserError("evidence URL is outside authority")
+
         self._require_digest(record_hash, "record hash")
-        self._require_ascii_text(subject, "evidence subject")
-        if subject != mission_id:
-            raise gl.vm.UserError("evidence subject mismatch")
+        self._require_uint(
+            published_at,
+            "evidence publication",
+            positive=True,
+        )
         self._require_uint(expires_at, "evidence expiry", positive=True)
+
+        mission_created_at = int(self.mission_created_at[mission_id])
+        if published_at < mission_created_at:
+            raise gl.vm.UserError("evidence published before mission")
         if expires_at < int(self.mission_recovery_deadline[mission_id]):
             raise gl.vm.UserError("invalid evidence expiry")
+
+        attestation_key = self._attestation_key(
+            authority_id,
+            record_id,
+            record_version,
+        )
+        if self.attestation_exists.get(attestation_key, False):
+            raise gl.vm.UserError("attestation already exists")
+
+        self.attestation_exists[attestation_key] = True
+        self.attestation_authority[attestation_key] = authority_id
+        self.attestation_authority_version[attestation_key] = authority_version
+        self.attestation_issuer[attestation_key] = gl.message.sender_address
+        self.attestation_record_id[attestation_key] = record_id
+        self.attestation_record_version[attestation_key] = record_version
+        self.attestation_mission[attestation_key] = mission_id
+        self.attestation_mission_version[attestation_key] = mission_version
+        self.attestation_url[attestation_key] = url
+        self.attestation_record_hash[attestation_key] = record_hash
+        self.attestation_published_at[attestation_key] = published_at
+        self.attestation_expires_at[attestation_key] = expires_at
+
+    @gl.public.write
+    def register_evidence(
+        self,
+        mission_id: str,
+        evidence_id: str,
+        authority_id: str,
+        authority_version: int,
+        record_id: str,
+        record_version: int,
+    ) -> None:
+        self._require_principal(mission_id)
+        if self.mission_state[mission_id] != STATE_PREPARING:
+            raise gl.vm.UserError("mission is not preparing")
+        if int(datetime.now(timezone.utc).timestamp()) > int(
+            self.mission_prepare_deadline[mission_id]
+        ):
+            raise gl.vm.UserError("preparation deadline has passed")
+
+        self._require_identifier(evidence_id, "evidence id", MAX_TEXT)
+        evidence_key = mission_id + ":" + evidence_id
+        if self.evidence_exists.get(evidence_key, False):
+            raise gl.vm.UserError("evidence already exists")
+
+        evidence_index = int(self.mission_evidence_count[mission_id])
+        if evidence_index >= MAX_EVIDENCE:
+            raise gl.vm.UserError("evidence limit exceeded")
+
+        self._require_authority(authority_id)
+        self._require_uint(
+            authority_version,
+            "authority version",
+            positive=True,
+        )
+        self._require_identifier(record_id, "record id", MAX_TEXT)
+        self._require_uint(record_version, "record version", positive=True)
+
+        attestation_key = self._attestation_key(
+            authority_id,
+            record_id,
+            record_version,
+        )
+        if not self.attestation_exists.get(attestation_key, False):
+            raise gl.vm.UserError("evidence attestation not found")
+
+        if (
+            int(self.attestation_authority_version[attestation_key])
+            != authority_version
+        ):
+            raise gl.vm.UserError("authority version mismatch")
+        if self.attestation_mission[attestation_key] != mission_id:
+            raise gl.vm.UserError("attestation mission mismatch")
+
+        current_mission_version = int(self.mission_version[mission_id])
+        if (
+            int(self.attestation_mission_version[attestation_key])
+            != current_mission_version
+        ):
+            raise gl.vm.UserError("attestation mission version mismatch")
 
         self.evidence_exists[evidence_key] = True
         self.evidence_mission[evidence_key] = mission_id
         self.evidence_id[evidence_key] = evidence_id
         self.evidence_authority[evidence_key] = authority_id
-        self.evidence_url[evidence_key] = url
-        self.evidence_record_hash[evidence_key] = record_hash
-        self.evidence_subject[evidence_key] = subject
-        self.evidence_expires_at[evidence_key] = (expires_at)
-        self.mission_evidence_key[mission_id + ":" + str(evidence_index)] = evidence_key
-        self.mission_evidence_count[mission_id] = (self._next_uint(evidence_index, "evidence count"))
+        self.evidence_authority_version[evidence_key] = authority_version
+        self.evidence_issuer[evidence_key] = self.attestation_issuer[attestation_key]
+        self.evidence_record_id[evidence_key] = record_id
+        self.evidence_record_version[evidence_key] = record_version
+        self.evidence_mission_version[evidence_key] = current_mission_version
+        self.evidence_url[evidence_key] = self.attestation_url[attestation_key]
+        self.evidence_record_hash[evidence_key] = (
+            self.attestation_record_hash[attestation_key]
+        )
+        self.evidence_subject[evidence_key] = mission_id
+        self.evidence_published_at[evidence_key] = (
+            self.attestation_published_at[attestation_key]
+        )
+        self.evidence_expires_at[evidence_key] = (
+            self.attestation_expires_at[attestation_key]
+        )
+        self.mission_evidence_key[
+            mission_id + ":" + str(evidence_index)
+        ] = evidence_key
+        self.mission_evidence_count[mission_id] = self._next_uint(
+            evidence_index,
+            "evidence count",
+        )
 
     @gl.public.write
     def create_mission(
@@ -404,6 +563,9 @@ class CommitProtocol(gl.contract.Contract):
         self.mission_evaluation_count[mission_id] = (0)
         self.mission_prepare_deadline[mission_id] = (prepare_deadline)
         self.mission_recovery_deadline[mission_id] = (recovery_deadline)
+        self.mission_created_at[mission_id] = int(
+            datetime.now(timezone.utc).timestamp()
+        )
         self.mission_version[mission_id] = (1)
         self.mission_effect_count[mission_id] = (0)
         # The principal may prepare its own effects. Other participants must
@@ -996,22 +1158,11 @@ class CommitProtocol(gl.contract.Contract):
 
     def _has_distinct_evidence_authorities(self, mission_id: str) -> bool:
         first_key = self.mission_evidence_key[mission_id + ":0"]
-        first_authority = self.evidence_authority[first_key]
-        first = (
-            self.authority_host[first_authority]
-            + "\x00"
-            + self.authority_path_prefix[first_authority]
-        )
+        first_issuer = self.evidence_issuer[first_key]
         count = int(self.mission_evidence_count[mission_id])
         for index in range(1, count):
             key = self.mission_evidence_key[mission_id + ":" + str(index)]
-            authority = self.evidence_authority[key]
-            origin = (
-                self.authority_host[authority]
-                + "\x00"
-                + self.authority_path_prefix[authority]
-            )
-            if origin != first:
+            if self.evidence_issuer[key] != first_issuer:
                 return True
         return False
 
@@ -1055,12 +1206,19 @@ class CommitProtocol(gl.contract.Contract):
         fields = (
             self.evidence_id[evidence_key],
             self.evidence_authority[evidence_key],
+            str(int(self.evidence_authority_version[evidence_key])),
+            self.evidence_issuer[evidence_key].as_hex,
+            self.evidence_record_id[evidence_key],
+            str(int(self.evidence_record_version[evidence_key])),
+            self.evidence_mission[evidence_key],
+            str(int(self.evidence_mission_version[evidence_key])),
             self.evidence_url[evidence_key],
             self.evidence_record_hash[evidence_key],
             self.evidence_subject[evidence_key],
+            str(int(self.evidence_published_at[evidence_key])),
             str(int(self.evidence_expires_at[evidence_key])),
         )
-        payload = "commit-evidence-leaf-v1" + "".join(
+        payload = "commit-evidence-leaf-v2" + "".join(
             self._frame(field) for field in fields
         )
         return Keccak256(payload.encode("utf-8")).hexdigest()
@@ -1081,7 +1239,7 @@ class CommitProtocol(gl.contract.Contract):
         if not self.mission_exists.get(mission_id, False):
             raise gl.vm.UserError("mission not found")
         count = int(self.mission_evidence_count[mission_id])
-        payload = "commit-evidence-root-v1" + self._frame(str(count))
+        payload = "commit-evidence-root-v2" + self._frame(str(count))
         for index in range(count):
             evidence_key = self.mission_evidence_key[mission_id + ":" + str(index)]
             payload += self._frame(self._evidence_leaf(evidence_key))
@@ -1117,6 +1275,7 @@ class CommitProtocol(gl.contract.Contract):
             "evaluation_count": int(self.mission_evaluation_count[mission_id]),
             "prepare_deadline": int(self.mission_prepare_deadline[mission_id]),
             "recovery_deadline": int(self.mission_recovery_deadline[mission_id]),
+            "created_at": int(self.mission_created_at[mission_id]),
         }
 
     @gl.public.view
@@ -1160,6 +1319,63 @@ class CommitProtocol(gl.contract.Contract):
             "active": self.authority_active.get(authority_id, False),
             "host": self.authority_host[authority_id],
             "path_prefix": self.authority_path_prefix[authority_id],
+            "issuer_address": self.authority_issuer[authority_id],
+            "authority_version": int(self.authority_version[authority_id]),
+        }
+
+    @gl.public.view
+    def authorities_are_independent(
+        self,
+        authority_a: str,
+        authority_b: str,
+    ) -> bool:
+        self._require_authority(authority_a)
+        self._require_authority(authority_b)
+        if authority_a == authority_b:
+            return False
+        return self.authority_issuer[authority_a] != self.authority_issuer[authority_b]
+
+    @gl.public.view
+    def get_evidence_attestation(
+        self,
+        authority_id: str,
+        record_id: str,
+        record_version: int,
+    ) -> dict:
+        self._require_authority(authority_id)
+        self._require_identifier(record_id, "record id", MAX_TEXT)
+        self._require_uint(record_version, "record version", positive=True)
+
+        attestation_key = self._attestation_key(
+            authority_id,
+            record_id,
+            record_version,
+        )
+        if not self.attestation_exists.get(attestation_key, False):
+            raise gl.vm.UserError("evidence attestation not found")
+
+        return {
+            "authority_id": self.attestation_authority[attestation_key],
+            "authority_version": int(
+                self.attestation_authority_version[attestation_key]
+            ),
+            "issuer_address": self.attestation_issuer[attestation_key],
+            "record_id": self.attestation_record_id[attestation_key],
+            "record_version": int(
+                self.attestation_record_version[attestation_key]
+            ),
+            "mission_id": self.attestation_mission[attestation_key],
+            "mission_version": int(
+                self.attestation_mission_version[attestation_key]
+            ),
+            "url": self.attestation_url[attestation_key],
+            "record_hash": self.attestation_record_hash[attestation_key],
+            "published_at": int(
+                self.attestation_published_at[attestation_key]
+            ),
+            "expires_at": int(
+                self.attestation_expires_at[attestation_key]
+            ),
         }
 
     @gl.public.view
@@ -1173,9 +1389,23 @@ class CommitProtocol(gl.contract.Contract):
             "mission_id": mission_id,
             "evidence_id": evidence_id,
             "authority_id": self.evidence_authority[evidence_key],
+            "authority_version": int(
+                self.evidence_authority_version[evidence_key]
+            ),
+            "issuer_address": self.evidence_issuer[evidence_key],
+            "record_id": self.evidence_record_id[evidence_key],
+            "record_version": int(
+                self.evidence_record_version[evidence_key]
+            ),
+            "mission_version": int(
+                self.evidence_mission_version[evidence_key]
+            ),
             "url": self.evidence_url[evidence_key],
             "record_hash": self.evidence_record_hash[evidence_key],
             "subject": self.evidence_subject[evidence_key],
+            "published_at": int(
+                self.evidence_published_at[evidence_key]
+            ),
             "expires_at": int(self.evidence_expires_at[evidence_key]),
         }
 

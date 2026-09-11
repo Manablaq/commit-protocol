@@ -20,8 +20,8 @@ not standalone proof of finality.
 | PREPARING | `revoke_supplier` / principal | No prepared effect owned by that supplier | Supplier authorization disabled |
 | PREPARING | `prepare_effect` / principal or authorized supplier | Exact digest; positive bounded value; valid beneficiary/expiry | Root effect |
 | PREPARING | `prepare_effect_with_dependency` / principal or authorized supplier | Same checks plus existing earlier dependency | Child effect in bounded single-parent graph |
-| PREPARING | `register_evidence` / principal | Active registered authority; exact HTTPS origin/path; mission subject; expiry through recovery boundary | Evidence manifest entry |
-| PREPARING | `seal_mission` / principal | Funding, effects, two distinct registered origin/path pairs, matching roots, acyclic graph | Immutable `SEALED` snapshot |
+| PREPARING | `register_evidence` / principal | Existing authenticated attestation; exact authority/version and record/version; attested mission/version match; attested expiry covers recovery boundary | Evidence manifest entry |
+| PREPARING | `seal_mission` / principal | Funding, effects, two evidence authorities controlled by distinct authenticated issuer addresses, matching roots, acyclic graph | Immutable `SEALED` snapshot |
 | PREPARING | `cancel_mission` / principal | No sealed obligations | Abort allocation and refund entitlement |
 | SEALED | `evaluate_mission` / anyone | Recovery deadline not reached; exact v2 records independently re-read | `DECISION_PENDING`; zero-value finalized self-message emitted |
 | DECISION_PENDING | `apply_decision` / authenticated coordinator self-message | Exact decision nonce; allocation not already applied | `COMMITTED` or `ABORTED` allocation |
@@ -53,7 +53,11 @@ delivery mechanism is not exposed by the current contract. The current
 revision does not provide reconciliation or retry.
 
 No upgrade/admin escape hatch can rewrite a sealed mission or redirect custody.
-The owner can register or deactivate publisher authorities; deactivation blocks
-new evidence and does not rewrite already stored history. Supplier
-authorization is mission-scoped and cannot be revoked after that supplier has
-prepared an effect.
+The owner can register or deactivate publisher authorities. Each authority ID
+binds one immutable issuer address and version; issuer or version rotation
+requires a new authority ID. Deactivation blocks new attestations and does not
+rewrite already stored history. The current candidate is intended for a fresh
+source-matched deployment and does not claim in-place storage-compatible
+upgrading of the historical v0.7 contract. Supplier authorization is
+mission-scoped and cannot be revoked after that supplier has prepared an
+effect.
