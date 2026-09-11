@@ -36,9 +36,9 @@ MAX_U256 = (1 << 256) - 1
 EVIDENCE_SCHEMA = "commit-evidence-v2"
 POLICY_RULE = "all-evidence-and-effects-v1"
 POLICY_DIGEST = "983307fac383ac4a92be6c0c361ea8f3c9d9efa20ad5e6e8bc8dee932f2a6103"
-DECISION_ENVELOPE = "commit-decision-v2"
-RECEIPT_SCHEMA = "commit-mission-receipt-v1"
-MANIFEST_SCHEMA = "commit-mission-manifest-v1"
+DECISION_ENVELOPE = "commit-decision-v3"
+RECEIPT_SCHEMA = "commit-mission-receipt-v2"
+MANIFEST_SCHEMA = "commit-mission-manifest-v2"
 
 
 @gl.evm.contract_interface
@@ -68,6 +68,7 @@ class CommitProtocol(gl.contract.Contract):
     mission_refund_beneficiary: TreeMap[str, Address]
     mission_refund_entitlement: TreeMap[str, u256]
     mission_decision_nonce: TreeMap[str, str]
+    mission_evaluation_evidence_root: TreeMap[str, str]
     mission_allocation_applied: TreeMap[str, bool]
     mission_evidence_count: TreeMap[str, u256]
     mission_decision: TreeMap[str, str]
@@ -124,6 +125,33 @@ class CommitProtocol(gl.contract.Contract):
     attestation_record_hash: TreeMap[str, str]
     attestation_published_at: TreeMap[str, u256]
     attestation_expires_at: TreeMap[str, u256]
+
+    evidence_failure_count: TreeMap[str, u256]
+    evidence_failure_exists: TreeMap[str, bool]
+    evidence_failure_status: TreeMap[str, str]
+    evidence_failure_code: TreeMap[str, str]
+    evidence_failure_evidence_id: TreeMap[str, str]
+    evidence_failure_record_id: TreeMap[str, str]
+    evidence_failure_record_version: TreeMap[str, u256]
+    evidence_failure_mission_version: TreeMap[str, u256]
+    evidence_failure_attempt: TreeMap[str, u256]
+    evidence_latest_failure_key: TreeMap[str, str]
+
+    evidence_repair_count: TreeMap[str, u256]
+    evidence_repair_exists: TreeMap[str, bool]
+    evidence_repair_status: TreeMap[str, str]
+    evidence_repair_authority: TreeMap[str, str]
+    evidence_repair_authority_version: TreeMap[str, u256]
+    evidence_repair_issuer: TreeMap[str, Address]
+    evidence_repair_record_id: TreeMap[str, str]
+    evidence_repair_original_record_version: TreeMap[str, u256]
+    evidence_repair_active_record_version: TreeMap[str, u256]
+    evidence_repair_url: TreeMap[str, str]
+    evidence_repair_record_hash: TreeMap[str, str]
+    evidence_repair_published_at: TreeMap[str, u256]
+    evidence_repair_expires_at: TreeMap[str, u256]
+    evidence_latest_repair_key: TreeMap[str, str]
+
     mission_claimable: TreeMap[str, u256]
     claimable_balance: TreeMap[str, u256]
     withdrawal_count: u256
@@ -556,6 +584,7 @@ class CommitProtocol(gl.contract.Contract):
         self.mission_refund_beneficiary[mission_id] = refund_beneficiary
         self.mission_refund_entitlement[mission_id] = (0)
         self.mission_decision_nonce[mission_id] = ""
+        self.mission_evaluation_evidence_root[mission_id] = ""
         self.mission_allocation_applied[mission_id] = False
         self.mission_evidence_count[mission_id] = (0)
         self.mission_decision[mission_id] = ""
@@ -711,72 +740,455 @@ class CommitProtocol(gl.contract.Contract):
             raise gl.vm.UserError("sealed mission cannot be cancelled")
         self._allocate_abort(mission_id, "cancelled_by_principal")
 
+    def _evidence_failure_key(
+        self,
+        evidence_key: str,
+        attempt: int,
+    ) -> str:
+        return evidence_key + ":failure:" + str(attempt)
+
+    def _evidence_repair_key(
+        self,
+        evidence_key: str,
+        repair_index: int,
+    ) -> str:
+        return evidence_key + ":repair:" + str(repair_index)
+
+    @gl.public.write
+    def repair_evidence(
+        self,
+        mission_id: str,
+        evidence_id: str,
+        authority_id: str,
+        authority_version: int,
+        record_id: str,
+        record_version: int,
+    ) -> None:
+        self._require_principal(mission_id)
+
+        if self.mission_state[mission_id] != STATE_SEALED:
+            raise gl.vm.UserError("mission is not sealed")
+
+        if self.mission_decision[mission_id]:
+            raise gl.vm.UserError("mission already evaluated")
+
+        now = int(datetime.now(timezone.utc).timestamp())
+
+        if now >= int(self.mission_recovery_deadline[mission_id]):
+            raise gl.vm.UserError("recovery deadline has passed")
+
+        evidence_key = mission_id + ":" + evidence_id
+
+        if not self.evidence_exists.get(evidence_key, False):
+            raise gl.vm.UserError("evidence not found")
+
+        failure_key = self.evidence_latest_failure_key.get(
+            evidence_key,
+            "",
+        )
+
+        if (
+            not failure_key
+            or not self.evidence_failure_exists.get(
+                failure_key,
+                False,
+            )
+        ):
+            raise gl.vm.UserError("evidence failure not found")
+
+        if (
+            self.evidence_failure_status[failure_key]
+            != "REPAIR_REQUIRED"
+        ):
+            raise gl.vm.UserError("evidence is not repairable")
+
+        if authority_id != self.evidence_authority[evidence_key]:
+            raise gl.vm.UserError("repair authority mismatch")
+
+        if authority_version != int(
+            self.evidence_authority_version[evidence_key]
+        ):
+            raise gl.vm.UserError(
+                "repair authority version mismatch"
+            )
+
+        if record_id != self.evidence_record_id[evidence_key]:
+            raise gl.vm.UserError(
+                "repair record identity mismatch"
+            )
+
+        self._require_uint(
+            record_version,
+            "record version",
+            positive=True,
+        )
+
+        current_version = int(
+            self.evidence_record_version[evidence_key]
+        )
+
+        latest_repair_key = self.evidence_latest_repair_key.get(
+            evidence_key,
+            "",
+        )
+
+        if (
+            latest_repair_key
+            and self.evidence_repair_exists.get(
+                latest_repair_key,
+                False,
+            )
+        ):
+            current_version = int(
+                self.evidence_repair_active_record_version[
+                    latest_repair_key
+                ]
+            )
+
+        if record_version <= current_version:
+            raise gl.vm.UserError(
+                "repair record version must be newer"
+            )
+
+        attestation_key = self._attestation_key(
+            authority_id,
+            record_id,
+            record_version,
+        )
+
+        if not self.attestation_exists.get(
+            attestation_key,
+            False,
+        ):
+            raise gl.vm.UserError(
+                "repair evidence attestation not found"
+            )
+
+        if int(
+            self.attestation_authority_version[
+                attestation_key
+            ]
+        ) != authority_version:
+            raise gl.vm.UserError(
+                "repair authority version mismatch"
+            )
+
+        if (
+            self.attestation_mission[attestation_key]
+            != mission_id
+        ):
+            raise gl.vm.UserError(
+                "repair attestation mission mismatch"
+            )
+
+        if int(
+            self.attestation_mission_version[
+                attestation_key
+            ]
+        ) != int(self.mission_version[mission_id]):
+            raise gl.vm.UserError(
+                "repair attestation mission version mismatch"
+            )
+
+        if (
+            self.attestation_record_id[attestation_key]
+            != self.evidence_record_id[evidence_key]
+        ):
+            raise gl.vm.UserError(
+                "repair record identity mismatch"
+            )
+
+        if (
+            self.attestation_issuer[attestation_key]
+            != self.evidence_issuer[evidence_key]
+        ):
+            raise gl.vm.UserError("repair issuer mismatch")
+
+        repair_index = (
+            int(
+                self.evidence_repair_count.get(
+                    evidence_key,
+                    0,
+                )
+            )
+            + 1
+        )
+
+        repair_key = self._evidence_repair_key(
+            evidence_key,
+            repair_index,
+        )
+
+        if self.evidence_repair_exists.get(
+            repair_key,
+            False,
+        ):
+            raise gl.vm.UserError(
+                "repair record already exists"
+            )
+
+        self.evidence_repair_exists[repair_key] = True
+        self.evidence_repair_status[repair_key] = "READY"
+
+        self.evidence_repair_authority[
+            repair_key
+        ] = authority_id
+
+        self.evidence_repair_authority_version[
+            repair_key
+        ] = authority_version
+
+        self.evidence_repair_issuer[
+            repair_key
+        ] = self.attestation_issuer[attestation_key]
+
+        self.evidence_repair_record_id[
+            repair_key
+        ] = record_id
+
+        self.evidence_repair_original_record_version[
+            repair_key
+        ] = int(self.evidence_record_version[evidence_key])
+
+        self.evidence_repair_active_record_version[
+            repair_key
+        ] = record_version
+
+        self.evidence_repair_url[
+            repair_key
+        ] = self.attestation_url[attestation_key]
+
+        self.evidence_repair_record_hash[
+            repair_key
+        ] = self.attestation_record_hash[attestation_key]
+
+        self.evidence_repair_published_at[
+            repair_key
+        ] = self.attestation_published_at[attestation_key]
+
+        self.evidence_repair_expires_at[
+            repair_key
+        ] = self.attestation_expires_at[attestation_key]
+
+        self.evidence_repair_count[
+            evidence_key
+        ] = repair_index
+
+        self.evidence_latest_repair_key[
+            evidence_key
+        ] = repair_key
+
     @gl.public.write
     def evaluate_mission(self, mission_id: str) -> None:
         if not self.mission_exists.get(mission_id, False):
             raise gl.vm.UserError("mission not found")
-        # Evaluation is permissionless after sealing so a principal going
-        # offline cannot strand a mission before its recovery deadline.
+
         if self.mission_state[mission_id] != STATE_SEALED:
             raise gl.vm.UserError("mission is not sealed")
+
         if self.mission_decision[mission_id]:
             raise gl.vm.UserError("mission already evaluated")
+
         now = int(datetime.now(timezone.utc).timestamp())
+
         if now >= int(self.mission_recovery_deadline[mission_id]):
             raise gl.vm.UserError("recovery deadline has passed")
 
-        # Read all deterministic storage before entering nondeterministic code.
-        # GenLayer does not make contract storage available inside leader_fn or
-        # validator_fn, so the closures capture an immutable source manifest.
         source_specs = []
-        for index in range(int(self.mission_evidence_count[mission_id])):
-            evidence_key = self.mission_evidence_key[mission_id + ":" + str(index)]
-            source_specs.append((
-                self.evidence_id[evidence_key],
-                self.evidence_authority[evidence_key],
-                self.evidence_url[evidence_key],
-                self.evidence_record_hash[evidence_key],
-                int(self.evidence_expires_at[evidence_key]),
-            ))
+
+        for index in range(
+            int(self.mission_evidence_count[mission_id])
+        ):
+            evidence_key = self.mission_evidence_key[
+                mission_id + ":" + str(index)
+            ]
+
+            authority_id = self.evidence_authority[evidence_key]
+            url = self.evidence_url[evidence_key]
+            record_hash = self.evidence_record_hash[evidence_key]
+            expires_at = int(
+                self.evidence_expires_at[evidence_key]
+            )
+            record_id = self.evidence_record_id[evidence_key]
+            record_version = int(
+                self.evidence_record_version[evidence_key]
+            )
+
+            repair_key = self.evidence_latest_repair_key.get(
+                evidence_key,
+                "",
+            )
+
+            if (
+                repair_key
+                and self.evidence_repair_exists.get(
+                    repair_key,
+                    False,
+                )
+                and self.evidence_repair_status[repair_key]
+                == "READY"
+            ):
+                authority_id = (
+                    self.evidence_repair_authority[repair_key]
+                )
+                url = self.evidence_repair_url[repair_key]
+                record_hash = (
+                    self.evidence_repair_record_hash[repair_key]
+                )
+                expires_at = int(
+                    self.evidence_repair_expires_at[repair_key]
+                )
+                record_id = (
+                    self.evidence_repair_record_id[repair_key]
+                )
+                record_version = int(
+                    self.evidence_repair_active_record_version[
+                        repair_key
+                    ]
+                )
+
+            source_specs.append(
+                (
+                    evidence_key,
+                    self.evidence_id[evidence_key],
+                    authority_id,
+                    url,
+                    record_hash,
+                    expires_at,
+                    record_id,
+                    record_version,
+                )
+            )
+
         mission_id_snapshot = mission_id
-        objective_snapshot = self.mission_objective[mission_id]
-        policy_digest_snapshot = self.mission_policy_digest[mission_id]
-        intent_digest_snapshot = self.mission_intent_digest[mission_id]
-        effect_root_snapshot = self.mission_effect_root[mission_id]
-        evidence_root_snapshot = self.mission_evidence_root[mission_id]
+
+        mission_version_snapshot = int(
+            self.mission_version[mission_id]
+        )
+
+        objective_snapshot = self.mission_objective[
+            mission_id
+        ]
+
+        policy_digest_snapshot = (
+            self.mission_policy_digest[mission_id]
+        )
+
+        intent_digest_snapshot = (
+            self.mission_intent_digest[mission_id]
+        )
+
+        effect_root_snapshot = (
+            self.mission_effect_root[mission_id]
+        )
+
+        evidence_root_snapshot = (
+            self.mission_evidence_root[mission_id]
+        )
+
+        active_evidence_root_snapshot = (
+            self.derive_active_evidence_root(
+                mission_id
+            )
+        )
+
         effect_specs = []
-        for index in range(int(self.mission_effect_count[mission_id])):
-            effect_key = self.mission_effect_key[mission_id + ":" + str(index)]
-            effect_specs.append((
-                self.effect_id[effect_key],
-                self.effect_parent.get(effect_key, ""),
-                self.effect_digest[effect_key],
-                self.effect_beneficiary[effect_key].as_hex,
-                int(self.effect_value[effect_key]),
-                int(self.effect_expiry[effect_key]),
-            ))
+
+        for index in range(
+            int(self.mission_effect_count[mission_id])
+        ):
+            effect_key = self.mission_effect_key[
+                mission_id + ":" + str(index)
+            ]
+
+            effect_specs.append(
+                (
+                    self.effect_id[effect_key],
+                    self.effect_parent.get(
+                        effect_key,
+                        "",
+                    ),
+                    self.effect_digest[effect_key],
+                    self.effect_beneficiary[
+                        effect_key
+                    ].as_hex,
+                    int(self.effect_value[effect_key]),
+                    int(self.effect_expiry[effect_key]),
+                )
+            )
+
+        def repair_required(
+            evidence_id: str,
+            record_id: str,
+            record_version: int,
+            failure_code: str,
+        ) -> dict:
+            return {
+                "outcome": "REPAIR_REQUIRED",
+                "failure_code": failure_code,
+                "evidence_id": evidence_id,
+                "record_id": record_id,
+                "record_version": record_version,
+                "mission_id": mission_id_snapshot,
+                "mission_version": mission_version_snapshot,
+            }
 
         def leader_fn() -> dict:
             all_eligible = True
-            for evidence_id, authority_id, url, expected_hash, expected_expiry in source_specs:
+
+            for (
+                _evidence_key,
+                evidence_id,
+                authority_id,
+                url,
+                expected_hash,
+                expected_expiry,
+                record_id,
+                record_version,
+            ) in source_specs:
                 response = gl.nondet.web.get(url)
+
                 if response.status != 200:
-                    raise gl.vm.UserError("evidence source unavailable")
+                    return repair_required(
+                        evidence_id,
+                        record_id,
+                        record_version,
+                        "source_unavailable",
+                    )
+
                 if not isinstance(response.body, bytes):
-                    raise gl.vm.UserError("evidence response body missing")
+                    return repair_required(
+                        evidence_id,
+                        record_id,
+                        record_version,
+                        "response_body_missing",
+                    )
+
                 if len(response.body) > MAX_REMOTE_BODY:
-                    raise gl.vm.UserError("evidence record is too large")
+                    return repair_required(
+                        evidence_id,
+                        record_id,
+                        record_version,
+                        "record_too_large",
+                    )
 
                 def reject_duplicate_keys(pairs):
                     parsed = {}
+
                     for key, value in pairs:
                         if key in parsed:
-                            raise gl.vm.UserError("duplicate evidence key")
+                            raise gl.vm.UserError(
+                                "invalid evidence JSON"
+                            )
+
                         parsed[key] = value
+
                     return parsed
 
                 def reject_nonstandard_number(value):
-                    raise gl.vm.UserError("invalid evidence JSON")
+                    raise gl.vm.UserError(
+                        "invalid evidence JSON"
+                    )
 
                 try:
                     record = json.loads(
@@ -784,82 +1196,239 @@ class CommitProtocol(gl.contract.Contract):
                         object_pairs_hook=reject_duplicate_keys,
                         parse_constant=reject_nonstandard_number,
                     )
-                except (UnicodeDecodeError, json.JSONDecodeError, RecursionError):
-                    raise gl.vm.UserError("invalid evidence JSON")
-                if not isinstance(record, dict):
-                    raise gl.vm.UserError("evidence record must be an object")
-                if record.get("schema") != EVIDENCE_SCHEMA:
-                    raise gl.vm.UserError("unsupported evidence schema")
-                expected_record_keys = {
-                    "schema", "evidence_id", "authority_id", "url", "subject",
-                    "expires_at", "mission_id", "objective", "policy_digest",
-                    "policy_rule", "intent_digest", "effect_root", "payload",
-                }
-                if set(record.keys()) != expected_record_keys:
-                    raise gl.vm.UserError("unsupported evidence record")
-                if record.get("evidence_id") != evidence_id:
-                    raise gl.vm.UserError("evidence id mismatch")
-                if record.get("authority_id") != authority_id:
-                    raise gl.vm.UserError("evidence authority mismatch")
-                if record.get("url") != url:
-                    raise gl.vm.UserError("evidence URL mismatch")
-                if record.get("subject") != mission_id_snapshot:
-                    raise gl.vm.UserError("evidence subject mismatch")
-                if type(record.get("expires_at")) is not int:
-                    raise gl.vm.UserError("evidence expiry missing")
-                if record.get("expires_at") != int(expected_expiry):
-                    raise gl.vm.UserError("evidence expiry mismatch")
-                if record.get("mission_id") != mission_id_snapshot:
-                    raise gl.vm.UserError("evidence mission mismatch")
-                if record.get("objective") != objective_snapshot:
-                    raise gl.vm.UserError("evidence objective mismatch")
-                if record.get("policy_digest") != policy_digest_snapshot:
-                    raise gl.vm.UserError("evidence policy mismatch")
-                if record.get("policy_rule") != POLICY_RULE:
-                    raise gl.vm.UserError("evidence policy rule mismatch")
-                if record.get("intent_digest") != intent_digest_snapshot:
-                    raise gl.vm.UserError("evidence intent mismatch")
-                if record.get("effect_root") != effect_root_snapshot:
-                    raise gl.vm.UserError("evidence effect root mismatch")
-                payload = record.get("payload")
-                if not isinstance(payload, dict):
-                    raise gl.vm.UserError("evidence payload must be an object")
-                if set(payload.keys()) != {"eligible", "reason_code", "effect_claims"}:
-                    raise gl.vm.UserError("unsupported evidence payload")
-                if type(payload.get("eligible")) is not bool:
-                    raise gl.vm.UserError("evidence eligibility missing")
-                if type(payload.get("reason_code")) is not str or not payload["reason_code"]:
-                    raise gl.vm.UserError("evidence reason missing")
-                reason_code = payload["reason_code"]
-                if len(reason_code) > MAX_REASON or any(
-                    ord(char) < 0x20 or ord(char) > 0x7E for char in reason_code
+                except (
+                    UnicodeDecodeError,
+                    json.JSONDecodeError,
+                    RecursionError,
+                    gl.vm.UserError,
                 ):
-                    raise gl.vm.UserError("evidence reason is invalid")
-                effect_claims = payload.get("effect_claims")
+                    return repair_required(
+                        evidence_id,
+                        record_id,
+                        record_version,
+                        "invalid_json",
+                    )
+
+                if not isinstance(record, dict):
+                    return repair_required(
+                        evidence_id,
+                        record_id,
+                        record_version,
+                        "unsupported_record",
+                    )
+
+                if record.get("schema") != EVIDENCE_SCHEMA:
+                    return repair_required(
+                        evidence_id,
+                        record_id,
+                        record_version,
+                        "unsupported_schema",
+                    )
+
+                expected_record_keys = {
+                    "schema",
+                    "evidence_id",
+                    "authority_id",
+                    "url",
+                    "subject",
+                    "expires_at",
+                    "mission_id",
+                    "objective",
+                    "policy_digest",
+                    "policy_rule",
+                    "intent_digest",
+                    "effect_root",
+                    "payload",
+                }
+
+                if set(record.keys()) != expected_record_keys:
+                    return repair_required(
+                        evidence_id,
+                        record_id,
+                        record_version,
+                        "unsupported_record",
+                    )
+
+                if (
+                    record.get("evidence_id") != evidence_id
+                    or record.get("authority_id")
+                    != authority_id
+                    or record.get("url") != url
+                    or record.get("subject")
+                    != mission_id_snapshot
+                    or type(record.get("expires_at"))
+                    is not int
+                    or record.get("expires_at")
+                    != int(expected_expiry)
+                    or record.get("mission_id")
+                    != mission_id_snapshot
+                    or record.get("objective")
+                    != objective_snapshot
+                    or record.get("policy_digest")
+                    != policy_digest_snapshot
+                    or record.get("policy_rule")
+                    != POLICY_RULE
+                    or record.get("intent_digest")
+                    != intent_digest_snapshot
+                    or record.get("effect_root")
+                    != effect_root_snapshot
+                ):
+                    return repair_required(
+                        evidence_id,
+                        record_id,
+                        record_version,
+                        "snapshot_mismatch",
+                    )
+
+                payload = record.get("payload")
+
+                if not isinstance(payload, dict):
+                    return repair_required(
+                        evidence_id,
+                        record_id,
+                        record_version,
+                        "invalid_payload",
+                    )
+
+                if set(payload.keys()) != {
+                    "eligible",
+                    "reason_code",
+                    "effect_claims",
+                }:
+                    return repair_required(
+                        evidence_id,
+                        record_id,
+                        record_version,
+                        "invalid_payload",
+                    )
+
+                if type(payload.get("eligible")) is not bool:
+                    return repair_required(
+                        evidence_id,
+                        record_id,
+                        record_version,
+                        "invalid_payload",
+                    )
+
+                if (
+                    type(payload.get("reason_code"))
+                    is not str
+                    or not payload["reason_code"]
+                ):
+                    return repair_required(
+                        evidence_id,
+                        record_id,
+                        record_version,
+                        "invalid_payload",
+                    )
+
+                reason_code = payload["reason_code"]
+
+                if (
+                    len(reason_code) > MAX_REASON
+                    or any(
+                        ord(char) < 0x20
+                        or ord(char) > 0x7E
+                        for char in reason_code
+                    )
+                ):
+                    return repair_required(
+                        evidence_id,
+                        record_id,
+                        record_version,
+                        "invalid_payload",
+                    )
+
+                effect_claims = payload.get(
+                    "effect_claims"
+                )
+
                 if not isinstance(effect_claims, dict):
-                    raise gl.vm.UserError("effect claims must be an object")
-                expected_effect_ids = {spec[0] for spec in effect_specs}
-                if set(effect_claims.keys()) != expected_effect_ids:
-                    raise gl.vm.UserError("effect claims do not match sealed effects")
+                    return repair_required(
+                        evidence_id,
+                        record_id,
+                        record_version,
+                        "invalid_payload",
+                    )
+
+                expected_effect_ids = {
+                    spec[0]
+                    for spec in effect_specs
+                }
+
+                if (
+                    set(effect_claims.keys())
+                    != expected_effect_ids
+                ):
+                    return repair_required(
+                        evidence_id,
+                        record_id,
+                        record_version,
+                        "snapshot_mismatch",
+                    )
+
                 all_effects_eligible = True
-                for effect_id, _parent, _digest, _beneficiary, _value, _expiry in effect_specs:
-                    if type(effect_claims.get(effect_id)) is not bool:
-                        raise gl.vm.UserError("effect claim must be boolean")
+
+                for (
+                    effect_id,
+                    _parent,
+                    _digest,
+                    _beneficiary,
+                    _value,
+                    _expiry,
+                ) in effect_specs:
+                    if (
+                        type(
+                            effect_claims.get(effect_id)
+                        )
+                        is not bool
+                    ):
+                        return repair_required(
+                            evidence_id,
+                            record_id,
+                            record_version,
+                            "invalid_payload",
+                        )
+
                     if not effect_claims[effect_id]:
                         all_effects_eligible = False
+
                 canonical_payload = json.dumps(
-                    payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")
+                    payload,
+                    ensure_ascii=True,
+                    sort_keys=True,
+                    separators=(",", ":"),
                 )
-                computed_hash = Keccak256(canonical_payload.encode("utf-8")).hexdigest()
+
+                computed_hash = Keccak256(
+                    canonical_payload.encode("utf-8")
+                ).hexdigest()
+
                 if computed_hash != expected_hash:
-                    raise gl.vm.UserError("evidence payload hash mismatch")
-                if not payload["eligible"] or not all_effects_eligible:
+                    return repair_required(
+                        evidence_id,
+                        record_id,
+                        record_version,
+                        "payload_hash_mismatch",
+                    )
+
+                if (
+                    not payload["eligible"]
+                    or not all_effects_eligible
+                ):
                     all_eligible = False
+
             return {
-                "decision": "COMMIT" if all_eligible else "ABORT",
+                "outcome": "DECISION",
+                "decision": (
+                    "COMMIT"
+                    if all_eligible
+                    else "ABORT"
+                ),
                 "reason_code": (
                     "all_sources_and_effects_eligible"
-                    if all_eligible else "policy_or_source_ineligible"
+                    if all_eligible
+                    else "policy_or_source_ineligible"
                 ),
                 "mission_id": mission_id_snapshot,
                 "revision": REVISION,
@@ -868,61 +1437,203 @@ class CommitProtocol(gl.contract.Contract):
                 "policy_rule": POLICY_RULE,
                 "effect_root": effect_root_snapshot,
                 "evidence_root": evidence_root_snapshot,
+                "active_evidence_root": (
+                    active_evidence_root_snapshot
+                ),
                 "effect_count": len(effect_specs),
                 "evidence_count": len(source_specs),
             }
 
         def validator_fn(leader_result) -> bool:
-            if not isinstance(leader_result, gl.vm.Return):
+            if not isinstance(
+                leader_result,
+                gl.vm.Return,
+            ):
                 return False
+
             try:
                 validator_data = leader_fn()
             except Exception:
                 return False
+
             leader_data = leader_result.calldata
+
             if not isinstance(leader_data, dict):
                 return False
-            return (
-                leader_data.get("decision") == validator_data["decision"]
-                and leader_data.get("reason_code") == validator_data["reason_code"]
-                and leader_data.get("mission_id") == validator_data["mission_id"]
-                and leader_data.get("revision") == validator_data["revision"]
-                and leader_data.get("intent_digest") == validator_data["intent_digest"]
-                and leader_data.get("policy_digest") == validator_data["policy_digest"]
-                and leader_data.get("policy_rule") == validator_data["policy_rule"]
-                and leader_data.get("effect_root") == validator_data["effect_root"]
-                and leader_data.get("evidence_root") == validator_data["evidence_root"]
-                and leader_data.get("effect_count") == validator_data["effect_count"]
-                and leader_data.get("evidence_count") == validator_data["evidence_count"]
+
+            if (
+                leader_data.get("outcome")
+                != validator_data.get("outcome")
+            ):
+                return False
+
+            return leader_data == validator_data
+
+        result = gl.vm.run_nondet(
+            leader_fn,
+            validator_fn,
+        )
+
+        if result.get("outcome") == "REPAIR_REQUIRED":
+            evidence_key = (
+                mission_id
+                + ":"
+                + result["evidence_id"]
             )
 
-        # The pinned Studio Dev v0.6 stack and its linter expose run_nondet as
-        # the compatible custom-validator primitive. validator_fn catches its
-        # own errors and returns False, so disagreement cannot mutate state.
-        result = gl.vm.run_nondet(leader_fn, validator_fn)
-        if result["decision"] not in ("COMMIT", "ABORT"):
-            raise gl.vm.UserError("invalid consensus decision")
-        self.mission_decision[mission_id] = result["decision"]
-        self.mission_reason_code[mission_id] = result["reason_code"]
-        self.mission_evaluation_count[mission_id] = (self._next_uint(
-                int(self.mission_evaluation_count[mission_id]),
-                "evaluation count",
-            ))
+            if not self.evidence_exists.get(
+                evidence_key,
+                False,
+            ):
+                raise gl.vm.UserError(
+                    "repair evidence not found"
+                )
+
+            attempt = (
+                int(
+                    self.evidence_failure_count.get(
+                        evidence_key,
+                        0,
+                    )
+                )
+                + 1
+            )
+
+            failure_key = self._evidence_failure_key(
+                evidence_key,
+                attempt,
+            )
+
+            self.evidence_failure_exists[
+                failure_key
+            ] = True
+
+            self.evidence_failure_status[
+                failure_key
+            ] = "REPAIR_REQUIRED"
+
+            self.evidence_failure_code[
+                failure_key
+            ] = result["failure_code"]
+
+            self.evidence_failure_evidence_id[
+                failure_key
+            ] = result["evidence_id"]
+
+            self.evidence_failure_record_id[
+                failure_key
+            ] = result["record_id"]
+
+            self.evidence_failure_record_version[
+                failure_key
+            ] = result["record_version"]
+
+            self.evidence_failure_mission_version[
+                failure_key
+            ] = result["mission_version"]
+
+            self.evidence_failure_attempt[
+                failure_key
+            ] = attempt
+
+            self.evidence_failure_count[
+                evidence_key
+            ] = attempt
+
+            self.evidence_latest_failure_key[
+                evidence_key
+            ] = failure_key
+
+            return
+
+        if result.get("outcome") != "DECISION":
+            raise gl.vm.UserError(
+                "invalid consensus outcome"
+            )
+
+        if result["decision"] not in (
+            "COMMIT",
+            "ABORT",
+        ):
+            raise gl.vm.UserError(
+                "invalid consensus decision"
+            )
+
+        self.mission_decision[
+            mission_id
+        ] = result["decision"]
+
+        self.mission_reason_code[
+            mission_id
+        ] = result["reason_code"]
+
+        self.mission_evaluation_count[
+            mission_id
+        ] = self._next_uint(
+            int(
+                self.mission_evaluation_count[
+                    mission_id
+                ]
+            ),
+            "evaluation count",
+        )
+
+        self.mission_evaluation_evidence_root[
+            mission_id
+        ] = result["active_evidence_root"]
+
         decision_nonce = Keccak256(
             (
                 DECISION_ENVELOPE
                 + self._frame(mission_id)
-                + self._frame(str(int(self.mission_version[mission_id])))
-                + self._frame(result["decision"])
-                + self._frame(result["reason_code"])
-                + self._frame(self.mission_effect_root[mission_id])
-                + self._frame(self.mission_evidence_root[mission_id])
+                + self._frame(
+                    str(
+                        int(
+                            self.mission_version[
+                                mission_id
+                            ]
+                        )
+                    )
+                )
+                + self._frame(
+                    result["decision"]
+                )
+                + self._frame(
+                    result["reason_code"]
+                )
+                + self._frame(
+                    self.mission_effect_root[
+                        mission_id
+                    ]
+                )
+                + self._frame(
+                    self.mission_evidence_root[
+                        mission_id
+                    ]
+                )
+                + self._frame(
+                    result[
+                        "active_evidence_root"
+                    ]
+                )
             ).encode("utf-8")
         ).hexdigest()
-        self.mission_decision_nonce[mission_id] = decision_nonce
-        self.mission_state[mission_id] = STATE_DECISION_PENDING
-        _get_contract_at(gl.message.contract_address).emit(on="finalized").apply_decision(
-            mission_id, decision_nonce
+
+        self.mission_decision_nonce[
+            mission_id
+        ] = decision_nonce
+
+        self.mission_state[
+            mission_id
+        ] = STATE_DECISION_PENDING
+
+        _get_contract_at(
+            gl.message.contract_address
+        ).emit(
+            on="finalized"
+        ).apply_decision(
+            mission_id,
+            decision_nonce,
         )
 
     @gl.public.write
@@ -1051,6 +1762,11 @@ class CommitProtocol(gl.contract.Contract):
             "intent_digest": self.mission_intent_digest[mission_id],
             "effect_root": self.mission_effect_root[mission_id],
             "evidence_root": self.mission_evidence_root[mission_id],
+            "evaluation_evidence_root": (
+                self.mission_evaluation_evidence_root[
+                    mission_id
+                ]
+            ),
             "effect_count": int(self.mission_effect_count[mission_id]),
             "evidence_count": int(self.mission_evidence_count[mission_id]),
             "budget": int(self.mission_budget[mission_id]),
@@ -1234,6 +1950,137 @@ class CommitProtocol(gl.contract.Contract):
             payload += self._frame(self._effect_leaf(effect_key))
         return Keccak256(payload.encode("utf-8")).hexdigest()
 
+    def _active_evidence_leaf(
+        self,
+        evidence_key: str,
+    ) -> str:
+        repair_key = self.evidence_latest_repair_key.get(
+            evidence_key,
+            "",
+        )
+
+        if (
+            not repair_key
+            or not self.evidence_repair_exists.get(
+                repair_key,
+                False,
+            )
+            or self.evidence_repair_status[repair_key]
+            != "READY"
+        ):
+            return self._evidence_leaf(evidence_key)
+
+        fields = (
+            self.evidence_id[evidence_key],
+            self.evidence_repair_authority[
+                repair_key
+            ],
+            str(
+                int(
+                    self.evidence_repair_authority_version[
+                        repair_key
+                    ]
+                )
+            ),
+            self.evidence_repair_issuer[
+                repair_key
+            ].as_hex,
+            self.evidence_repair_record_id[
+                repair_key
+            ],
+            str(
+                int(
+                    self.evidence_repair_active_record_version[
+                        repair_key
+                    ]
+                )
+            ),
+            self.evidence_mission[evidence_key],
+            str(
+                int(
+                    self.evidence_mission_version[
+                        evidence_key
+                    ]
+                )
+            ),
+            self.evidence_repair_url[
+                repair_key
+            ],
+            self.evidence_repair_record_hash[
+                repair_key
+            ],
+            self.evidence_subject[evidence_key],
+            str(
+                int(
+                    self.evidence_repair_published_at[
+                        repair_key
+                    ]
+                )
+            ),
+            str(
+                int(
+                    self.evidence_repair_expires_at[
+                        repair_key
+                    ]
+                )
+            ),
+        )
+
+        payload = (
+            "commit-evidence-leaf-v2"
+            + "".join(
+                self._frame(value)
+                for value in fields
+            )
+        )
+
+        return Keccak256(
+            payload.encode("utf-8")
+        ).hexdigest()
+
+    @gl.public.view
+    def derive_active_evidence_root(
+        self,
+        mission_id: str,
+    ) -> str:
+        if not self.mission_exists.get(
+            mission_id,
+            False,
+        ):
+            raise gl.vm.UserError(
+                "mission not found"
+            )
+
+        count = int(
+            self.mission_evidence_count[
+                mission_id
+            ]
+        )
+
+        payload = (
+            "commit-evidence-root-v2"
+            + self._frame(str(count))
+        )
+
+        for index in range(count):
+            evidence_key = (
+                self.mission_evidence_key[
+                    mission_id
+                    + ":"
+                    + str(index)
+                ]
+            )
+
+            payload += self._frame(
+                self._active_evidence_leaf(
+                    evidence_key
+                )
+            )
+
+        return Keccak256(
+            payload.encode("utf-8")
+        ).hexdigest()
+
     @gl.public.view
     def derive_evidence_root(self, mission_id: str) -> str:
         if not self.mission_exists.get(mission_id, False):
@@ -1244,6 +2091,154 @@ class CommitProtocol(gl.contract.Contract):
             evidence_key = self.mission_evidence_key[mission_id + ":" + str(index)]
             payload += self._frame(self._evidence_leaf(evidence_key))
         return Keccak256(payload.encode("utf-8")).hexdigest()
+
+    @gl.public.view
+    def get_evidence_failure(
+        self,
+        mission_id: str,
+        evidence_id: str,
+    ) -> dict:
+        evidence_key = mission_id + ":" + evidence_id
+
+        if not self.evidence_exists.get(
+            evidence_key,
+            False,
+        ):
+            raise gl.vm.UserError("evidence not found")
+
+        failure_key = self.evidence_latest_failure_key.get(
+            evidence_key,
+            "",
+        )
+
+        if (
+            not failure_key
+            or not self.evidence_failure_exists.get(
+                failure_key,
+                False,
+            )
+        ):
+            raise gl.vm.UserError(
+                "evidence failure not found"
+            )
+
+        return {
+            "status": self.evidence_failure_status[
+                failure_key
+            ],
+            "failure_code": self.evidence_failure_code[
+                failure_key
+            ],
+            "evidence_id": (
+                self.evidence_failure_evidence_id[
+                    failure_key
+                ]
+            ),
+            "record_id": (
+                self.evidence_failure_record_id[
+                    failure_key
+                ]
+            ),
+            "failed_record_version": int(
+                self.evidence_failure_record_version[
+                    failure_key
+                ]
+            ),
+            "mission_version": int(
+                self.evidence_failure_mission_version[
+                    failure_key
+                ]
+            ),
+            "attempt": int(
+                self.evidence_failure_attempt[
+                    failure_key
+                ]
+            ),
+        }
+
+    @gl.public.view
+    def get_evidence_repair(
+        self,
+        mission_id: str,
+        evidence_id: str,
+    ) -> dict:
+        evidence_key = mission_id + ":" + evidence_id
+
+        if not self.evidence_exists.get(
+            evidence_key,
+            False,
+        ):
+            raise gl.vm.UserError("evidence not found")
+
+        repair_key = self.evidence_latest_repair_key.get(
+            evidence_key,
+            "",
+        )
+
+        if (
+            not repair_key
+            or not self.evidence_repair_exists.get(
+                repair_key,
+                False,
+            )
+        ):
+            raise gl.vm.UserError(
+                "evidence repair not found"
+            )
+
+        return {
+            "status": self.evidence_repair_status[
+                repair_key
+            ],
+            "authority_id": (
+                self.evidence_repair_authority[
+                    repair_key
+                ]
+            ),
+            "authority_version": int(
+                self.evidence_repair_authority_version[
+                    repair_key
+                ]
+            ),
+            "issuer_address": (
+                self.evidence_repair_issuer[
+                    repair_key
+                ]
+            ),
+            "record_id": (
+                self.evidence_repair_record_id[
+                    repair_key
+                ]
+            ),
+            "original_record_version": int(
+                self.evidence_repair_original_record_version[
+                    repair_key
+                ]
+            ),
+            "active_record_version": int(
+                self.evidence_repair_active_record_version[
+                    repair_key
+                ]
+            ),
+            "url": self.evidence_repair_url[
+                repair_key
+            ],
+            "record_hash": (
+                self.evidence_repair_record_hash[
+                    repair_key
+                ]
+            ),
+            "published_at": int(
+                self.evidence_repair_published_at[
+                    repair_key
+                ]
+            ),
+            "expires_at": int(
+                self.evidence_repair_expires_at[
+                    repair_key
+                ]
+            ),
+        }
 
     @gl.public.view
     def get_mission(self, mission_id: str) -> dict:
@@ -1270,6 +2265,11 @@ class CommitProtocol(gl.contract.Contract):
             "decision": self.mission_decision[mission_id],
             "reason_code": self.mission_reason_code[mission_id],
             "decision_nonce": self.mission_decision_nonce[mission_id],
+            "evaluation_evidence_root": (
+                self.mission_evaluation_evidence_root[
+                    mission_id
+                ]
+            ),
             "allocation_applied": self.mission_allocation_applied[mission_id],
             "refund_entitlement": int(self.mission_refund_entitlement[mission_id]),
             "evaluation_count": int(self.mission_evaluation_count[mission_id]),
@@ -1452,6 +2452,11 @@ class CommitProtocol(gl.contract.Contract):
             "evidence_count": int(self.mission_evidence_count[mission_id]),
             "effect_root": self.mission_effect_root[mission_id],
             "evidence_root": self.mission_evidence_root[mission_id],
+            "evaluation_evidence_root": (
+                self.mission_evaluation_evidence_root[
+                    mission_id
+                ]
+            ),
             "allocation_applied": self.mission_allocation_applied[mission_id],
             "effects": effects,
             "evidence": evidence,

@@ -247,9 +247,9 @@ def test_protocol_discloses_custody_and_evaluation(probe_vm):
         "custody_enabled": True,
         "semantic_evaluation_enabled": True,
         "equivalence_primitive": "run_nondet",
-        "decision_envelope": "commit-decision-v2",
-        "receipt_schema": "commit-mission-receipt-v1",
-        "manifest_schema": "commit-mission-manifest-v1",
+        "decision_envelope": "commit-decision-v3",
+        "receipt_schema": "commit-mission-receipt-v2",
+        "manifest_schema": "commit-mission-manifest-v2",
         "evaluation_trigger": "permissionless-after-seal",
         "authority_provenance": "https-origin-path",
         "mission_count": 0,
@@ -281,7 +281,7 @@ def test_manifest_exposes_exact_root_inputs_for_review(probe_vm):
     )
 
     manifest = contract.get_mission_manifest("mission-001")
-    assert manifest["manifest_schema"] == "commit-mission-manifest-v1"
+    assert manifest["manifest_schema"] == "commit-mission-manifest-v2"
     assert manifest["revision"] == "0.7.0-reviewable-manifest"
     assert manifest["chain_id"] == 1  # direct-runtime fixture chain
     assert manifest["coordinator"] == contract.address.as_hex
@@ -1306,7 +1306,7 @@ def test_mission_receipt_binds_the_decision_proof_envelope(probe_vm):
 
     import genlayer as gl
 
-    assert receipt["receipt_schema"] == "commit-mission-receipt-v1"
+    assert receipt["receipt_schema"] == "commit-mission-receipt-v2"
     assert receipt["protocol"] == "commit"
     assert receipt["revision"] == "0.7.0-reviewable-manifest"
     assert receipt["chain_id"] == int(gl.message.chain_id)
@@ -1384,6 +1384,7 @@ def test_evaluation_validator_rejects_forged_decision_and_changed_source(probe_v
 def test_evaluation_rejects_oversized_remote_evidence(probe_vm):
     contract = load_contract(probe_vm)
     seal_evaluable_mission(contract, probe_vm, True, True)
+
     import json
 
     probe_vm.clear_mocks()
@@ -1391,10 +1392,22 @@ def test_evaluation_rejects_oversized_remote_evidence(probe_vm):
         "https://publisher-a.example/records/mission-001",
         {"status": 200, "body": json.dumps({"padding": "x" * 17000})},
     )
-    with pytest.raises(Exception, match="evidence record is too large"):
-        contract.evaluate_mission("mission-001")
-    assert contract.get_mission("mission-001")["state"] == "SEALED"
-    assert contract.get_mission("mission-001")["evaluation_count"] == 0
+
+    contract.evaluate_mission("mission-001")
+
+    mission = contract.get_mission("mission-001")
+    failure = contract.get_evidence_failure(
+        "mission-001",
+        "evidence-001",
+    )
+
+    assert mission["state"] == "SEALED"
+    assert mission["decision"] == ""
+    assert mission["decision_nonce"] == ""
+    assert failure["status"] == "REPAIR_REQUIRED"
+    assert failure["failure_code"] == "record_too_large"
+    assert failure["evidence_id"] == "evidence-001"
+    assert failure["attempt"] == 1
 
 
 @pytest.mark.parametrize(
@@ -1404,17 +1417,40 @@ def test_evaluation_rejects_oversized_remote_evidence(probe_vm):
         (b"not-json", "invalid evidence JSON"),
     ],
 )
-def test_evaluation_rejects_missing_or_malformed_remote_body(probe_vm, body, error):
+def test_evaluation_rejects_missing_or_malformed_remote_body(
+    probe_vm,
+    body,
+    error,
+):
     contract = load_contract(probe_vm)
     seal_evaluable_mission(contract, probe_vm, True, True)
+
     probe_vm.clear_mocks()
     probe_vm.mock_web(
         "https://publisher-a.example/records/mission-001",
         {"status": 200, "body": body},
     )
-    with pytest.raises(Exception, match=error):
-        contract.evaluate_mission("mission-001")
-    assert contract.get_mission("mission-001")["state"] == "SEALED"
+
+    contract.evaluate_mission("mission-001")
+
+    mission = contract.get_mission("mission-001")
+    failure = contract.get_evidence_failure(
+        "mission-001",
+        "evidence-001",
+    )
+
+    expected_code = {
+        "evidence response body missing": "response_body_missing",
+        "invalid evidence JSON": "invalid_json",
+    }[error]
+
+    assert mission["state"] == "SEALED"
+    assert mission["decision"] == ""
+    assert mission["decision_nonce"] == ""
+    assert failure["status"] == "REPAIR_REQUIRED"
+    assert failure["failure_code"] == expected_code
+    assert failure["evidence_id"] == "evidence-001"
+    assert failure["attempt"] == 1
 
 
 def _valid_record(contract, evidence_id, authority_id, url, eligible=True):
@@ -1443,13 +1479,26 @@ def _valid_record(contract, evidence_id, authority_id, url, eligible=True):
 
 
 @pytest.mark.parametrize("variant,error", [("duplicate", "duplicate evidence key"), ("constant", "invalid evidence JSON")])
-def test_evaluation_rejects_ambiguous_or_nonstandard_json(probe_vm, variant, error):
+def test_evaluation_rejects_ambiguous_or_nonstandard_json(
+    probe_vm,
+    variant,
+    error,
+):
     contract = load_contract(probe_vm)
     seal_evaluable_mission(contract, probe_vm, True, True)
+
     import json
 
     url = "https://publisher-a.example/records/mission-001"
-    body = json.dumps(_valid_record(contract, "evidence-001", AUTHORITY_A, url))
+    body = json.dumps(
+        _valid_record(
+            contract,
+            "evidence-001",
+            AUTHORITY_A,
+            url,
+        )
+    )
+
     if variant == "duplicate":
         body = body.replace(
             '"schema": "commit-evidence-v2"',
@@ -1457,27 +1506,75 @@ def test_evaluation_rejects_ambiguous_or_nonstandard_json(probe_vm, variant, err
             1,
         )
     else:
-        body = body.replace('"eligible": true', '"eligible": NaN', 1)
+        body = body.replace(
+            '"eligible": true',
+            '"eligible": NaN',
+            1,
+        )
+
     probe_vm.clear_mocks()
-    probe_vm.mock_web(url, {"status": 200, "body": body})
-    with pytest.raises(Exception, match=error):
-        contract.evaluate_mission("mission-001")
-    assert contract.get_mission("mission-001")["state"] == "SEALED"
+    probe_vm.mock_web(
+        url,
+        {"status": 200, "body": body},
+    )
+
+    contract.evaluate_mission("mission-001")
+
+    mission = contract.get_mission("mission-001")
+    failure = contract.get_evidence_failure(
+        "mission-001",
+        "evidence-001",
+    )
+
+    assert error in (
+        "duplicate evidence key",
+        "invalid evidence JSON",
+    )
+    assert mission["state"] == "SEALED"
+    assert mission["decision"] == ""
+    assert mission["decision_nonce"] == ""
+    assert failure["status"] == "REPAIR_REQUIRED"
+    assert failure["failure_code"] == "invalid_json"
+    assert failure["evidence_id"] == "evidence-001"
+    assert failure["attempt"] == 1
 
 
 def test_evaluation_rejects_unknown_record_fields(probe_vm):
     contract = load_contract(probe_vm)
     seal_evaluable_mission(contract, probe_vm, True, True)
+
     import json
 
     url = "https://publisher-a.example/records/mission-001"
-    record = _valid_record(contract, "evidence-001", AUTHORITY_A, url)
+    record = _valid_record(
+        contract,
+        "evidence-001",
+        AUTHORITY_A,
+        url,
+    )
     record["unbound_metadata"] = "must-not-be-ignored"
+
     probe_vm.clear_mocks()
-    probe_vm.mock_web(url, {"status": 200, "body": json.dumps(record)})
-    with pytest.raises(Exception, match="unsupported evidence record"):
-        contract.evaluate_mission("mission-001")
-    assert contract.get_mission("mission-001")["state"] == "SEALED"
+    probe_vm.mock_web(
+        url,
+        {"status": 200, "body": json.dumps(record)},
+    )
+
+    contract.evaluate_mission("mission-001")
+
+    mission = contract.get_mission("mission-001")
+    failure = contract.get_evidence_failure(
+        "mission-001",
+        "evidence-001",
+    )
+
+    assert mission["state"] == "SEALED"
+    assert mission["decision"] == ""
+    assert mission["decision_nonce"] == ""
+    assert failure["status"] == "REPAIR_REQUIRED"
+    assert failure["failure_code"] == "unsupported_record"
+    assert failure["evidence_id"] == "evidence-001"
+    assert failure["attempt"] == 1
 
 
 def test_evaluation_is_single_use_and_only_accepts_sealed_missions(probe_vm):

@@ -80,6 +80,48 @@ issuer key and version plus the consequential mission/effect bindings and
 expiry. A non-empty signature string or self-generated digest is not
 authentication.
 
+## Repairable evidence failures and active evaluation root
+
+The current reviewer-hard-gates candidate distinguishes evidence acquisition or
+integrity failure from a valid negative semantic record.
+
+A remote HTTP failure, missing body, oversized body, invalid JSON, wrong
+schema/shape, sealed-binding mismatch, or payload-hash mismatch is repairable.
+When such a failure is encountered, evaluation persists an immutable
+evidence-level `REPAIR_REQUIRED` failure response and does not manufacture a
+semantic ABORT decision from unavailable or malformed source material.
+
+Before the mission recovery deadline, only the mission principal may attach a
+repair. The successor must already have an authenticated issuer attestation and
+must preserve the exact authority ID/version, issuer address, stable record ID,
+mission ID, and mission version while using a strictly newer record version.
+A successful attachment is persisted as `READY`. The original registered
+evidence entry and the mission's sealed evidence root are never rewritten.
+
+`derive_evidence_root` therefore continues to represent the immutable sealed
+snapshot. `derive_active_evidence_root` represents the exact evidence versions
+selected for the next evaluation. With no READY repair the active root is
+byte-for-byte equal to the sealed root. When a valid successor is attached,
+only that evidence leaf is replaced in the active root.
+
+A valid fetched record whose consequential claims fail the declared policy is
+negative evidence and follows the normal semantic ABORT path; it is not a
+repairable source failure. Validator disagreement is likewise not persisted as
+an evidence failure because disagreement is a consensus outcome, not proof that
+the evidence source itself is defective.
+
+The leader and validators compare the complete consequential result including
+the active evaluation root. `commit-decision-v3` binds the mission/version,
+decision, reason code, effect root, immutable sealed evidence root, and exact
+active evaluation root. A repaired decision therefore cannot be replayed as if
+it had been produced from the original evidence version.
+
+`get_mission` exposes the persisted `evaluation_evidence_root`.
+`commit-mission-receipt-v2` and `commit-mission-manifest-v2` expose both the
+immutable sealed `evidence_root` and the exact `evaluation_evidence_root` used
+for the stored decision, allowing reviewers to distinguish the sealed
+commitment from the repaired evaluation snapshot.
+
 ## Failure and freshness
 
 Unavailable publishers, malformed content, schema mismatch, snapshot mismatch,

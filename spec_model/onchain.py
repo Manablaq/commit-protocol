@@ -91,3 +91,34 @@ def effect_root(effects: Iterable[dict[str, object]]) -> str:
     payload = "commit-effect-root-v1" + frame(str(len(leaves)))
     payload += "".join(frame(leaf) for leaf in leaves)
     return _digest(payload)
+
+
+def decision_nonce_v3(
+    *,
+    mission_id: str,
+    mission_version: int,
+    decision: str,
+    reason_code: str,
+    effect_root: str,
+    sealed_evidence_root: str,
+    active_evidence_root: str,
+) -> str:
+    fields = (
+        mission_id,
+        str(mission_version),
+        decision,
+        reason_code,
+        effect_root,
+        sealed_evidence_root,
+        active_evidence_root,
+    )
+
+    payload = (
+        "commit-decision-v3"
+        + "".join(
+            frame(value)
+            for value in fields
+        )
+    )
+
+    return _digest(payload)

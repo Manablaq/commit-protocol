@@ -132,3 +132,56 @@ def evidence_root(evidence_records: Iterable[dict[str, object]]) -> str:
     payload = "commit-evidence-root-v2" + frame(str(len(leaves)))
     payload += "".join(frame(leaf) for leaf in leaves)
     return keccak(payload.encode("utf-8")).hex()
+
+
+def active_evidence_root(
+    evidence_records: Iterable[dict[str, object]],
+    repairs: dict[str, dict[str, object]],
+) -> str:
+    active_records = []
+
+    for record in evidence_records:
+        active_record = dict(record)
+        evidence_id = str(record["evidence_id"])
+        repair = repairs.get(evidence_id)
+
+        if (
+            repair is not None
+            and str(repair.get("status", ""))
+            == "READY"
+        ):
+            active_record.update(
+                {
+                    "authority_id": str(
+                        repair["authority_id"]
+                    ),
+                    "authority_version": int(
+                        repair["authority_version"]
+                    ),
+                    "issuer_address": str(
+                        repair["issuer_address"]
+                    ),
+                    "record_id": str(
+                        repair["record_id"]
+                    ),
+                    "record_version": int(
+                        repair["record_version"]
+                    ),
+                    "url": str(
+                        repair["url"]
+                    ),
+                    "record_hash": str(
+                        repair["record_hash"]
+                    ),
+                    "published_at": int(
+                        repair["published_at"]
+                    ),
+                    "expires_at": int(
+                        repair["expires_at"]
+                    ),
+                }
+            )
+
+        active_records.append(active_record)
+
+    return evidence_root(active_records)

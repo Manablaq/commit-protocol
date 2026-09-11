@@ -23,7 +23,9 @@ not standalone proof of finality.
 | PREPARING | `register_evidence` / principal | Existing authenticated attestation; exact authority/version and record/version; attested mission/version match; attested expiry covers recovery boundary | Evidence manifest entry |
 | PREPARING | `seal_mission` / principal | Funding, effects, two evidence authorities controlled by distinct authenticated issuer addresses, matching roots, acyclic graph | Immutable `SEALED` snapshot |
 | PREPARING | `cancel_mission` / principal | No sealed obligations | Abort allocation and refund entitlement |
-| SEALED | `evaluate_mission` / anyone | Recovery deadline not reached; exact v2 records independently re-read | `DECISION_PENDING`; zero-value finalized self-message emitted |
+| SEALED | `evaluate_mission` / anyone | Recovery deadline not reached; exact active v2 evidence independently re-read | Either persist an evidence-level `REPAIR_REQUIRED` response with no mission decision, or persist the exact active evaluation root and enter `DECISION_PENDING`; a zero-value finalized self-message is emitted only for a decision |
+| SEALED | `repair_evidence` / principal | Existing `REPAIR_REQUIRED` failure; before recovery deadline; no mission decision; authenticated successor has the same authority/version, issuer, stable record ID, mission/version, and a strictly newer record version | Persist append-only `READY` repair; sealed evidence entry/root remain unchanged |
+| SEALED | `evaluate_mission` / anyone after READY repair | Recovery deadline not reached; repaired active evidence independently re-read | Persist exact `evaluation_evidence_root`; enter `DECISION_PENDING` on a valid consequential result |
 | DECISION_PENDING | `apply_decision` / authenticated coordinator self-message | Exact decision nonce; allocation not already applied | `COMMITTED` or `ABORTED` allocation |
 | PREPARING / SEALED / DECISION_PENDING | `expire_mission` / anyone | Recovery deadline reached; no terminal allocation | `ABORTED` allocation and refund entitlement |
 | Allocated | `claim_mission` / beneficiary | Available beneficiary entitlement; fresh withdrawal ID | `DISPATCHED` withdrawal and finalized external GEN transfer requested |
@@ -35,6 +37,16 @@ URL, subject, expiry, and a complete boolean claim for every sealed effect.
 COMMIT is returned only when every independently fetched record and every effect
 claim is eligible. The contract does not currently invoke an LLM or interpret
 an arbitrary policy document.
+
+The sealed evidence root is immutable after sealing. Repair does not rewrite
+that root. Reevaluation derives an active evidence root from the exact evidence
+versions in force, and `commit-decision-v3` binds both the sealed and active
+roots. `commit-mission-receipt-v2` and `commit-mission-manifest-v2` expose both
+roots for reviewer verification.
+
+A valid negative evidence record remains a semantic ABORT. Acquisition or
+integrity failures use the repair path instead, and validator disagreement is
+not stored as an evidence-source failure.
 
 The apply-decision mechanism authenticates the self-message sender, binds the
 exact decision nonce, and is idempotent. Cancellation and recovery are explicit
