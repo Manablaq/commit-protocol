@@ -1,7 +1,7 @@
 # Semantic Atomicity Specification
 
-Revision: implementation draft 0.2, 2026-09-10. This describes the hardened
-v0.5 source and its verified mission-004 Studio Dev behavior; it is not a
+Revision: implementation draft 0.3, 2026-09-11. This describes the hardened
+v0.6 candidate and the prior source's verified mission-004 Studio Dev behavior; it is not a
 claim that every production or external-payment property is complete. Runtime
 assumptions are tracked in [OPEN_QUESTIONS.md](./OPEN_QUESTIONS.md).
 
@@ -29,7 +29,7 @@ or permission.
 | Commit decision | Fixed decision envelope plus COMMIT, justified by all hard constraints and independent semantic evaluation |
 | Abort decision | Same envelope plus ABORT; semantic failure or declared deterministic cancellation/timeout reason |
 | Commit/abort certificate | Exact decision envelope plus verifiable successful finalized transaction provenance; a JSON file alone is not a certificate |
-| Mission receipt | Frozen terms, decision, allocation entries, and separate payment-progress records |
+| Mission receipt | Frozen terms, decision, allocation entries, decision nonce, and separate payment-progress records exposed by `get_mission_receipt` |
 
 Canonical encoding is implemented with printable-ASCII length-prefixed fields
 and GenLayer's native Keccak-256 for `commit-intent-v2`,
@@ -42,6 +42,10 @@ schema compatibility remain separate gates.
 Let `X = (domain, mission_id, version, intent_hash, policy_hash, effect_root, evidence_root, allocation_root, budget, decision_time_policy)`.
 
 The deterministic contract constructs X from the sealed snapshot. A validator independently retrieves authority-bound evidence and evaluates the original mission. Equivalence requires agreement on the decision and the exact consequential envelope. Explanatory prose is not used for accounting or authority.
+
+After sealing, evaluation is permissionless. This keeps the semantic decision
+path live if the principal is offline; principal-only preparation, funding,
+evidence registration, sealing, and cancellation rules remain unchanged.
 
 For any accepted equivalent results `r1` and `r2`, `allocation(r1) = allocation(r2)`. This follows only if allocation is derived from the same sealed graph and the decision bit, with no leader-supplied payout fields trusted. Tests must substitute each consequential field and demonstrate rejection.
 

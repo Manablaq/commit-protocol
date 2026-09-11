@@ -64,8 +64,8 @@ class IndependentEvaluationProbe(gl.contract.Contract):
                 and leader_data.get("reason_code") == validator_data["reason_code"]
             )
 
-        # The linter recognizes this primitive as the enclosing equivalence
-        # block for the web reads; validator errors are handled explicitly.
+        # The pinned Studio Dev v0.6 stack and its linter expose run_nondet as
+        # the compatible custom-validator primitive.
         result = gl.vm.run_nondet(leader_fn, validator_fn)
         if result["decision"] not in ("COMMIT", "ABORT"):
             raise gl.vm.UserError("invalid consensus decision")

@@ -123,9 +123,14 @@ def test_protocol_discloses_custody_and_evaluation(probe_vm):
     contract = load_contract(probe_vm)
     assert contract.protocol_info() == {
         "protocol": "commit",
-        "revision": "0.5.0-authorized-graph",
+        "revision": "0.6.0-semantic-receipt",
         "custody_enabled": True,
         "semantic_evaluation_enabled": True,
+        "equivalence_primitive": "run_nondet",
+        "decision_envelope": "commit-decision-v2",
+        "receipt_schema": "commit-mission-receipt-v1",
+        "evaluation_trigger": "permissionless-after-seal",
+        "authority_provenance": "https-origin-path",
         "mission_count": 0,
         "external_withdrawal_recovery": False,
         "supplier_authorization_required": True,
@@ -227,13 +232,22 @@ def test_principal_cannot_revoke_its_required_authorization(probe_vm):
     assert contract.is_supplier_authorized("mission-001", gl.message.sender_address) is True
 
 
-def test_deactivated_authority_invalidates_sealed_evaluation(probe_vm):
+def test_deactivated_authority_does_not_rewrite_sealed_evidence(probe_vm):
     contract = load_contract(probe_vm)
     seal_evaluable_mission(contract, probe_vm)
     contract.deactivate_authority(AUTHORITY_A)
-    with pytest.raises(Exception, match="authority is inactive"):
-        contract.evaluate_mission("mission-001")
-    assert contract.get_mission("mission-001")["state"] == "SEALED"
+    contract.evaluate_mission("mission-001")
+    assert contract.get_mission("mission-001")["state"] == "DECISION_PENDING"
+
+
+def test_sealed_evaluation_is_permissionless(probe_vm):
+    contract = load_contract(probe_vm)
+    seal_evaluable_mission(contract, probe_vm)
+    from gltest.direct import create_address
+
+    probe_vm.sender = create_address("evaluation-keeper")
+    contract.evaluate_mission("mission-001")
+    assert contract.get_mission("mission-001")["decision"] == "COMMIT"
 
 
 def test_unknown_policy_rule_is_rejected(probe_vm):
@@ -559,6 +573,20 @@ def test_effect_and_cancel_are_locked_after_seal(probe_vm):
         contract.cancel_mission("mission-001")
 
 
+def test_principal_cancellation_records_explicit_abort_receipt(probe_vm):
+    contract = load_contract(probe_vm)
+    create_default(contract, probe_vm, budget=10)
+    contract.cancel_mission("mission-001")
+    mission = contract.get_mission("mission-001")
+    from gltest.direct import create_address
+
+    assert mission["state"] == "ABORTED"
+    assert mission["decision"] == "ABORT"
+    assert mission["reason_code"] == "cancelled_by_principal"
+    assert mission["allocation_applied"] is True
+    assert contract.get_mission_claimable("mission-001", create_address(REFUND_LABEL)) == 10
+
+
 def test_seal_rejects_effect_root_that_does_not_match(probe_vm):
     contract = load_contract(probe_vm)
     create_default(contract, probe_vm, budget=10)
@@ -686,6 +714,8 @@ def test_finalized_allocation_credits_effect_and_refund_entitlements(probe_vm):
 
     assert contract.get_claimable(create_address("beneficiary")) == 7
     assert contract.get_claimable(create_address(REFUND_LABEL)) == 3
+    assert contract.get_mission_claimable("mission-001", create_address("beneficiary")) == 7
+    assert contract.get_mission_claimable("mission-001", create_address(REFUND_LABEL)) == 3
     assert contract.get_mission("mission-001")["allocation_applied"] is True
     assert effect["beneficiary"] != "0x" + "00" * 20
 
@@ -717,7 +747,10 @@ def test_recovery_wins_against_a_late_decision_callback(probe_vm):
     probe_vm.warp("2065-01-24T05:21:41Z")
     probe_vm.sender = create_address("recovery-keeper")
     contract.expire_mission("mission-001")
-    assert contract.get_mission("mission-001")["state"] == "ABORTED"
+    recovered = contract.get_mission("mission-001")
+    assert recovered["state"] == "ABORTED"
+    assert recovered["decision"] == "ABORT"
+    assert recovered["reason_code"] == "recovery_deadline_expired"
     assert contract.get_claimable(create_address(REFUND_LABEL)) == 10
 
     probe_vm.sender = gl.message.contract_address
@@ -757,6 +790,37 @@ def test_claim_dispatch_consumes_one_entitlement_and_records_withdrawal(probe_vm
         contract.claim_mission("mission-001")
 
 
+def test_mission_receipt_binds_the_decision_proof_envelope(probe_vm):
+    contract = load_contract(probe_vm)
+    seal_evaluable_mission(contract, probe_vm, True, True)
+    contract.evaluate_mission("mission-001")
+    mission = contract.get_mission("mission-001")
+    receipt = contract.get_mission_receipt("mission-001")
+
+    import genlayer as gl
+
+    assert receipt["receipt_schema"] == "commit-mission-receipt-v1"
+    assert receipt["protocol"] == "commit"
+    assert receipt["revision"] == "0.6.0-semantic-receipt"
+    assert receipt["chain_id"] == int(gl.message.chain_id)
+    assert receipt["coordinator"] == gl.message.contract_address.as_hex
+    assert receipt["mission_id"] == "mission-001"
+    assert receipt["principal"] == gl.message.sender_address.as_hex
+    assert receipt["objective"] == OBJECTIVE
+    assert receipt["state"] == "DECISION_PENDING"
+    assert receipt["decision"] == "COMMIT"
+    assert receipt["decision_nonce"] == mission["decision_nonce"]
+    assert receipt["intent_digest"] == mission["intent_digest"]
+    assert receipt["effect_root"] == mission["effect_root"]
+    assert receipt["evidence_root"] == mission["evidence_root"]
+    assert receipt["effect_count"] == 1
+    assert receipt["evidence_count"] == 2
+    assert receipt["budget"] == 10
+    assert receipt["prepare_deadline"] == FUTURE_PREPARE
+    assert receipt["recovery_deadline"] == FUTURE_RECOVERY
+    assert receipt["allocation_applied"] is False
+
+
 def test_evaluation_aborts_when_one_source_is_ineligible(probe_vm):
     contract = load_contract(probe_vm)
     seal_evaluable_mission(contract, probe_vm, True, False)
@@ -781,6 +845,23 @@ def test_evaluation_validator_rejects_forged_decision_and_changed_source(probe_v
 
     assert probe_vm.run_validator(
         leader_result={"decision": "ABORT", "reason_code": "policy_or_source_ineligible"}
+    ) is False
+
+    mission = contract.get_mission("mission-001")
+    assert probe_vm.run_validator(
+        leader_result={
+            "decision": "COMMIT",
+            "reason_code": "all_sources_and_effects_eligible",
+            "mission_id": "mission-001",
+            "revision": "0.6.0-semantic-receipt",
+            "intent_digest": mission["intent_digest"],
+            "policy_digest": DIGEST,
+            "policy_rule": "all-evidence-and-effects-v1",
+            "effect_root": mission["effect_root"],
+            "evidence_root": "00" * 32,
+            "effect_count": 1,
+            "evidence_count": 2,
+        }
     ) is False
 
     import json

@@ -1,9 +1,10 @@
 # State Machine and Privileges
 
-Status: implemented and directly tested locally; Studio Dev semantic consensus,
-finalized callback allocation, and finalized claim dispatch are proven by
-mission-004. External delivery reconciliation, recovery, and live deadline
-races remain open.
+Status: revision `0.6.0-semantic-receipt` is implemented and directly tested
+locally. Studio Dev semantic consensus, finalized callback allocation, and
+finalized claim dispatch are proven for the prior source by mission-004. The
+new revision requires a fresh source-matched deployment proof. External
+delivery reconciliation, recovery, and live deadline races remain open.
 
 Contract state and transaction consensus status are separate. An accepted
 transaction may expose provisional state. A stored word such as COMMITTED is
@@ -20,7 +21,7 @@ not standalone proof of finality.
 | PREPARING | `register_evidence` / principal | Active registered authority; exact HTTPS origin/path; mission subject; expiry through recovery boundary | Evidence manifest entry |
 | PREPARING | `seal_mission` / principal | Funding, effects, two distinct registered origin/path pairs, matching roots, acyclic graph | Immutable `SEALED` snapshot |
 | PREPARING | `cancel_mission` / principal | No sealed obligations | Abort allocation and refund entitlement |
-| SEALED | `evaluate_mission` / principal | Recovery deadline not reached; exact v2 records independently re-read | `DECISION_PENDING`; zero-value finalized self-message emitted |
+| SEALED | `evaluate_mission` / anyone | Recovery deadline not reached; exact v2 records independently re-read | `DECISION_PENDING`; zero-value finalized self-message emitted |
 | DECISION_PENDING | `apply_decision` / authenticated coordinator self-message | Exact decision nonce; allocation not already applied | `COMMITTED` or `ABORTED` allocation |
 | PREPARING / SEALED / DECISION_PENDING | `expire_mission` / anyone | Recovery deadline reached; no terminal allocation | `ABORTED` allocation and refund entitlement |
 | Allocated | `claim_mission` / beneficiary | Available beneficiary entitlement; fresh withdrawal ID | `DISPATCHED` withdrawal and finalized external GEN transfer requested |
@@ -34,9 +35,14 @@ claim is eligible. The contract does not currently invoke an LLM or interpret
 an arbitrary policy document.
 
 The apply-decision mechanism authenticates the self-message sender, binds the
-exact decision nonce, and is idempotent. If deadline recovery wins first, a
-late authenticated callback is harmless even with stale calldata. This race
-still requires a live target-network proof.
+exact decision nonce, and is idempotent. Cancellation and recovery are explicit
+ABORT decisions with reason codes. If deadline recovery wins first, it replaces
+any unresolved decision with `ABORT`; a late authenticated callback is harmless
+even with stale calldata. This race still requires a live target-network proof.
+
+Evaluation is permissionless after sealing. This removes an unnecessary keeper
+dependency while preserving principal-only preparation, funding, evidence
+registration, sealing, and cancellation.
 
 External claim dispatch is intentionally not blindly retried. The entitlement
 is consumed before dispatch to prevent double payment, and remains represented

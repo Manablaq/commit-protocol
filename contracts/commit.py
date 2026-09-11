@@ -33,7 +33,7 @@ else:
 
 
 PROTOCOL = "commit"
-REVISION = "0.5.0-authorized-graph"
+REVISION = "0.6.0-semantic-receipt"
 STATE_PREPARING = "PREPARING"
 STATE_SEALED = "SEALED"
 STATE_DECISION_PENDING = "DECISION_PENDING"
@@ -49,6 +49,8 @@ MAX_U256 = (1 << 256) - 1
 EVIDENCE_SCHEMA = "commit-evidence-v2"
 POLICY_RULE = "all-evidence-and-effects-v1"
 POLICY_DIGEST = "983307fac383ac4a92be6c0c361ea8f3c9d9efa20ad5e6e8bc8dee932f2a6103"
+DECISION_ENVELOPE = "commit-decision-v2"
+RECEIPT_SCHEMA = "commit-mission-receipt-v1"
 
 
 @gl.evm.contract_interface
@@ -551,11 +553,14 @@ class CommitProtocol(_ContractBase):
         self._require_principal(mission_id)
         if self.mission_state[mission_id] != STATE_PREPARING:
             raise gl.vm.UserError("sealed mission cannot be cancelled")
-        self._allocate_abort(mission_id)
+        self._allocate_abort(mission_id, "cancelled_by_principal")
 
     @gl.public.write
     def evaluate_mission(self, mission_id: str) -> None:
-        self._require_principal(mission_id)
+        if not self.mission_exists.get(mission_id, False):
+            raise gl.vm.UserError("mission not found")
+        # Evaluation is permissionless after sealing so a principal going
+        # offline cannot strand a mission before its recovery deadline.
         if self.mission_state[mission_id] != STATE_SEALED:
             raise gl.vm.UserError("mission is not sealed")
         if self.mission_decision[mission_id]:
@@ -577,13 +582,12 @@ class CommitProtocol(_ContractBase):
                 self.evidence_record_hash[evidence_key],
                 int(self.evidence_expires_at[evidence_key]),
             ))
-            if not self.authority_active.get(self.evidence_authority[evidence_key], False):
-                raise gl.vm.UserError("authority is inactive")
         mission_id_snapshot = mission_id
         objective_snapshot = self.mission_objective[mission_id]
         policy_digest_snapshot = self.mission_policy_digest[mission_id]
         intent_digest_snapshot = self.mission_intent_digest[mission_id]
         effect_root_snapshot = self.mission_effect_root[mission_id]
+        evidence_root_snapshot = self.mission_evidence_root[mission_id]
         effect_specs = []
         for index in range(int(self.mission_effect_count[mission_id])):
             effect_key = self.mission_effect_key[mission_id + ":" + str(index)]
@@ -702,9 +706,14 @@ class CommitProtocol(_ContractBase):
                     if all_eligible else "policy_or_source_ineligible"
                 ),
                 "mission_id": mission_id_snapshot,
+                "revision": REVISION,
                 "intent_digest": intent_digest_snapshot,
                 "policy_digest": policy_digest_snapshot,
+                "policy_rule": POLICY_RULE,
                 "effect_root": effect_root_snapshot,
+                "evidence_root": evidence_root_snapshot,
+                "effect_count": len(effect_specs),
+                "evidence_count": len(source_specs),
             }
 
         def validator_fn(leader_result) -> bool:
@@ -721,11 +730,19 @@ class CommitProtocol(_ContractBase):
                 leader_data.get("decision") == validator_data["decision"]
                 and leader_data.get("reason_code") == validator_data["reason_code"]
                 and leader_data.get("mission_id") == validator_data["mission_id"]
+                and leader_data.get("revision") == validator_data["revision"]
                 and leader_data.get("intent_digest") == validator_data["intent_digest"]
                 and leader_data.get("policy_digest") == validator_data["policy_digest"]
+                and leader_data.get("policy_rule") == validator_data["policy_rule"]
                 and leader_data.get("effect_root") == validator_data["effect_root"]
+                and leader_data.get("evidence_root") == validator_data["evidence_root"]
+                and leader_data.get("effect_count") == validator_data["effect_count"]
+                and leader_data.get("evidence_count") == validator_data["evidence_count"]
             )
 
+        # The pinned Studio Dev v0.6 stack and its linter expose run_nondet as
+        # the compatible custom-validator primitive. validator_fn catches its
+        # own errors and returns False, so disagreement cannot mutate state.
         result = gl.vm.run_nondet(leader_fn, validator_fn)
         if result["decision"] not in ("COMMIT", "ABORT"):
             raise gl.vm.UserError("invalid consensus decision")
@@ -736,7 +753,7 @@ class CommitProtocol(_ContractBase):
         )
         decision_nonce = Keccak256(
             (
-                "commit-decision-v1"
+                DECISION_ENVELOPE
                 + self._frame(mission_id)
                 + self._frame(str(int(self.mission_version[mission_id])))
                 + self._frame(result["decision"])
@@ -766,7 +783,7 @@ class CommitProtocol(_ContractBase):
         if self.mission_decision[mission_id] == "COMMIT":
             self._allocate_commit(mission_id)
         elif self.mission_decision[mission_id] == "ABORT":
-            self._allocate_abort(mission_id)
+            self._allocate_abort(mission_id, self.mission_reason_code[mission_id])
         else:
             raise gl.vm.UserError("invalid decision")
 
@@ -812,7 +829,7 @@ class CommitProtocol(_ContractBase):
         now = int(datetime.now(timezone.utc).timestamp())
         if now < int(self.mission_recovery_deadline[mission_id]):
             raise gl.vm.UserError("recovery deadline has not passed")
-        self._allocate_abort(mission_id)
+        self._allocate_abort(mission_id, "recovery_deadline_expired")
 
     @gl.public.view
     def protocol_info(self) -> dict:
@@ -821,6 +838,11 @@ class CommitProtocol(_ContractBase):
             "revision": REVISION,
             "custody_enabled": True,
             "semantic_evaluation_enabled": True,
+            "equivalence_primitive": "run_nondet",
+            "decision_envelope": DECISION_ENVELOPE,
+            "receipt_schema": RECEIPT_SCHEMA,
+            "evaluation_trigger": "permissionless-after-seal",
+            "authority_provenance": "https-origin-path",
             "mission_count": int(self.mission_count),
             "external_withdrawal_recovery": False,
             "supplier_authorization_required": True,
@@ -834,6 +856,55 @@ class CommitProtocol(_ContractBase):
     @gl.public.view
     def get_claimable(self, beneficiary: gl.Address) -> int:
         return int(self.claimable_balance.get(beneficiary.as_hex, gl.u256(0)))
+
+    @gl.public.view
+    def get_mission_claimable(self, mission_id: str, beneficiary: gl.Address) -> int:
+        """Return only this beneficiary's entitlement for this mission."""
+        if not self.mission_exists.get(mission_id, False):
+            raise gl.vm.UserError("mission not found")
+        return int(
+            self.mission_claimable.get(
+                mission_id + ":" + beneficiary.as_hex, gl.u256(0)
+            )
+        )
+
+    @gl.public.view
+    def get_mission_receipt(self, mission_id: str) -> dict:
+        """Return one auditable proof envelope for clients and reviewers."""
+        if not self.mission_exists.get(mission_id, False):
+            raise gl.vm.UserError("mission not found")
+        return {
+            "receipt_schema": RECEIPT_SCHEMA,
+            "protocol": PROTOCOL,
+            "revision": REVISION,
+            "chain_id": int(gl.message.chain_id),
+            "coordinator": gl.message.contract_address.as_hex,
+            "mission_id": mission_id,
+            "principal": self.mission_principal[mission_id].as_hex,
+            "version": int(self.mission_version[mission_id]),
+            "objective": self.mission_objective[mission_id],
+            "state": self.mission_state[mission_id],
+            "decision": self.mission_decision[mission_id],
+            "reason_code": self.mission_reason_code[mission_id],
+            "decision_nonce": self.mission_decision_nonce[mission_id],
+            "policy_rule": POLICY_RULE,
+            "policy_digest": self.mission_policy_digest[mission_id],
+            "intent_digest": self.mission_intent_digest[mission_id],
+            "effect_root": self.mission_effect_root[mission_id],
+            "evidence_root": self.mission_evidence_root[mission_id],
+            "effect_count": int(self.mission_effect_count[mission_id]),
+            "evidence_count": int(self.mission_evidence_count[mission_id]),
+            "budget": int(self.mission_budget[mission_id]),
+            "funded_value": int(self.mission_funded_value[mission_id]),
+            "prepared_value": int(self.mission_prepared_value[mission_id]),
+            "refund_beneficiary": self.mission_refund_beneficiary[mission_id].as_hex,
+            "refund_entitlement": int(self.mission_refund_entitlement[mission_id]),
+            "prepare_deadline": int(self.mission_prepare_deadline[mission_id]),
+            "recovery_deadline": int(self.mission_recovery_deadline[mission_id]),
+            "evaluation_count": int(self.mission_evaluation_count[mission_id]),
+            "allocation_applied": self.mission_allocation_applied[mission_id],
+            "external_withdrawal_recovery": False,
+        }
 
     @gl.public.view
     def get_withdrawal(self, withdrawal_id: str) -> dict:
@@ -882,9 +953,13 @@ class CommitProtocol(_ContractBase):
             return
         claim_key = mission_id + ":" + beneficiary.as_hex
         mission_current = int(self.mission_claimable.get(claim_key, gl.u256(0)))
-        self.mission_claimable[claim_key] = gl.u256(mission_current + amount)
         global_key = beneficiary.as_hex
         global_current = int(self.claimable_balance.get(global_key, gl.u256(0)))
+        if amount > MAX_U256 - mission_current:
+            raise gl.vm.UserError("mission claimable balance overflow")
+        if amount > MAX_U256 - global_current:
+            raise gl.vm.UserError("global claimable balance overflow")
+        self.mission_claimable[claim_key] = gl.u256(mission_current + amount)
         self.claimable_balance[global_key] = gl.u256(global_current + amount)
 
     def _allocate_commit(self, mission_id: str) -> None:
@@ -906,10 +981,15 @@ class CommitProtocol(_ContractBase):
         self.mission_allocation_applied[mission_id] = True
         self.mission_state[mission_id] = STATE_COMMITTED
 
-    def _allocate_abort(self, mission_id: str) -> None:
+    def _allocate_abort(self, mission_id: str, reason_code: str) -> None:
         if self.mission_allocation_applied[mission_id]:
             return
         funded = int(self.mission_funded_value[mission_id])
+        # Deterministic cancellation and timeout are still explicit ABORT
+        # decisions. This also invalidates any unresolved COMMIT callback that
+        # races with recovery, so the public receipt cannot lie about outcome.
+        self.mission_decision[mission_id] = "ABORT"
+        self.mission_reason_code[mission_id] = reason_code
         self.mission_refund_entitlement[mission_id] = gl.u256(funded)
         self._credit_claimable(
             mission_id, self.mission_refund_beneficiary[mission_id], funded

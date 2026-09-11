@@ -1,6 +1,6 @@
 # COMMIT Studio Dev Deployment Log
 
-Updated: 2026-09-10 (Africa/Lagos)
+Updated: 2026-09-11 (Africa/Lagos)
 
 This log records only facts observed against Studio Dev. `ACCEPTED` means the
 consensus transaction reached a decided accepted result. Finalized receipts
@@ -19,6 +19,12 @@ dispatch.
 - Contract runner: `py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng`
 
 ## Deployments
+
+### Next candidate (not deployed)
+
+- Source revision: `0.6.0-semantic-receipt`
+- Local status: 24 deterministic tests, 78 direct-runtime tests, three lint targets, bytecode compilation, and diff checks passed on 2026-09-11.
+- Deployment status: pending. The existing `0xf1a47118c04Ad0D5B49871ae207B8D715bC0d085` address remains the prior `0.5.0-authorized-graph` source and must not be cited as proof for this candidate.
 
 ### v0.6 canary
 

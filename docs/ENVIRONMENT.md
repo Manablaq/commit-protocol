@@ -1,7 +1,7 @@
 # Verified Environment Baseline
 
-Status: **Local hardening closed; Studio Dev semantic settlement and finalized claim dispatch proven; external delivery/recovery remains open**
-Verified: 2026-09-10
+Status: **Revision 0.6.0 local hardening closed; prior 0.5.0 Studio Dev semantic settlement and finalized claim dispatch proven; candidate redeployment pending; external delivery/recovery remains open**
+Verified: 2026-09-11
 
 ## Protocol family
 
@@ -38,10 +38,10 @@ The current official network table distinguishes the production-like Bradbury te
 - This environment is temporary and may reset; it is not Bradbury.
 
 COMMIT must not reuse preview addresses, fee assumptions, or runtime conclusions
-across networks. The current target is Studio Dev. A matching v0.6 canary and
-the full COMMIT source are deployed and source-matched there. Bradbury is a
-separate persistent follow-up target and must not be used to infer Studio Dev
-compatibility.
+across networks. The current target is Studio Dev. The prior 0.5.0 canary and
+full source are deployed and source-matched there; the 0.6.0 candidate is
+locally verified but not yet deployed. Bradbury is a separate persistent
+follow-up target and must not be used to infer Studio Dev compatibility.
 
 ## Unresolved before dependency lock
 

@@ -39,6 +39,13 @@ Protocol fee deposits are accounted separately from purchase principal. Caller t
 
 Observed ghost balance must be reconciled against liabilities using network-specific treatment of in-flight messages. Do not assume `self.balance == L + C + R + D`: emitted value may already be held in a message.
 
+## Read surface
+
+`get_claimable(beneficiary)` reports the beneficiary's aggregate entitlement
+across missions. `get_mission_claimable(mission_id, beneficiary)` reports the
+mission-specific amount, so clients and reviewers do not have to infer one
+mission's liability from a global balance.
+
 ## Withdrawal authority
 
 Only the beneficiary can request a withdrawal of their entitlement. The target and amount become immutable when dispatched. No admin can change beneficiaries, sweep liabilities, or mark uncertain payments as failed. Address code/behavior can change; a claim that an address is an EOA does not itself prove transfers can never fail.
