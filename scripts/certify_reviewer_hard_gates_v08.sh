@@ -13,6 +13,7 @@ EXPECTED_LEGACY_SHA="b73386a814d39b91b381009fdf006e30876b084d4a7e67f6d87e3295fa5
 EXPECTED_REPAIR_SHA="2d6952c0eda64b54f6aa687ef117fadc3ea41a9179a761384eb1f77c7a883458"
 EXPECTED_PARITY_SHA="54db4ce2426e16364606c8dcbe5caada379237493a9c8356d8fd947e1b8152a8"
 EXPECTED_VECTOR_SHA="abc2befc25fb3c73f44dda7d7a214af22497cd18c0bb7c0e08a09c3a6fc54e4e"
+EXPECTED_RACE_SHA="d64aaf53c1c65d4d32c9e1ec0fe3ae0051fe5f50828c9fbfc2a6ae5f233730f4"
 EXPECTED_PROVENANCE_TEST_SHA="f29e50a2156806eac774516e256f3c8d069abe645f5ac103da1721d0ab1604d0"
 EXPECTED_HARD_GATE_SHA="bbb04e2c004a071ac99c8ae067c265e058e7b0fdaa88b6e9e6bdb732f4baad21"
 EXPECTED_README_SHA="6dfd0a26590b71ad7b9d04b3b83cd3da745c622866c848887cff58f558866715"
@@ -52,6 +53,7 @@ assert_sha LEGACY_RUNTIME_TEST_SHA tests/runtime/test_commit_skeleton.py "$EXPEC
 assert_sha REPAIR_RUNTIME_TEST_SHA tests/runtime/test_repairable_evidence_failures_v08.py "$EXPECTED_REPAIR_SHA"
 assert_sha ACTIVE_ROOT_PARITY_TEST_SHA tests/test_active_evidence_decision_v3.py "$EXPECTED_PARITY_SHA"
 assert_sha ACTIVE_ROOT_RUNTIME_VECTOR_SHA tests/runtime/test_active_evidence_runtime_vector_v08.py "$EXPECTED_VECTOR_SHA"
+assert_sha DEADLINE_ALLOCATION_RACE_TEST_SHA tests/runtime/test_deadline_allocation_races_v08.py "$EXPECTED_RACE_SHA"
 assert_sha PROVENANCE_TEST_SHA tests/test_provenance.py "$EXPECTED_PROVENANCE_TEST_SHA"
 assert_sha REVIEWER_HARD_GATE_TEST_SHA tests/runtime/test_reviewer_hard_gates_v08.py "$EXPECTED_HARD_GATE_SHA"
 assert_sha README_SHA README.md "$EXPECTED_README_SHA"
@@ -112,6 +114,9 @@ GENVM_PREBUILT_DIR="$GENVM_PREBUILT_DIR" \
 uv run python -m pytest -q tests/runtime/test_active_evidence_runtime_vector_v08.py
 
 GENVM_PREBUILT_DIR="$GENVM_PREBUILT_DIR" \
+uv run python -m pytest -q tests/runtime/test_deadline_allocation_races_v08.py
+
+GENVM_PREBUILT_DIR="$GENVM_PREBUILT_DIR" \
 uv run python -m pytest -q tests/runtime
 
 GENVM_PREBUILT_DIR="$GENVM_PREBUILT_DIR" \
@@ -164,19 +169,29 @@ VECTOR_COUNT="$(
   grep -Eo '^[0-9]+'
 )"
 
+RACE_COUNT="$(
+  GENVM_PREBUILT_DIR="$GENVM_PREBUILT_DIR" \
+  uv run python -m pytest --collect-only -q tests/runtime/test_deadline_allocation_races_v08.py 2>/dev/null |
+  grep -Eo '[0-9]+ tests? collected' |
+  tail -1 |
+  grep -Eo '^[0-9]+'
+)"
+
 echo "DETERMINISTIC_COUNT=$DETERMINISTIC_COUNT"
 echo "RUNTIME_COUNT=$RUNTIME_COUNT"
 echo "FULL_COUNT=$FULL_COUNT"
 echo "HARD_GATE_COUNT=$HARD_GATE_COUNT"
 echo "REPAIR_COUNT=$REPAIR_COUNT"
 echo "VECTOR_COUNT=$VECTOR_COUNT"
+echo "RACE_COUNT=$RACE_COUNT"
 
 test "$DETERMINISTIC_COUNT" = "30"
-test "$RUNTIME_COUNT" = "109"
-test "$FULL_COUNT" = "139"
+test "$RUNTIME_COUNT" = "113"
+test "$FULL_COUNT" = "143"
 test "$HARD_GATE_COUNT" = "11"
 test "$REPAIR_COUNT" = "18"
 test "$VECTOR_COUNT" = "1"
+test "$RACE_COUNT" = "4"
 
 python3 <<'PY2'
 from pathlib import Path
@@ -244,11 +259,12 @@ git diff --check
 echo
 echo "COMMIT_STEP2_REVIEWER_HARD_GATES_CERTIFICATION=PASS"
 echo "DETERMINISTIC_TESTS=30/30_PASS"
-echo "RUNTIME_TESTS=109/109_PASS"
-echo "FULL_SUITE=139/139_PASS"
+echo "RUNTIME_TESTS=113/113_PASS"
+echo "FULL_SUITE=143/143_PASS"
 echo "REVIEWER_HARD_GATES=11/11_PASS"
 echo "REPAIR_TESTS=18/18_PASS"
 echo "ACTIVE_ROOT_RUNTIME_VECTOR=1/1_PASS"
+echo "DEADLINE_ALLOCATION_RACE_TESTS=4/4_PASS"
 echo "CONTRACT_SPEC_EVIDENCE_ROOT_PARITY=PASS"
 echo "DECISION_ENVELOPE=commit-decision-v3"
 echo "RECEIPT_SCHEMA=commit-mission-receipt-v2"
