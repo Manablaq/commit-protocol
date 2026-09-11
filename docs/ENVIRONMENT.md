@@ -1,6 +1,6 @@
 # Verified Environment Baseline
 
-Status: **Revision 0.6.0 local hardening closed; prior 0.5.0 Studio Dev semantic settlement and finalized claim dispatch proven; candidate redeployment pending; external delivery/recovery remains open**
+Status: **Revision 0.7.0 local hardening closed; prior 0.5.0/0.6.0 Studio Dev source matches recorded; v0.7 candidate redeployment pending; external delivery/recovery remains open**
 Verified: 2026-09-11
 
 ## Protocol family
@@ -39,8 +39,8 @@ The current official network table distinguishes the production-like Bradbury te
 
 COMMIT must not reuse preview addresses, fee assumptions, or runtime conclusions
 across networks. The current target is Studio Dev. The prior 0.5.0 canary and
-full source are deployed and source-matched there; the 0.6.0 candidate is
-locally verified but not yet deployed. Bradbury is a separate persistent
+full source, plus the source-matched 0.6.0 deployment, are recorded there; the
+0.7.0 candidate is locally verified but not yet deployed. Bradbury is a separate persistent
 follow-up target and must not be used to infer Studio Dev compatibility.
 
 ## Unresolved before dependency lock
@@ -65,7 +65,7 @@ Its [manifest at that commit](https://github.com/genlayerlabs/genlayer-transacti
 
 ## Corrections to the initial progress report
 
-Phase 2 was previously described as completed too early. Published package versions and documented network settings did not verify the deployed Studio/consensus versions, runtime hash, hackathon network requirement, or withdrawal failure semantics. Mission-004 closes the deployment, evaluation, finality-gated allocation, and one-way dispatch portions on Studio Dev; withdrawal delivery/recovery semantics remain open.
+Phase 2 was previously described as completed too early. Published package versions and documented network settings did not verify the deployed Studio/consensus versions, runtime hash, hackathon network requirement, or withdrawal failure semantics. Mission-004 closes the deployment, evaluation, finality-gated allocation, and one-way dispatch portions on Studio Dev for the earlier source; withdrawal delivery/recovery semantics remain open for the current protocol.
 
 The public hackathon page initially returned no readable rules through text retrieval. Subsequent browser inspection on 2026-09-09 resolved this: the actual submission form supports Studio, Bradbury or Asimov address links, requires a website, and requires a public repository belonging to the linked GitHub account. No exclusive Bradbury requirement appears. The reference track is Agentic Commerce Infrastructure. Source: https://portal.genlayer.foundation/agent-tank/hackathon/submit
 

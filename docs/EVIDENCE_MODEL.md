@@ -2,8 +2,12 @@
 
 Status: structural authority/path enforcement, snapshot binding, bounded
 remote input, v2 schema checks, and full decision-envelope comparison are
-implemented and locally tested in revision `0.6.0-semantic-receipt`. Mission
-004 proves the prior source's semantic evaluation path on Studio Dev. Live
+implemented and locally tested in revision `0.7.0-reviewable-manifest`. Mission
+004 proves the prior source's semantic evaluation path on Studio Dev. The new
+`get_mission_manifest` read exposes the frozen mission terms, exact ordered
+effect/evidence inputs, sealed roots, current decision/allocation state, and
+registered authority metadata for reviewer inspection in one bounded response.
+Live
 redirect provenance and issuer cryptographic authentication remain open.
 
 ## Authority
@@ -46,7 +50,9 @@ Validator equivalence includes the decision and every sealed snapshot binding
 field, so a well-formed leader cannot substitute another mission, policy, root,
 or manifest size. `get_mission_receipt` exposes those commitments together with
 the frozen objective, principal, budget, deadlines, decision nonce, and
-allocation state.
+allocation state. `get_mission_manifest` exposes the bounded root inputs and the
+authority record used for each evidence URL, so a reviewer can reconstruct what
+was sealed without relying on an off-chain database.
 
 ## Remaining provenance boundary
 

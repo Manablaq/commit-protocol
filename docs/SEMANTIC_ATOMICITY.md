@@ -1,7 +1,7 @@
 # Semantic Atomicity Specification
 
-Revision: implementation draft 0.3, 2026-09-11. This describes the hardened
-v0.6 candidate and the prior source's verified mission-004 Studio Dev behavior; it is not a
+Revision: implementation draft 0.4, 2026-09-11. This describes the hardened
+v0.7 candidate and the prior source's verified mission-004 Studio Dev behavior; it is not a
 claim that every production or external-payment property is complete. Runtime
 assumptions are tracked in [OPEN_QUESTIONS.md](./OPEN_QUESTIONS.md).
 
@@ -30,6 +30,7 @@ or permission.
 | Abort decision | Same envelope plus ABORT; semantic failure or declared deterministic cancellation/timeout reason |
 | Commit/abort certificate | Exact decision envelope plus verifiable successful finalized transaction provenance; a JSON file alone is not a certificate |
 | Mission receipt | Frozen terms, decision, allocation entries, decision nonce, and separate payment-progress records exposed by `get_mission_receipt` |
+| Review manifest | Bounded ordered effect/evidence inputs, sealed roots, and registered authority metadata exposed by `get_mission_manifest` |
 
 Canonical encoding is implemented with printable-ASCII length-prefixed fields
 and GenLayer's native Keccak-256 for `commit-intent-v2`,

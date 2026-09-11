@@ -22,9 +22,19 @@ dispatch.
 
 ### Next candidate (not deployed)
 
+- Source revision: `0.7.0-reviewable-manifest`
+- Local status: 24 deterministic tests, 79 direct-runtime tests, three lint targets, bytecode compilation, and diff checks passed on 2026-09-11.
+- New capability: `get_mission_manifest` exposes the frozen mission terms, exact bounded effect/evidence inputs, sealed roots, current decision/allocation state, and registered authority metadata used for reviewer reconstruction; all protocol counters now use explicit overflow guards.
+- Deployment status: pending. The v0.6 source-matched deployment below is historical evidence for revision `0.6.0-semantic-receipt`; it must not be cited as proof for this candidate.
+
+### v0.6 source-matched deployment
+
+- Contract: `0xfB15d38FB1Bb5ba44965BA9d2b527e8D742004fF`
+- Transaction: `0x993d17d863af0c7ff98feeb046c2a63af66e0a19f55adbff8bd95933a7a3a774`
+- Execution: `ACCEPTED`, `FINISHED_WITH_RETURN`
 - Source revision: `0.6.0-semantic-receipt`
-- Local status: 24 deterministic tests, 78 direct-runtime tests, three lint targets, bytecode compilation, and diff checks passed on 2026-09-11.
-- Deployment status: pending. The existing `0xf1a47118c04Ad0D5B49871ae207B8D715bC0d085` address remains the prior `0.5.0-authorized-graph` source and must not be cited as proof for this candidate.
+- Local/deployed source SHA-256: `789ff473ac8574ac15bf810ce8eb30dc7b7d6845fa69537c663fb148cc407dca`
+- `protocol_info()` readback: Studio Dev chain `61997`, semantic evaluation enabled, `commit-decision-v2` envelope, `commit-mission-receipt-v1` receipt, exact HTTPS origin/path authority enforcement, permissionless post-seal evaluation, and external withdrawal recovery explicitly disabled.
 
 ### v0.6 canary
 

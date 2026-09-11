@@ -123,12 +123,13 @@ def test_protocol_discloses_custody_and_evaluation(probe_vm):
     contract = load_contract(probe_vm)
     assert contract.protocol_info() == {
         "protocol": "commit",
-        "revision": "0.6.0-semantic-receipt",
+        "revision": "0.7.0-reviewable-manifest",
         "custody_enabled": True,
         "semantic_evaluation_enabled": True,
         "equivalence_primitive": "run_nondet",
         "decision_envelope": "commit-decision-v2",
         "receipt_schema": "commit-mission-receipt-v1",
+        "manifest_schema": "commit-mission-manifest-v1",
         "evaluation_trigger": "permissionless-after-seal",
         "authority_provenance": "https-origin-path",
         "mission_count": 0,
@@ -140,6 +141,57 @@ def test_protocol_discloses_custody_and_evaluation(probe_vm):
         "policy_digest": DIGEST,
         "remote_body_limit": 16384,
     }
+
+
+def test_manifest_exposes_exact_root_inputs_for_review(probe_vm):
+    contract = load_contract(probe_vm)
+    from gltest.direct import create_address
+
+    create_default(contract, probe_vm, budget=10)
+    supplier = create_address("supplier")
+    beneficiary = create_address("beneficiary")
+    probe_vm.sender = supplier
+    contract.prepare_effect(
+        "mission-001", "effect-001", "cd" * 32, beneficiary, 7, FUTURE_RECOVERY
+    )
+    add_evaluable_evidence(contract, probe_vm)
+    contract.seal_mission(
+        "mission-001", contract.derive_effect_root("mission-001"),
+        contract.derive_evidence_root("mission-001"),
+    )
+
+    manifest = contract.get_mission_manifest("mission-001")
+    assert manifest["manifest_schema"] == "commit-mission-manifest-v1"
+    assert manifest["revision"] == "0.7.0-reviewable-manifest"
+    assert manifest["chain_id"] == 1  # direct-runtime fixture chain
+    assert manifest["coordinator"] == contract.address.as_hex
+    assert manifest["principal"] == "0x" + PRINCIPAL.hex()
+    assert manifest["objective"] == OBJECTIVE
+    assert manifest["policy_rule"] == "all-evidence-and-effects-v1"
+    assert manifest["policy_digest"] == DIGEST
+    assert manifest["intent_digest"] == contract.derive_intent_digest("mission-001")
+    assert manifest["state"] == "SEALED"
+    assert manifest["decision"] == ""
+    assert manifest["reason_code"] == ""
+    assert manifest["effect_count"] == 1
+    assert manifest["evidence_count"] == 2
+    assert manifest["allocation_applied"] is False
+    assert manifest["effect_root"] == contract.derive_effect_root("mission-001")
+    assert manifest["evidence_root"] == contract.derive_evidence_root("mission-001")
+    assert manifest["effects"] == [
+        {
+            "mission_id": "mission-001",
+            "effect_id": "effect-001",
+            "supplier": supplier.as_hex,
+            "digest": "cd" * 32,
+            "dependency_id": "",
+            "beneficiary": beneficiary.as_hex,
+            "value": 7,
+            "expiry": FUTURE_RECOVERY,
+        }
+    ]
+    assert manifest["evidence"][0]["authority"]["host"] == "publisher-a.example"
+    assert manifest["evidence"][1]["authority"]["path_prefix"] == "/records"
 
 
 def test_authority_registry_is_owner_only_and_immutable(probe_vm):
@@ -801,7 +853,7 @@ def test_mission_receipt_binds_the_decision_proof_envelope(probe_vm):
 
     assert receipt["receipt_schema"] == "commit-mission-receipt-v1"
     assert receipt["protocol"] == "commit"
-    assert receipt["revision"] == "0.6.0-semantic-receipt"
+    assert receipt["revision"] == "0.7.0-reviewable-manifest"
     assert receipt["chain_id"] == int(gl.message.chain_id)
     assert receipt["coordinator"] == gl.message.contract_address.as_hex
     assert receipt["mission_id"] == "mission-001"
@@ -853,7 +905,7 @@ def test_evaluation_validator_rejects_forged_decision_and_changed_source(probe_v
             "decision": "COMMIT",
             "reason_code": "all_sources_and_effects_eligible",
             "mission_id": "mission-001",
-            "revision": "0.6.0-semantic-receipt",
+            "revision": "0.7.0-reviewable-manifest",
             "intent_digest": mission["intent_digest"],
             "policy_digest": DIGEST,
             "policy_rule": "all-evidence-and-effects-v1",

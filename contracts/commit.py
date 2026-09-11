@@ -33,7 +33,7 @@ else:
 
 
 PROTOCOL = "commit"
-REVISION = "0.6.0-semantic-receipt"
+REVISION = "0.7.0-reviewable-manifest"
 STATE_PREPARING = "PREPARING"
 STATE_SEALED = "SEALED"
 STATE_DECISION_PENDING = "DECISION_PENDING"
@@ -51,6 +51,7 @@ POLICY_RULE = "all-evidence-and-effects-v1"
 POLICY_DIGEST = "983307fac383ac4a92be6c0c361ea8f3c9d9efa20ad5e6e8bc8dee932f2a6103"
 DECISION_ENVELOPE = "commit-decision-v2"
 RECEIPT_SCHEMA = "commit-mission-receipt-v1"
+MANIFEST_SCHEMA = "commit-mission-manifest-v1"
 
 
 @gl.evm.contract_interface
@@ -141,6 +142,12 @@ class CommitProtocol(_ContractBase):
         if type(value) is not int or value < (1 if positive else 0) or value > MAX_U256:
             raise gl.vm.UserError(f"invalid {label}")
         return value
+
+    def _next_uint(self, value: int, label: str) -> int:
+        """Increment a stored uint only when the next value remains representable."""
+        if value < 0 or value >= MAX_U256:
+            raise gl.vm.UserError(f"{label} overflow")
+        return value + 1
 
     def _require_ascii_text(self, value: str, label: str, limit: int = MAX_TEXT) -> None:
         if not value or len(value) > limit:
@@ -281,7 +288,10 @@ class CommitProtocol(_ContractBase):
             raise gl.vm.UserError("supplier already authorized")
         self.supplier_authorized[supplier_key] = True
         self.supplier_count[mission_id] = gl.u256(
-            int(self.supplier_count.get(mission_id, gl.u256(0))) + 1
+            self._next_uint(
+                int(self.supplier_count.get(mission_id, gl.u256(0))),
+                "supplier count",
+            )
         )
 
     @gl.public.write
@@ -353,7 +363,9 @@ class CommitProtocol(_ContractBase):
         self.evidence_subject[evidence_key] = subject
         self.evidence_expires_at[evidence_key] = gl.u256(expires_at)
         self.mission_evidence_key[mission_id + ":" + str(evidence_index)] = evidence_key
-        self.mission_evidence_count[mission_id] = gl.u256(evidence_index + 1)
+        self.mission_evidence_count[mission_id] = gl.u256(
+            self._next_uint(evidence_index, "evidence count")
+        )
 
     @gl.public.write
     def create_mission(
@@ -415,8 +427,9 @@ class CommitProtocol(_ContractBase):
         # be explicitly authorized before they can contribute any effect.
         self.supplier_authorized[mission_id + ":" + gl.message.sender_address.as_hex] = True
         self.supplier_count[mission_id] = gl.u256(1)
-        self.mission_key[str(int(self.mission_count))] = mission_id
-        self.mission_count = gl.u256(self.mission_count + 1)
+        mission_index = int(self.mission_count)
+        self.mission_key[str(mission_index)] = mission_id
+        self.mission_count = gl.u256(self._next_uint(mission_index, "mission count"))
 
     @gl.public.write.payable
     def fund_mission(self, mission_id: str) -> None:
@@ -520,7 +533,9 @@ class CommitProtocol(_ContractBase):
             int(self.mission_prepared_value[mission_id]) + value
         )
         self.mission_effect_key[mission_id + ":" + str(effect_index)] = effect_key
-        self.mission_effect_count[mission_id] = gl.u256(effect_index + 1)
+        self.mission_effect_count[mission_id] = gl.u256(
+            self._next_uint(effect_index, "effect count")
+        )
 
     @gl.public.write
     def seal_mission(self, mission_id: str, effect_root: str, evidence_root: str) -> None:
@@ -749,7 +764,10 @@ class CommitProtocol(_ContractBase):
         self.mission_decision[mission_id] = result["decision"]
         self.mission_reason_code[mission_id] = result["reason_code"]
         self.mission_evaluation_count[mission_id] = gl.u256(
-            int(self.mission_evaluation_count[mission_id]) + 1
+            self._next_uint(
+                int(self.mission_evaluation_count[mission_id]),
+                "evaluation count",
+            )
         )
         decision_nonce = Keccak256(
             (
@@ -812,7 +830,9 @@ class CommitProtocol(_ContractBase):
         self.withdrawal_beneficiary[withdrawal_id] = beneficiary
         self.withdrawal_amount[withdrawal_id] = gl.u256(amount)
         self.withdrawal_status[withdrawal_id] = WITHDRAWAL_DISPATCHED
-        self.withdrawal_count = gl.u256(self.withdrawal_count + 1)
+        self.withdrawal_count = gl.u256(
+            self._next_uint(int(self.withdrawal_count), "withdrawal count")
+        )
         # External GEN transfers are finalized child messages. The entitlement
         # is consumed before dispatch and is never retried without a verified
         # delivery/non-delivery proof, preventing double payment.
@@ -841,6 +861,7 @@ class CommitProtocol(_ContractBase):
             "equivalence_primitive": "run_nondet",
             "decision_envelope": DECISION_ENVELOPE,
             "receipt_schema": RECEIPT_SCHEMA,
+            "manifest_schema": MANIFEST_SCHEMA,
             "evaluation_trigger": "permissionless-after-seal",
             "authority_provenance": "https-origin-path",
             "mission_count": int(self.mission_count),
@@ -875,6 +896,7 @@ class CommitProtocol(_ContractBase):
             raise gl.vm.UserError("mission not found")
         return {
             "receipt_schema": RECEIPT_SCHEMA,
+            "manifest_schema": MANIFEST_SCHEMA,
             "protocol": PROTOCOL,
             "revision": REVISION,
             "chain_id": int(gl.message.chain_id),
@@ -1190,6 +1212,45 @@ class CommitProtocol(_ContractBase):
             raise gl.vm.UserError("evidence index out of range")
         evidence_key = self.mission_evidence_key[mission_id + ":" + str(index)]
         return self.get_evidence(mission_id, self.evidence_id[evidence_key])
+
+    @gl.public.view
+    def get_mission_manifest(self, mission_id: str) -> dict:
+        """Return the bounded inputs behind both sealed roots for reviewers."""
+        if not self.mission_exists.get(mission_id, False):
+            raise gl.vm.UserError("mission not found")
+        effects = []
+        for index in range(int(self.mission_effect_count[mission_id])):
+            effects.append(self.get_effect_by_index(mission_id, index))
+        evidence = []
+        for index in range(int(self.mission_evidence_count[mission_id])):
+            item = self.get_evidence_by_index(mission_id, index)
+            item["authority"] = self.get_authority(item["authority_id"])
+            evidence.append(item)
+        return {
+            "manifest_schema": MANIFEST_SCHEMA,
+            "protocol": PROTOCOL,
+            "revision": REVISION,
+            "chain_id": int(gl.message.chain_id),
+            "coordinator": gl.message.contract_address.as_hex,
+            "mission_id": mission_id,
+            "principal": self.mission_principal[mission_id].as_hex,
+            "objective": self.mission_objective[mission_id],
+            "policy_rule": POLICY_RULE,
+            "policy_digest": self.mission_policy_digest[mission_id],
+            "intent_digest": self.mission_intent_digest[mission_id],
+            "state": self.mission_state[mission_id],
+            "decision": self.mission_decision[mission_id],
+            "reason_code": self.mission_reason_code[mission_id],
+            "prepare_deadline": int(self.mission_prepare_deadline[mission_id]),
+            "recovery_deadline": int(self.mission_recovery_deadline[mission_id]),
+            "effect_count": int(self.mission_effect_count[mission_id]),
+            "evidence_count": int(self.mission_evidence_count[mission_id]),
+            "effect_root": self.mission_effect_root[mission_id],
+            "evidence_root": self.mission_evidence_root[mission_id],
+            "allocation_applied": self.mission_allocation_applied[mission_id],
+            "effects": effects,
+            "evidence": evidence,
+        }
 
     @gl.public.view
     def is_supplier_authorized(self, mission_id: str, supplier: gl.Address) -> bool:

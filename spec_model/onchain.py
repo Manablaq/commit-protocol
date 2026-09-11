@@ -39,7 +39,7 @@ def intent_digest(
     fields = (
         "2",
         "commit",
-        "0.6.0-semantic-receipt",
+        "0.7.0-reviewable-manifest",
         str(chain_id),
         coordinator,
         mission_id,
