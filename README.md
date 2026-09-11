@@ -18,7 +18,7 @@ External effects must be represented as reversible reservations, idempotent adap
 
 ## Current status
 
-The product thesis, protocol specification, accounting model, state machine, evidence model, and adversarial review are drafted. The contract requires explicit supplier authorization, rejects duplicate authority labels for the same registered origin/path, validates canonical DNS-style hosts and path prefixes, rejects boolean/out-of-range uint inputs, uses a bounded single-parent acyclic effect graph with seal-time cycle checks, accepts only the explicit `all-evidence-and-effects-v1` policy, binds every fetched record to the mission/objective/policy/intent/effect snapshot, rejects missing or malformed bodies, rejects ambiguous/non-standard JSON, and limits remote evidence bodies to 16 KiB. The current working tree is revision `0.7.0-reviewable-manifest`, adding a bounded reviewer-facing mission manifest that combines the frozen mission terms, exact root inputs, roots, and authority metadata in one read, plus overflow-guarded counters on top of the v0.6 semantic receipt and lifecycle hardening. Revision `0.7.0` passes GenVM lint, deterministic tests, and the direct-runtime suite but is not yet deployed. The source-matched v0.6 deployment is recorded in [DEPLOYMENT_LOG_STUDIO_DEV.md](./docs/DEPLOYMENT_LOG_STUDIO_DEV.md); its live mission-004 path proves semantic evaluation, finalized allocation, and one-way claim dispatch for that prior revision. Studio Dev exposes no child transaction ID for that external message, so independent delivery reconciliation and external-transfer recovery remain unproven and are explicitly disabled. The historical Bradbury canary proved that this v0.6 runner is unavailable on Bradbury; its separate legacy probe is not evidence for the current source.
+The product thesis, protocol specification, accounting model, state machine, evidence model, and adversarial review are drafted. The contract requires explicit supplier authorization, rejects duplicate authority labels for the same registered origin/path, validates canonical DNS-style hosts and path prefixes, rejects boolean/out-of-range uint inputs, uses a bounded single-parent acyclic effect graph with seal-time cycle checks, accepts only the explicit `all-evidence-and-effects-v1` policy, binds every fetched record to the mission/objective/policy/intent/effect snapshot, rejects missing or malformed bodies, rejects ambiguous/non-standard JSON, and limits remote evidence bodies to 16 KiB. Revision `0.7.0-reviewable-manifest` adds a bounded reviewer-facing mission manifest that combines the frozen mission terms, exact root inputs, roots, and authority metadata in one read, plus overflow-guarded counters on top of the v0.6 semantic receipt and lifecycle hardening. Revision `0.7.0` passes GenVM lint, 24 deterministic tests, and 79 direct-runtime tests. It is deployed source-matched on Studio Dev at `0x10c708517b4465596E2dc40De92B30A610Cb7a10`; the exact deployment and live COMMIT/ABORT proofs are recorded in [DEPLOYMENT_LOG_STUDIO_DEV.md](./docs/DEPLOYMENT_LOG_STUDIO_DEV.md). Studio Dev exposes finalized external dispatch children but not a delivery/non-delivery proof, so independent delivery reconciliation and external-transfer recovery remain unproven and are explicitly disabled. The historical Bradbury canary proved that this v0.6 runner is unavailable on Bradbury; its separate legacy probe is not evidence for the current source.
 
 See [PRODUCT_THESIS.md](./docs/PRODUCT_THESIS.md), [ENVIRONMENT.md](./docs/ENVIRONMENT.md), and [VERIFICATION_POLICY.md](./docs/VERIFICATION_POLICY.md).
 
@@ -30,6 +30,7 @@ Reproduce the current local checks with the exact commands and runtime digest in
 - [Accounting](./docs/ACCOUNTING_MODEL.md): conservation, escrow, refunds and in-flight payments.
 - [State machine](./docs/STATE_MACHINE.md): roles, transitions and recovery races.
 - [Evidence and consensus](./docs/EVIDENCE_MODEL.md): publisher authority, freshness and independent evaluation.
+- [Studio Dev fee runbook](./docs/STUDIO_DEV_FEE_RUNBOOK.md): message-aware fee estimation and verification rules.
 - [Threat model](./docs/THREAT_MODEL.md): adversarial cases and unresolved high-severity findings.
 - [Verification gates](./docs/OPEN_QUESTIONS.md): evidence still required before custody implementation.
 
@@ -40,8 +41,8 @@ Reproduce the current local checks with the exact commands and runtime digest in
 3. Intelligent Contract implementation
 4. Deterministic tests and adversarial tests
 5. GenLayer consensus tests and fee profiling
-6. Studio Dev deployment and source/receipt verification with the matching v0.6 RC stack — v0.6 source match recorded; v0.7 redeployment pending
-7. Native-GEN custody, finality-gated allocation, finalized claim dispatch, and reviewer manifest proof on Studio Dev — live mission-004 proves the lifecycle for v0.5; repeat source-matched live proof for v0.7
+6. Studio Dev deployment and source/receipt verification with the matching v0.6 RC stack — v0.7 source match recorded at `0x10c708...7a10`
+7. Native-GEN custody, finality-gated allocation, finalized claim dispatch, reviewer manifest proof, and both COMMIT/ABORT branches on Studio Dev — missions 008 and 009 recorded
 8. Backend/indexer integration
 9. Frontend only after the backend gate passes
 10. Bradbury compatibility check and persistent production-like validation

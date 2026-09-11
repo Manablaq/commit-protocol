@@ -20,12 +20,20 @@ dispatch.
 
 ## Deployments
 
-### Next candidate (not deployed)
+### v0.7 source-matched deployment
 
 - Source revision: `0.7.0-reviewable-manifest`
-- Local status: 24 deterministic tests, 79 direct-runtime tests, three lint targets, bytecode compilation, and diff checks passed on 2026-09-11.
+- Contract: `0x10c708517b4465596E2dc40De92B30A610Cb7a10`
+- Deployment transaction: `0x03071d2f8353c993a6a8aae38c1086e025df712f320090fd036ace2ef218ccab`
+- Execution: `ACCEPTED`, `FINISHED_WITH_RETURN`; explorer status `FINALIZED`
+- Local/deployed source bytes: `61306 / 61306`
+- Local/deployed source SHA-256: `4dd61b7e7a5acbdc254f7a63419fe7b4a2674909d49fa07e0d0b051fd74eb36f`
 - New capability: `get_mission_manifest` exposes the frozen mission terms, exact bounded effect/evidence inputs, sealed roots, current decision/allocation state, and registered authority metadata used for reviewer reconstruction; all protocol counters now use explicit overflow guards.
-- Deployment status: pending. The v0.6 source-matched deployment below is historical evidence for revision `0.6.0-semantic-receipt`; it must not be cited as proof for this candidate.
+- `protocol_info()` readback: chain `61997`, revision `0.7.0-reviewable-manifest`, `commit-mission-manifest-v1`, `commit-mission-receipt-v1`, `run_nondet`, permissionless post-seal evaluation, exact HTTPS origin/path authority enforcement, and external withdrawal recovery explicitly disabled.
+
+The v0.6 source-matched deployment below is historical evidence for revision
+`0.6.0-semantic-receipt`; it is retained for lineage and is not evidence for
+the current address.
 
 ### v0.6 source-matched deployment
 
@@ -90,13 +98,61 @@ back from the deployed contract and transaction API.
 - Post-claim readback: `get_claimable(worker) = 0`; this proves the internal entitlement was consumed exactly once before dispatch. `getTriggeredTransactionIds` returned no child ID, so the external delivery cannot be independently reconciled through the exposed Studio Dev transaction API.
 - Final mission readback: `state = COMMITTED`, `decision = COMMIT`, `allocation_applied = true`, `funded_value = 100000000000000`, `prepared_value = 100000000000000`, `evidence_count = 2`, `effect_count = 1`, `reason_code = all_sources_and_effects_eligible`.
 
+### v0.7 mission-008 COMMIT and reviewer-manifest proof
+
+This isolated mission uses the v0.7 deployment and the public `record-008.json`
+fixtures. Its source records, intent, effect root, and evidence root are bound
+to the mission and read back through `get_mission_manifest`.
+
+- Mission: `review-mission-008`
+- Objective: `Autonomous procurement proof on COMMIT 0.7`
+- Create: `0xb963e78313583ad6b79d475766350b97b3c8fa256bb3584c8ce4c1324fbeccd0`
+- Fund: `0x4c9856c1aa984347554e0b9dc23f87859f7352db785b63828220cc46a587dfd0`
+- Prepare effect: `0xbc2a92169683e3fedbdae9a5bde3cccf8672914566e48ac0c5a9fe41f56d3a9e`
+- Evidence A: `0x499e4c1e7517ac4339ce5b63e181774ffc08d7ed876086b05a5cb0fd15a96136`
+- Evidence B: `0xf42ff6416dd3e172dc0513f5cb4e916220061e809afe2f2f90a163252b8a1a5d`
+- Seal: `0x6280c3625c39480080242551b7ed20fd0ff2badb5aa11ddc9485170d218f9bcb`
+- Intent digest: `ad5dcd862c0fc1eae45ea8c678998e8ad703d3f673fe5db7288a46bd6b9abfbb`
+- Effect root: `76584ccb158a9ce0736e85a16285fef47317d40f820b6894214e04347dc539ad`
+- Evidence root: `1315a83d922eb06bc919f40e510619e4ef5849de5ff89949d273c6f36a3c58d4`
+- Initial evaluation attempt: `0x25c31f76e6b2ee0021be7aeaf29146ce935d911133e87a3c302305a9e9e6cfa5` — finalized execution error `fee no_matching_allocation`; no contract state change. This is the fee-allocation failure documented in [STUDIO_DEV_FEE_RUNBOOK.md](./STUDIO_DEV_FEE_RUNBOOK.md).
+- Corrected evaluation: `0x349b82f1385efb2e76c4e61e4664100eccf5ff853bf842982f2e13ea2daeae4e` — `FINISHED_WITH_RETURN`; `COMMIT`, `all_sources_and_effects_eligible`.
+- Finalized callback: `0x349d463d3c043e4fb75fe7f6cd8fe48dd0e445868e7e02e7b191ffb084e27d8f` — `FINISHED_WITH_RETURN`; mission readback `COMMITTED`, `allocation_applied = true`.
+- Claim: `0xee8044f4bd6ea0bacd69fe91bd8b4e21e03e0c370968511476fb53d29810190c`; finalized external child `0x2894a7973b0e8a5121f99ff334b0b036d1f9babb0875c7b1e3d8d1fae7fd4458` transferred `100000000000000` wei to the worker.
+- Post-claim readback: mission claimable and global claimable balances are both `0`; the entitlement was consumed once.
+
+### v0.7 mission-009 ABORT and one-time refund proof
+
+This isolated mission uses the same deployed source and the public `record-009`
+fixtures. Issuer A reports the effect as ineligible while issuer B reports it
+eligible; the explicit all-records-and-effects policy therefore must abort.
+
+- Mission: `review-mission-009`
+- Objective: `Autonomous procurement abort proof on COMMIT 0.7`
+- Create: `0x0843d26bfa6e07dc951ccfd26436642c1457a1b8817555c768aedd24ce0f07ce`
+- Fund: `0xcef4d8d66d3c58aa3e0289bb0eb0719d7a3b8f8c6481a2eb735295f60011f91e`
+- Prepare effect: `0xce94c60a2762d902e1fb428b8d6edfbd45a599a5c0051cba125b7ba8ef96e716`
+- Evidence A: `0x9c9b2906806d375f7e5b63afdd4af0081f8f63c264dc02d942d24703e977e67a`
+- Evidence B: `0x56aeb43e4c03c747d83047735677642b21df8571b33d5e4c36e9d3a845260351`
+- Seal: `0xb39a91754e8591c68b5598a2d40ca22bb70c757c7c3ae90784bd850fe00df56c`
+- Intent digest: `207ca483e2d7ff0bd21bd546182452b08ef42072966e09e267f64aee60c5b64c`
+- Effect root: `592ba44fdc9f3b47f3b40107f17a8b4ac4f8413cb9c5a46f0e0691bc2d82c2af`
+- Evidence root: `1471dbfea0463725323c87bdc083f939934255d94ece16183aeac3a67d48af5b`
+- Evaluation: `0x1ba6a6fc7f646a1c945653740e0648354770e88b32f8b9d41b57afe08182dbbb` — `FINISHED_WITH_RETURN`; `ABORT`, `policy_or_source_ineligible`.
+- Finalized callback: `0x404e8ed01f8347bf995f33d46e28675820d96afebb1b922a082b21b09df937e1` — `FINISHED_WITH_RETURN`; mission readback `ABORTED`, `allocation_applied = true`, refund entitlement `100000000000000` wei.
+- Refund claim: `0xb9a026854d27a2b052588b3f32a876e3ed5583e7385bacef2a73ed70962923a`; finalized external child `0x4d9d327fc965dec177565a53893046a393176315a0829814e1dc1c7d81897d91` transferred `100000000000000` wei.
+- Post-claim readback: mission claimable and global claimable balances are both `0`; the refund entitlement was consumed once.
+
 ## Fee evidence
 
 The current Studio Dev fee policy was read from the network, and exact fee
-quotes were obtained with the matching RC toolchain before writes. The
-payable funding write used `613816800010352` wei for protocol fees plus
-`100000000000000` wei of mission value. Fee quotes are network- and payload-
-dependent; clients must estimate again for each concrete call.
+quotes were obtained with the matching RC toolchain before writes. Message-
+emitting calls used the SDK's network-generated `messageAllocations`; omitting
+the finalized `apply_decision` allocation caused mission 008's first evaluation
+to fail with `fee no_matching_allocation`. The corrected evaluation used a fee
+value of `120158211300005176` wei plus one internal callback allocation. Claim
+and refund calls used one external allocation. Fee quotes are network- and
+payload-dependent; clients must estimate again for each concrete call.
 
 ## Remaining live gates
 

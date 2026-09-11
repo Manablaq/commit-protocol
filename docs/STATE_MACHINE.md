@@ -1,12 +1,12 @@
 # State Machine and Privileges
 
-Status: revision `0.7.0-reviewable-manifest` is implemented and directly tested
-locally. It adds one bounded read surface for the exact effect/evidence inputs
-and registered authority metadata behind both sealed roots. Studio Dev semantic
-consensus, finalized callback allocation, and finalized claim dispatch are
-proven for the prior source by mission-004; this revision requires a fresh
-source-matched deployment and live proof. External delivery reconciliation,
-recovery, and live deadline races remain open.
+Status: revision `0.7.0-reviewable-manifest` is implemented, directly tested
+locally, and deployed source-matched on Studio Dev. It adds one bounded read
+surface for the exact effect/evidence inputs and registered authority metadata
+behind both sealed roots. Studio Dev semantic consensus, finalized callback
+allocation, finalized COMMIT claim dispatch, and finalized ABORT refund
+dispatch are proven by isolated missions 008 and 009. External delivery
+reconciliation, recovery, and live deadline races remain open.
 
 Contract state and transaction consensus status are separate. An accepted
 transaction may expose provisional state. A stored word such as COMMITTED is

@@ -37,3 +37,22 @@ git diff --check
 - Whitespace validation: passed.
 
 The contract tests establish principal-bound mission creation, explicit versioned policy enforcement, payable native-GEN funding, chain/deployment-bound intent commitment derivation, deadline ordering, preparation deadline enforcement, budget bounds, owner-controlled active authority registration, exact URL/path provenance checks, mission-bound v2 evidence, distinct-authority sealing, authorized supplier preparation, bounded single-parent graph validation, digest validation, duplicate rejection, sealed-state immutability, permissionless post-seal evaluation, finality-gated decision application, atomic effect/refund entitlement allocation, overflow-guarded counters, explicit cancellation/timeout ABORT receipts, recovery winning against a late callback, one-way claim dispatch, explicit deadline recovery, reviewer manifest reconstruction, and honest capability disclosure. The reference commitment and provenance tests establish Python parity for the contract's Keccak-256, framed intent/effect/evidence encoding and adversarial URL cases. Expiry uses the transaction-pinned standard-library clock documented by GenLayer. The callback tests establish the generated zero-value `finalized` message payload and deterministic guards for sender authentication, identifier binding, and idempotence. The independent-evaluation tests establish exact v2 schema/snapshot/payload-hash checks, full consequential-envelope comparison, bounded decisions from independently re-read sources, rejection of forged leader output, rejection of changed validator evidence, oversized input rejection, and single-use evaluation. Direct mode executes the leader locally and captures the validator for a separate test invocation; it does not establish live network consensus, live finality delivery, live fee behavior, external transfer failure recovery, or final redirect provenance.
+
+## Live Studio Dev verification
+
+The source-matched v0.7 deployment and transaction evidence are recorded in
+[`DEPLOYMENT_LOG_STUDIO_DEV.md`](./DEPLOYMENT_LOG_STUDIO_DEV.md). The live
+proof covers both policy outcomes on the same deployed bytecode:
+
+- Mission 008 fetched two bound public records and returned `COMMIT`; its
+  finalized self-callback allocated the prepared entitlement, and its claim
+  consumed the entitlement exactly once.
+- Mission 009 fetched one ineligible and one eligible record and returned
+  `ABORT`; its finalized self-callback allocated the fixed refund, and its
+  refund claim consumed that entitlement exactly once.
+
+The first mission-008 evaluation intentionally remains documented as a failed
+fee-allocation attempt. Its `fee no_matching_allocation` result led to the
+message-aware fee runbook and the successful retry; it did not modify mission
+state. These live fixtures prove contract behavior and public record binding,
+not real-world issuer identity or authenticated external payment delivery.

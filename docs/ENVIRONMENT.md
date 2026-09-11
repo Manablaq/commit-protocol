@@ -1,6 +1,6 @@
 # Verified Environment Baseline
 
-Status: **Revision 0.7.0 local hardening closed; prior 0.5.0/0.6.0 Studio Dev source matches recorded; v0.7 candidate redeployment pending; external delivery/recovery remains open**
+Status: **Revision 0.7.0 local hardening closed; Studio Dev source match and live COMMIT/ABORT proofs recorded; external delivery/recovery remains open**
 Verified: 2026-09-11
 
 ## Protocol family
@@ -38,23 +38,23 @@ The current official network table distinguishes the production-like Bradbury te
 - This environment is temporary and may reset; it is not Bradbury.
 
 COMMIT must not reuse preview addresses, fee assumptions, or runtime conclusions
-across networks. The current target is Studio Dev. The prior 0.5.0 canary and
-full source, plus the source-matched 0.6.0 deployment, are recorded there; the
-0.7.0 candidate is locally verified but not yet deployed. Bradbury is a separate persistent
-follow-up target and must not be used to infer Studio Dev compatibility.
+across networks. The current target is Studio Dev. The source-matched 0.7.0
+deployment and live branch proofs are recorded there. Bradbury is a separate
+persistent follow-up target and must not be used to infer Studio Dev compatibility.
 
-## Unresolved before dependency lock
+## Remaining environment questions
 
 - Transaction Kit source is resolved, but its compatibility remains untested (see below).
-- GenVM runtime dependency hash and runner accepted by Studio Dev
-- Whether Agent Tank judging requires a specific network rather than a reproducible preview deployment
+- Recheck the GenVM runtime hash and runner after any Studio Dev network or runner upgrade.
+- Whether Agent Tank judging requires a specific network rather than a reproducible preview deployment.
 
 The isolated probe harness pins the verified Python packages in `pyproject.toml`
 and all resolved dependencies in `uv.lock`; this does not by itself establish
-compatibility with the live network. Studio Dev has now proven the mission-004
-evaluation, finalized callback allocation, and finalized one-way claim
-dispatch. It has not proven authenticated external delivery, failed-payment
-recovery, or deadline recovery. The probe runtime header is taken from a
+compatibility with the live network. Studio Dev has now proven the source-
+matched v0.7 mission-008 COMMIT and mission-009 ABORT evaluations, finalized
+callback allocations, reviewer manifest reads, and finalized one-way
+claim/refund dispatch. It has not proven authenticated external delivery,
+failed-payment recovery, or deadline recovery. The probe runtime header is taken from a
 checksum-verified release archive.
 
 ## Transaction Kit investigation
@@ -65,7 +65,7 @@ Its [manifest at that commit](https://github.com/genlayerlabs/genlayer-transacti
 
 ## Corrections to the initial progress report
 
-Phase 2 was previously described as completed too early. Published package versions and documented network settings did not verify the deployed Studio/consensus versions, runtime hash, hackathon network requirement, or withdrawal failure semantics. Mission-004 closes the deployment, evaluation, finality-gated allocation, and one-way dispatch portions on Studio Dev for the earlier source; withdrawal delivery/recovery semantics remain open for the current protocol.
+Phase 2 was previously described as completed too early. Published package versions and documented network settings did not verify the deployed Studio/consensus versions, runtime hash, hackathon network requirement, or withdrawal failure semantics. Source-matched v0.7 missions 008 and 009 now close the deployment, evaluation, finality-gated allocation, reviewer-manifest, and one-way dispatch portions on Studio Dev; withdrawal delivery/recovery semantics remain open for the current protocol.
 
 The public hackathon page initially returned no readable rules through text retrieval. Subsequent browser inspection on 2026-09-09 resolved this: the actual submission form supports Studio, Bradbury or Asimov address links, requires a website, and requires a public repository belonging to the linked GitHub account. No exclusive Bradbury requirement appears. The reference track is Agentic Commerce Infrastructure. Source: https://portal.genlayer.foundation/agent-tank/hackathon/submit
 
