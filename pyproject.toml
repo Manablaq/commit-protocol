@@ -1,7 +1,7 @@
 [project]
 name = "commit-protocol-verification"
 version = "0.0.1"
-description = "GenLayer runtime probes for COMMIT; not a deployed custody contract"
+description = "Verification and reproducibility tooling for the COMMIT GenLayer protocol"
 requires-python = ">=3.12,<3.13"
 dependencies = [
   "eth-hash==0.8.0",

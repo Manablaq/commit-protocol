@@ -72,7 +72,7 @@ The public hackathon page initially returned no readable rules through text retr
 ## Isolated v0.6 runtime and Bradbury compatibility
 
 - Host interpreter: Python 3.12.14 (the test suite requires Python >=3.12).
-- GenVM manager release: `v0.6.0-rc4`, published 2026-09-09.
+- GenVM manager Direct-runtime baseline: `v0.6.0-rc3`.
 - Archive: `genvm-universal.tar.xz`.
 - Published and locally verified SHA-256: `bd30580f911338d5533460eca8ed714dec371de5803c04e41dbb96430aea7b6e`.
 - The current COMMIT source and probes use the v0.6 runner `py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng` and the modern `genlayer as gl` package layout. Its runner manifest resolves `py-lib-genlayer-std:kzr02ndm9et4qkmbqpq5djjt5sme2yt76n7sz1qbzax0knt6mam0`.
@@ -82,7 +82,7 @@ The public hackathon page initially returned no readable rules through text retr
 - Direct-runtime tests load the v0.6 package, storage, calldata, message, and consensus APIs directly. No legacy adapter is used.
 - The accepted legacy Bradbury canary remains useful historical evidence for that probe only. It does not verify the current COMMIT source or establish Studio Dev deployment.
 
-Release source: https://github.com/genlayerlabs/genvm-manager/releases/tag/v0.6.0-rc4
+Direct-runtime release source: https://github.com/genlayerlabs/genvm-manager/releases/tag/v0.6.0-rc3
 
 ## Required transaction semantics
 

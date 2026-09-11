@@ -8,7 +8,7 @@ Verified 2026-09-11. This record covers deterministic and direct-runtime checks 
 - `genlayer-py`: 0.19.0rc2
 - `genlayer-test`: 0.30.0rc2
 - `genvm-linter`: 0.11.1rc2
-- GenVM manager release: v0.6.0-rc4
+- GenVM manager Direct-runtime baseline: v0.6.0-rc3
 - Runtime archive SHA-256: `bd30580f911338d5533460eca8ed714dec371de5803c04e41dbb96430aea7b6e`
 - Contract runner used by the Studio Dev-targeted source: `py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng`
 - Standard library dependency resolved by that runner: `py-lib-genlayer-std:kzr02ndm9et4qkmbqpq5djjt5sme2yt76n7sz1qbzax0knt6mam0`
@@ -21,11 +21,11 @@ Python dependencies are locked in `uv.lock`. The runtime archive is intentionall
 After extracting the verified archive to a directory, set `GENVM_PREBUILT_DIR` to that directory, not to the `.tar.xz` file.
 
 ```sh
-.venv/bin/genvm-lint contracts/commit.py
-.venv/bin/genvm-lint probes/independent_evaluation.py
-.venv/bin/genvm-lint probes/finalized_callback.py
-.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
-GENVM_PREBUILT_DIR=/absolute/path/to/extracted/genvm .venv/bin/pytest -q tests/runtime
+uv run genvm-lint check contracts/commit.py
+uv run genvm-lint check probes/independent_evaluation.py
+uv run genvm-lint check probes/finalized_callback.py
+uv run python -m pytest -q tests/test_canonical.py tests/test_onchain_encoding.py tests/test_provenance.py tests/test_settlement_model.py
+GENVM_PREBUILT_DIR=/absolute/path/to/verified/v0.6.0-rc3-tree uv run python -m pytest -q tests/runtime
 git diff --check
 ```
 

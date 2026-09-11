@@ -11,26 +11,13 @@ until the network provides an authenticated delivery/non-delivery proof.
 from datetime import datetime, timezone
 import json
 
-try:
-    import genlayer as _modern_genlayer
+import genlayer as gl
 
-    _modern_contract_module = _modern_genlayer.contract
-except (AttributeError, ImportError):
-    from genlayer import *
-    _modern_genlayer = None
-
-if _modern_genlayer is not None:
-    gl = _modern_genlayer
-    Address = gl.Address
-    Keccak256 = gl.Keccak256
-    TreeMap = gl.storage.TreeMap
-    u256 = gl.u256
-    _ContractBase = gl.contract.Contract
-    _get_contract_at = gl.contract.get_at
-else:
-    _ContractBase = gl.Contract
-    _get_contract_at = gl.get_contract_at
-
+Address = gl.Address
+Keccak256 = gl.Keccak256
+TreeMap = gl.storage.TreeMap
+u256 = gl.u256
+_get_contract_at = gl.contract.get_at
 
 PROTOCOL = "commit"
 REVISION = "0.7.0-reviewable-manifest"
@@ -63,7 +50,7 @@ class _NativeRecipient:
         pass
 
 
-class CommitProtocol(_ContractBase):
+class CommitProtocol(gl.contract.Contract):
     owner: gl.Address
     mission_count: gl.u256
     mission_exists: TreeMap[str, bool]
@@ -126,8 +113,8 @@ class CommitProtocol(_ContractBase):
 
     def __init__(self):
         self.owner = gl.message.sender_address
-        self.mission_count = gl.u256(0)
-        self.withdrawal_count = gl.u256(0)
+        self.mission_count = (0)
+        self.withdrawal_count = (0)
         # v0.6 storage collections are allocated by the contract runtime.
 
     def _require_digest(self, value: str, label: str) -> None:
@@ -287,12 +274,10 @@ class CommitProtocol(_ContractBase):
         if self.supplier_authorized.get(supplier_key, False):
             raise gl.vm.UserError("supplier already authorized")
         self.supplier_authorized[supplier_key] = True
-        self.supplier_count[mission_id] = gl.u256(
-            self._next_uint(
-                int(self.supplier_count.get(mission_id, gl.u256(0))),
+        self.supplier_count[mission_id] = (self._next_uint(
+                int(self.supplier_count.get(mission_id, (0))),
                 "supplier count",
-            )
-        )
+            ))
 
     @gl.public.write
     def revoke_supplier(self, mission_id: str, supplier: gl.Address) -> None:
@@ -310,9 +295,9 @@ class CommitProtocol(_ContractBase):
             if self.effect_supplier[effect_key] == supplier:
                 raise gl.vm.UserError("supplier has a prepared effect")
         self.supplier_authorized[supplier_key] = False
-        current_count = int(self.supplier_count.get(mission_id, gl.u256(0)))
+        current_count = int(self.supplier_count.get(mission_id, (0)))
         if current_count > 0:
-            self.supplier_count[mission_id] = gl.u256(current_count - 1)
+            self.supplier_count[mission_id] = (current_count - 1)
 
     @gl.public.write
     def register_evidence(
@@ -361,11 +346,9 @@ class CommitProtocol(_ContractBase):
         self.evidence_url[evidence_key] = url
         self.evidence_record_hash[evidence_key] = record_hash
         self.evidence_subject[evidence_key] = subject
-        self.evidence_expires_at[evidence_key] = gl.u256(expires_at)
+        self.evidence_expires_at[evidence_key] = (expires_at)
         self.mission_evidence_key[mission_id + ":" + str(evidence_index)] = evidence_key
-        self.mission_evidence_count[mission_id] = gl.u256(
-            self._next_uint(evidence_index, "evidence count")
-        )
+        self.mission_evidence_count[mission_id] = (self._next_uint(evidence_index, "evidence count"))
 
     @gl.public.write
     def create_mission(
@@ -408,28 +391,28 @@ class CommitProtocol(_ContractBase):
         )
         self.mission_effect_root[mission_id] = ""
         self.mission_evidence_root[mission_id] = ""
-        self.mission_budget[mission_id] = gl.u256(budget)
-        self.mission_funded_value[mission_id] = gl.u256(0)
-        self.mission_prepared_value[mission_id] = gl.u256(0)
+        self.mission_budget[mission_id] = (budget)
+        self.mission_funded_value[mission_id] = (0)
+        self.mission_prepared_value[mission_id] = (0)
         self.mission_refund_beneficiary[mission_id] = refund_beneficiary
-        self.mission_refund_entitlement[mission_id] = gl.u256(0)
+        self.mission_refund_entitlement[mission_id] = (0)
         self.mission_decision_nonce[mission_id] = ""
         self.mission_allocation_applied[mission_id] = False
-        self.mission_evidence_count[mission_id] = gl.u256(0)
+        self.mission_evidence_count[mission_id] = (0)
         self.mission_decision[mission_id] = ""
         self.mission_reason_code[mission_id] = ""
-        self.mission_evaluation_count[mission_id] = gl.u256(0)
-        self.mission_prepare_deadline[mission_id] = gl.u256(prepare_deadline)
-        self.mission_recovery_deadline[mission_id] = gl.u256(recovery_deadline)
-        self.mission_version[mission_id] = gl.u256(1)
-        self.mission_effect_count[mission_id] = gl.u256(0)
+        self.mission_evaluation_count[mission_id] = (0)
+        self.mission_prepare_deadline[mission_id] = (prepare_deadline)
+        self.mission_recovery_deadline[mission_id] = (recovery_deadline)
+        self.mission_version[mission_id] = (1)
+        self.mission_effect_count[mission_id] = (0)
         # The principal may prepare its own effects. Other participants must
         # be explicitly authorized before they can contribute any effect.
         self.supplier_authorized[mission_id + ":" + gl.message.sender_address.as_hex] = True
-        self.supplier_count[mission_id] = gl.u256(1)
+        self.supplier_count[mission_id] = (1)
         mission_index = int(self.mission_count)
         self.mission_key[str(mission_index)] = mission_id
-        self.mission_count = gl.u256(self._next_uint(mission_index, "mission count"))
+        self.mission_count = (self._next_uint(mission_index, "mission count"))
 
     @gl.public.write.payable
     def fund_mission(self, mission_id: str) -> None:
@@ -444,7 +427,7 @@ class CommitProtocol(_ContractBase):
         funded = int(self.mission_funded_value[mission_id])
         if funded + amount > int(self.mission_budget[mission_id]):
             raise gl.vm.UserError("funding exceeds mission budget")
-        self.mission_funded_value[mission_id] = gl.u256(funded + amount)
+        self.mission_funded_value[mission_id] = (funded + amount)
 
     @gl.public.write
     def prepare_effect(
@@ -527,15 +510,11 @@ class CommitProtocol(_ContractBase):
         self.effect_digest[effect_key] = effect_digest
         self.effect_parent[effect_key] = dependency_id
         self.effect_beneficiary[effect_key] = beneficiary
-        self.effect_value[effect_key] = gl.u256(value)
-        self.effect_expiry[effect_key] = gl.u256(expiry)
-        self.mission_prepared_value[mission_id] = gl.u256(
-            int(self.mission_prepared_value[mission_id]) + value
-        )
+        self.effect_value[effect_key] = (value)
+        self.effect_expiry[effect_key] = (expiry)
+        self.mission_prepared_value[mission_id] = (int(self.mission_prepared_value[mission_id]) + value)
         self.mission_effect_key[mission_id + ":" + str(effect_index)] = effect_key
-        self.mission_effect_count[mission_id] = gl.u256(
-            self._next_uint(effect_index, "effect count")
-        )
+        self.mission_effect_count[mission_id] = (self._next_uint(effect_index, "effect count"))
 
     @gl.public.write
     def seal_mission(self, mission_id: str, effect_root: str, evidence_root: str) -> None:
@@ -763,12 +742,10 @@ class CommitProtocol(_ContractBase):
             raise gl.vm.UserError("invalid consensus decision")
         self.mission_decision[mission_id] = result["decision"]
         self.mission_reason_code[mission_id] = result["reason_code"]
-        self.mission_evaluation_count[mission_id] = gl.u256(
-            self._next_uint(
+        self.mission_evaluation_count[mission_id] = (self._next_uint(
                 int(self.mission_evaluation_count[mission_id]),
                 "evaluation count",
-            )
-        )
+            ))
         decision_nonce = Keccak256(
             (
                 DECISION_ENVELOPE
@@ -813,30 +790,28 @@ class CommitProtocol(_ContractBase):
             raise gl.vm.UserError("mission is not allocated")
         beneficiary = gl.message.sender_address
         claim_key = mission_id + ":" + beneficiary.as_hex
-        amount = int(self.mission_claimable.get(claim_key, gl.u256(0)))
+        amount = int(self.mission_claimable.get(claim_key, (0)))
         if amount <= 0:
             raise gl.vm.UserError("no claimable balance")
         withdrawal_id = str(int(self.withdrawal_count))
         if self.withdrawal_exists.get(withdrawal_id, False):
             raise gl.vm.UserError("withdrawal id collision")
-        self.mission_claimable[claim_key] = gl.u256(0)
+        self.mission_claimable[claim_key] = (0)
         global_key = beneficiary.as_hex
-        current_global = int(self.claimable_balance.get(global_key, gl.u256(0)))
+        current_global = int(self.claimable_balance.get(global_key, (0)))
         if current_global < amount:
             raise gl.vm.UserError("claimable balance underflow")
-        self.claimable_balance[global_key] = gl.u256(current_global - amount)
+        self.claimable_balance[global_key] = (current_global - amount)
         self.withdrawal_exists[withdrawal_id] = True
         self.withdrawal_mission[withdrawal_id] = mission_id
         self.withdrawal_beneficiary[withdrawal_id] = beneficiary
-        self.withdrawal_amount[withdrawal_id] = gl.u256(amount)
+        self.withdrawal_amount[withdrawal_id] = (amount)
         self.withdrawal_status[withdrawal_id] = WITHDRAWAL_DISPATCHED
-        self.withdrawal_count = gl.u256(
-            self._next_uint(int(self.withdrawal_count), "withdrawal count")
-        )
+        self.withdrawal_count = (self._next_uint(int(self.withdrawal_count), "withdrawal count"))
         # External GEN transfers are finalized child messages. The entitlement
         # is consumed before dispatch and is never retried without a verified
         # delivery/non-delivery proof, preventing double payment.
-        _NativeRecipient(beneficiary).emit_transfer(value=gl.u256(amount))
+        _NativeRecipient(beneficiary).emit_transfer(value=amount)
 
     @gl.public.write
     def expire_mission(self, mission_id: str) -> None:
@@ -876,7 +851,7 @@ class CommitProtocol(_ContractBase):
 
     @gl.public.view
     def get_claimable(self, beneficiary: gl.Address) -> int:
-        return int(self.claimable_balance.get(beneficiary.as_hex, gl.u256(0)))
+        return int(self.claimable_balance.get(beneficiary.as_hex, (0)))
 
     @gl.public.view
     def get_mission_claimable(self, mission_id: str, beneficiary: gl.Address) -> int:
@@ -885,7 +860,7 @@ class CommitProtocol(_ContractBase):
             raise gl.vm.UserError("mission not found")
         return int(
             self.mission_claimable.get(
-                mission_id + ":" + beneficiary.as_hex, gl.u256(0)
+                mission_id + ":" + beneficiary.as_hex, (0)
             )
         )
 
@@ -974,15 +949,15 @@ class CommitProtocol(_ContractBase):
         if amount <= 0:
             return
         claim_key = mission_id + ":" + beneficiary.as_hex
-        mission_current = int(self.mission_claimable.get(claim_key, gl.u256(0)))
+        mission_current = int(self.mission_claimable.get(claim_key, (0)))
         global_key = beneficiary.as_hex
-        global_current = int(self.claimable_balance.get(global_key, gl.u256(0)))
+        global_current = int(self.claimable_balance.get(global_key, (0)))
         if amount > MAX_U256 - mission_current:
             raise gl.vm.UserError("mission claimable balance overflow")
         if amount > MAX_U256 - global_current:
             raise gl.vm.UserError("global claimable balance overflow")
-        self.mission_claimable[claim_key] = gl.u256(mission_current + amount)
-        self.claimable_balance[global_key] = gl.u256(global_current + amount)
+        self.mission_claimable[claim_key] = (mission_current + amount)
+        self.claimable_balance[global_key] = (global_current + amount)
 
     def _allocate_commit(self, mission_id: str) -> None:
         funded = int(self.mission_funded_value[mission_id])
@@ -996,7 +971,7 @@ class CommitProtocol(_ContractBase):
                 mission_id, self.effect_beneficiary[effect_key], amount
             )
         refund = funded - prepared
-        self.mission_refund_entitlement[mission_id] = gl.u256(refund)
+        self.mission_refund_entitlement[mission_id] = (refund)
         self._credit_claimable(
             mission_id, self.mission_refund_beneficiary[mission_id], refund
         )
@@ -1012,7 +987,7 @@ class CommitProtocol(_ContractBase):
         # races with recovery, so the public receipt cannot lie about outcome.
         self.mission_decision[mission_id] = "ABORT"
         self.mission_reason_code[mission_id] = reason_code
-        self.mission_refund_entitlement[mission_id] = gl.u256(funded)
+        self.mission_refund_entitlement[mission_id] = (funded)
         self._credit_claimable(
             mission_id, self.mission_refund_beneficiary[mission_id], funded
         )
@@ -1133,7 +1108,7 @@ class CommitProtocol(_ContractBase):
             "refund_beneficiary": self.mission_refund_beneficiary[mission_id].as_hex,
             "effect_count": int(self.mission_effect_count[mission_id]),
             "evidence_count": int(self.mission_evidence_count[mission_id]),
-            "supplier_count": int(self.supplier_count.get(mission_id, gl.u256(0))),
+            "supplier_count": int(self.supplier_count.get(mission_id, (0))),
             "decision": self.mission_decision[mission_id],
             "reason_code": self.mission_reason_code[mission_id],
             "decision_nonce": self.mission_decision_nonce[mission_id],
