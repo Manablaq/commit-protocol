@@ -1,0 +1,21 @@
+{
+  "schema": "commit-evidence-v2",
+  "evidence_id": "review-evidence-008-b",
+  "authority_id": "review-issuer-b",
+  "url": "https://raw.githubusercontent.com/Manablaq/commit-protocol/main/evidence/issuer-b/record-008.json",
+  "subject": "review-mission-008",
+  "expires_at": 1789102600,
+  "mission_id": "review-mission-008",
+  "objective": "Autonomous procurement proof on COMMIT 0.7",
+  "policy_digest": "983307fac383ac4a92be6c0c361ea8f3c9d9efa20ad5e6e8bc8dee932f2a6103",
+  "policy_rule": "all-evidence-and-effects-v1",
+  "intent_digest": "ad5dcd862c0fc1eae45ea8c678998e8ad703d3f673fe5db7288a46bd6b9abfbb",
+  "effect_root": "76584ccb158a9ce0736e85a16285fef47317d40f820b6894214e04347dc539ad",
+  "payload": {
+    "effect_claims": {
+      "review-effect-008": true
+    },
+    "eligible": true,
+    "reason_code": "review_path_verified"
+  }
+}
