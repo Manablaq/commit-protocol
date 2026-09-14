@@ -1,0 +1,940 @@
+{
+  "baseline_bytes": 93083,
+  "baseline_sha256": "1872dd0cbf92cc7edfffc4b4ab30f898584cbbf251f9ac32a1553b8b98f54b73",
+  "candidate_bytes": 48589,
+  "candidate_sha256": "a298b2697846adbcddf88272a0fbd514778a7fee733fa8b6d6fa489ee973e33b",
+  "local_identifier_map": {
+    "_beneficiary": "v0",
+    "_digest": "v1",
+    "_evidence_key": "v2",
+    "_expiry": "v3",
+    "_parent": "v4",
+    "_value": "v5",
+    "active_evidence_root_snapshot": "v6",
+    "all_effects_eligible": "v7",
+    "all_eligible": "v8",
+    "attestation_authority": "v9",
+    "attestation_authority_version": "v10",
+    "attestation_exists": "v11",
+    "attestation_expires_at": "v12",
+    "attestation_issuer": "v13",
+    "attestation_key": "v14",
+    "attestation_mission": "v15",
+    "attestation_mission_version": "v16",
+    "attestation_published_at": "v17",
+    "attestation_record_hash": "v18",
+    "attestation_record_id": "v19",
+    "attestation_record_version": "v20",
+    "attestation_url": "v21",
+    "authority_active": "v22",
+    "authority_exists": "v23",
+    "authority_host": "v24",
+    "authority_issuer": "v25",
+    "authority_path_prefix": "v26",
+    "boundary": "v27",
+    "canonical_payload": "v28",
+    "char": "v29",
+    "claim_key": "v30",
+    "claimable_balance": "v31",
+    "computed_hash": "v32",
+    "count": "v33",
+    "current_count": "v34",
+    "current_global": "v35",
+    "current_key": "v36",
+    "current_mission_version": "v37",
+    "current_version": "v38",
+    "dependency_key": "v39",
+    "effect_beneficiary": "v40",
+    "effect_claims": "v41",
+    "effect_exists": "v42",
+    "effect_expiry": "v43",
+    "effect_index": "v44",
+    "effect_mission": "v45",
+    "effect_parent": "v46",
+    "effect_root_snapshot": "v47",
+    "effect_specs": "v48",
+    "effect_supplier": "v49",
+    "effect_value": "v50",
+    "effects": "v51",
+    "evidence": "v52",
+    "evidence_authority": "v53",
+    "evidence_authority_version": "v54",
+    "evidence_exists": "v55",
+    "evidence_expires_at": "v56",
+    "evidence_failure_attempt": "v57",
+    "evidence_failure_code": "v58",
+    "evidence_failure_count": "v59",
+    "evidence_failure_evidence_id": "v60",
+    "evidence_failure_exists": "v61",
+    "evidence_failure_mission_version": "v62",
+    "evidence_failure_record_id": "v63",
+    "evidence_failure_record_version": "v64",
+    "evidence_failure_status": "v65",
+    "evidence_index": "v66",
+    "evidence_issuer": "v67",
+    "evidence_latest_failure_key": "v68",
+    "evidence_latest_repair_key": "v69",
+    "evidence_mission": "v70",
+    "evidence_mission_version": "v71",
+    "evidence_published_at": "v72",
+    "evidence_record_hash": "v73",
+    "evidence_record_id": "v74",
+    "evidence_record_version": "v75",
+    "evidence_repair_active_record_version": "v76",
+    "evidence_repair_authority": "v77",
+    "evidence_repair_authority_version": "v78",
+    "evidence_repair_count": "v79",
+    "evidence_repair_exists": "v80",
+    "evidence_repair_expires_at": "v81",
+    "evidence_repair_issuer": "v82",
+    "evidence_repair_original_record_version": "v83",
+    "evidence_repair_published_at": "v84",
+    "evidence_repair_record_hash": "v85",
+    "evidence_repair_record_id": "v86",
+    "evidence_repair_status": "v87",
+    "evidence_repair_url": "v88",
+    "evidence_root_snapshot": "v89",
+    "evidence_subject": "v90",
+    "evidence_url": "v91",
+    "expected_effect_ids": "v92",
+    "expected_expiry": "v93",
+    "expected_hash": "v94",
+    "expected_record_keys": "v95",
+    "failure_key": "v96",
+    "field": "v97",
+    "fields": "v98",
+    "first_issuer": "v99",
+    "first_key": "v100",
+    "funded": "v101",
+    "global_current": "v102",
+    "global_key": "v103",
+    "intent_digest_snapshot": "v104",
+    "item": "v105",
+    "key": "v106",
+    "latest_repair_key": "v107",
+    "leader_data": "v108",
+    "marker": "v109",
+    "mission_allocation_applied": "v110",
+    "mission_budget": "v111",
+    "mission_claimable": "v112",
+    "mission_count": "v113",
+    "mission_created_at": "v114",
+    "mission_current": "v115",
+    "mission_decision": "v116",
+    "mission_decision_nonce": "v117",
+    "mission_effect_count": "v118",
+    "mission_effect_key": "v119",
+    "mission_effect_root": "v120",
+    "mission_evaluation_count": "v121",
+    "mission_evaluation_evidence_root": "v122",
+    "mission_evidence_count": "v123",
+    "mission_evidence_key": "v124",
+    "mission_evidence_root": "v125",
+    "mission_exists": "v126",
+    "mission_funded_value": "v127",
+    "mission_id_snapshot": "v128",
+    "mission_index": "v129",
+    "mission_intent_digest": "v130",
+    "mission_key": "v131",
+    "mission_objective": "v132",
+    "mission_policy_digest": "v133",
+    "mission_prepare_deadline": "v134",
+    "mission_prepared_value": "v135",
+    "mission_principal": "v136",
+    "mission_reason_code": "v137",
+    "mission_recovery_deadline": "v138",
+    "mission_refund_beneficiary": "v139",
+    "mission_refund_entitlement": "v140",
+    "mission_state": "v141",
+    "mission_version_snapshot": "v142",
+    "now": "v143",
+    "objective_snapshot": "v144",
+    "origin": "v145",
+    "owner": "v146",
+    "parent_id": "v147",
+    "parent_key": "v148",
+    "parsed": "v149",
+    "payload": "v150",
+    "policy_digest_snapshot": "v151",
+    "prepared": "v152",
+    "record": "v153",
+    "refund": "v154",
+    "remainder": "v155",
+    "repair_key": "v156",
+    "response": "v157",
+    "result": "v158",
+    "segment": "v159",
+    "segments": "v160",
+    "source_specs": "v161",
+    "spec": "v162",
+    "supplier_authorized": "v163",
+    "supplier_count": "v164",
+    "supplier_key": "v165",
+    "validator_data": "v166",
+    "visited": "v167",
+    "withdrawal_amount": "v168",
+    "withdrawal_beneficiary": "v169",
+    "withdrawal_count": "v170",
+    "withdrawal_exists": "v171",
+    "withdrawal_mission": "v172",
+    "withdrawal_status": "v173"
+  },
+  "max_source_bytes": 49152,
+  "module_constant_external_protected": [
+    "PROTOCOL",
+    "REVISION"
+  ],
+  "module_constant_map": {
+    "DECISION_ENVELOPE": "c0",
+    "EVIDENCE_SCHEMA": "c1",
+    "MANIFEST_SCHEMA": "c2",
+    "MAX_EFFECTS": "c3",
+    "MAX_EVIDENCE": "c4",
+    "MAX_REASON": "c5",
+    "MAX_REMOTE_BODY": "c6",
+    "MAX_TEXT": "c7",
+    "MAX_U256": "c8",
+    "POLICY_DIGEST": "c9",
+    "POLICY_RULE": "c10",
+    "RECEIPT_SCHEMA": "c11",
+    "STATE_ABORTED": "c12",
+    "STATE_COMMITTED": "c13",
+    "STATE_DECISION_PENDING": "c14",
+    "STATE_PREPARING": "c15",
+    "STATE_SEALED": "c16",
+    "WITHDRAWAL_DISPATCHED": "c17"
+  },
+  "module_constant_public_surface_protected": [],
+  "nested_function_map": {
+    "leader_fn": "f0",
+    "reject_duplicate_keys": "f1",
+    "reject_nonstandard_number": "f2",
+    "repair_required": "f3",
+    "validator_fn": "f4"
+  },
+  "pooled_string_count": 70,
+  "private_method_map": {
+    "_active_evidence_leaf": "p25",
+    "_allocate_abort": "p19",
+    "_allocate_commit": "p18",
+    "_attestation_key": "p12",
+    "_credit_claimable": "p17",
+    "_effect_leaf": "p23",
+    "_evidence_failure_key": "p14",
+    "_evidence_leaf": "p24",
+    "_evidence_repair_key": "p15",
+    "_frame": "p22",
+    "_has_distinct_evidence_authorities": "p20",
+    "_intent_digest": "p11",
+    "_next_uint": "p2",
+    "_prepare_effect": "p13",
+    "_require_acyclic_effect_graph": "p21",
+    "_require_ascii_text": "p3",
+    "_require_authority": "p9",
+    "_require_authority_host": "p6",
+    "_require_digest": "p0",
+    "_require_identifier": "p5",
+    "_require_mission_id": "p4",
+    "_require_nonzero_address": "p10",
+    "_require_path_prefix": "p7",
+    "_require_principal": "p16",
+    "_require_uint": "p1",
+    "_url_matches_authority": "p8"
+  },
+  "public_signature": {
+    "apply_decision": {
+      "args": [
+        "self",
+        "mission_id",
+        "decision_nonce"
+      ],
+      "decorators": [
+        "gl.public.write"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Constant(value=None)"
+    },
+    "attest_evidence": {
+      "args": [
+        "self",
+        "authority_id",
+        "authority_version",
+        "record_id",
+        "record_version",
+        "mission_id",
+        "mission_version",
+        "url",
+        "record_hash",
+        "published_at",
+        "expires_at"
+      ],
+      "decorators": [
+        "gl.public.write"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Constant(value=None)"
+    },
+    "authorities_are_independent": {
+      "args": [
+        "self",
+        "authority_a",
+        "authority_b"
+      ],
+      "decorators": [
+        "gl.public.view"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Name(id='bool', ctx=Load())"
+    },
+    "authorize_supplier": {
+      "args": [
+        "self",
+        "mission_id",
+        "supplier"
+      ],
+      "decorators": [
+        "gl.public.write"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Constant(value=None)"
+    },
+    "cancel_mission": {
+      "args": [
+        "self",
+        "mission_id"
+      ],
+      "decorators": [
+        "gl.public.write"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Constant(value=None)"
+    },
+    "claim_mission": {
+      "args": [
+        "self",
+        "mission_id"
+      ],
+      "decorators": [
+        "gl.public.write"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Constant(value=None)"
+    },
+    "create_mission": {
+      "args": [
+        "self",
+        "mission_id",
+        "objective",
+        "policy_digest",
+        "budget",
+        "refund_beneficiary",
+        "prepare_deadline",
+        "recovery_deadline"
+      ],
+      "decorators": [
+        "gl.public.write"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Constant(value=None)"
+    },
+    "deactivate_authority": {
+      "args": [
+        "self",
+        "authority_id"
+      ],
+      "decorators": [
+        "gl.public.write"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Constant(value=None)"
+    },
+    "derive_active_evidence_root": {
+      "args": [
+        "self",
+        "mission_id"
+      ],
+      "decorators": [
+        "gl.public.view"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Name(id='str', ctx=Load())"
+    },
+    "derive_effect_root": {
+      "args": [
+        "self",
+        "mission_id"
+      ],
+      "decorators": [
+        "gl.public.view"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Name(id='str', ctx=Load())"
+    },
+    "derive_evidence_root": {
+      "args": [
+        "self",
+        "mission_id"
+      ],
+      "decorators": [
+        "gl.public.view"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Name(id='str', ctx=Load())"
+    },
+    "derive_intent_digest": {
+      "args": [
+        "self",
+        "mission_id"
+      ],
+      "decorators": [
+        "gl.public.view"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Name(id='str', ctx=Load())"
+    },
+    "evaluate_mission": {
+      "args": [
+        "self",
+        "mission_id"
+      ],
+      "decorators": [
+        "gl.public.write"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Constant(value=None)"
+    },
+    "expire_mission": {
+      "args": [
+        "self",
+        "mission_id"
+      ],
+      "decorators": [
+        "gl.public.write"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Constant(value=None)"
+    },
+    "fund_mission": {
+      "args": [
+        "self",
+        "mission_id"
+      ],
+      "decorators": [
+        "gl.public.write.payable"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Constant(value=None)"
+    },
+    "get_authority": {
+      "args": [
+        "self",
+        "authority_id"
+      ],
+      "decorators": [
+        "gl.public.view"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Name(id='dict', ctx=Load())"
+    },
+    "get_claimable": {
+      "args": [
+        "self",
+        "beneficiary"
+      ],
+      "decorators": [
+        "gl.public.view"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Name(id='int', ctx=Load())"
+    },
+    "get_effect": {
+      "args": [
+        "self",
+        "mission_id",
+        "effect_id"
+      ],
+      "decorators": [
+        "gl.public.view"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Name(id='dict', ctx=Load())"
+    },
+    "get_effect_by_index": {
+      "args": [
+        "self",
+        "mission_id",
+        "index"
+      ],
+      "decorators": [
+        "gl.public.view"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Name(id='dict', ctx=Load())"
+    },
+    "get_evidence": {
+      "args": [
+        "self",
+        "mission_id",
+        "evidence_id"
+      ],
+      "decorators": [
+        "gl.public.view"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Name(id='dict', ctx=Load())"
+    },
+    "get_evidence_attestation": {
+      "args": [
+        "self",
+        "authority_id",
+        "record_id",
+        "record_version"
+      ],
+      "decorators": [
+        "gl.public.view"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Name(id='dict', ctx=Load())"
+    },
+    "get_evidence_by_index": {
+      "args": [
+        "self",
+        "mission_id",
+        "index"
+      ],
+      "decorators": [
+        "gl.public.view"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Name(id='dict', ctx=Load())"
+    },
+    "get_evidence_failure": {
+      "args": [
+        "self",
+        "mission_id",
+        "evidence_id"
+      ],
+      "decorators": [
+        "gl.public.view"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Name(id='dict', ctx=Load())"
+    },
+    "get_evidence_repair": {
+      "args": [
+        "self",
+        "mission_id",
+        "evidence_id"
+      ],
+      "decorators": [
+        "gl.public.view"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Name(id='dict', ctx=Load())"
+    },
+    "get_mission": {
+      "args": [
+        "self",
+        "mission_id"
+      ],
+      "decorators": [
+        "gl.public.view"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Name(id='dict', ctx=Load())"
+    },
+    "get_mission_by_index": {
+      "args": [
+        "self",
+        "index"
+      ],
+      "decorators": [
+        "gl.public.view"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Name(id='dict', ctx=Load())"
+    },
+    "get_mission_claimable": {
+      "args": [
+        "self",
+        "mission_id",
+        "beneficiary"
+      ],
+      "decorators": [
+        "gl.public.view"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Name(id='int', ctx=Load())"
+    },
+    "get_mission_manifest": {
+      "args": [
+        "self",
+        "mission_id"
+      ],
+      "decorators": [
+        "gl.public.view"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Name(id='dict', ctx=Load())"
+    },
+    "get_mission_receipt": {
+      "args": [
+        "self",
+        "mission_id"
+      ],
+      "decorators": [
+        "gl.public.view"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Name(id='dict', ctx=Load())"
+    },
+    "get_withdrawal": {
+      "args": [
+        "self",
+        "withdrawal_id"
+      ],
+      "decorators": [
+        "gl.public.view"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Name(id='dict', ctx=Load())"
+    },
+    "get_withdrawal_by_index": {
+      "args": [
+        "self",
+        "index"
+      ],
+      "decorators": [
+        "gl.public.view"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Name(id='dict', ctx=Load())"
+    },
+    "get_withdrawal_count": {
+      "args": [
+        "self"
+      ],
+      "decorators": [
+        "gl.public.view"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Name(id='int', ctx=Load())"
+    },
+    "is_supplier_authorized": {
+      "args": [
+        "self",
+        "mission_id",
+        "supplier"
+      ],
+      "decorators": [
+        "gl.public.view"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Name(id='bool', ctx=Load())"
+    },
+    "prepare_effect": {
+      "args": [
+        "self",
+        "mission_id",
+        "effect_id",
+        "effect_digest",
+        "beneficiary",
+        "value",
+        "expiry"
+      ],
+      "decorators": [
+        "gl.public.write"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Constant(value=None)"
+    },
+    "prepare_effect_with_dependency": {
+      "args": [
+        "self",
+        "mission_id",
+        "effect_id",
+        "effect_digest",
+        "beneficiary",
+        "value",
+        "expiry",
+        "dependency_id"
+      ],
+      "decorators": [
+        "gl.public.write"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Constant(value=None)"
+    },
+    "protocol_info": {
+      "args": [
+        "self"
+      ],
+      "decorators": [
+        "gl.public.view"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Name(id='dict', ctx=Load())"
+    },
+    "register_authority": {
+      "args": [
+        "self",
+        "authority_id",
+        "host",
+        "path_prefix",
+        "issuer_address",
+        "authority_version"
+      ],
+      "decorators": [
+        "gl.public.write"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Constant(value=None)"
+    },
+    "register_evidence": {
+      "args": [
+        "self",
+        "mission_id",
+        "evidence_id",
+        "authority_id",
+        "authority_version",
+        "record_id",
+        "record_version"
+      ],
+      "decorators": [
+        "gl.public.write"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Constant(value=None)"
+    },
+    "repair_evidence": {
+      "args": [
+        "self",
+        "mission_id",
+        "evidence_id",
+        "authority_id",
+        "authority_version",
+        "record_id",
+        "record_version"
+      ],
+      "decorators": [
+        "gl.public.write"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Constant(value=None)"
+    },
+    "revoke_supplier": {
+      "args": [
+        "self",
+        "mission_id",
+        "supplier"
+      ],
+      "decorators": [
+        "gl.public.write"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Constant(value=None)"
+    },
+    "seal_mission": {
+      "args": [
+        "self",
+        "mission_id",
+        "effect_root",
+        "evidence_root"
+      ],
+      "decorators": [
+        "gl.public.write"
+      ],
+      "defaults": [],
+      "kw_defaults": [],
+      "returns": "Constant(value=None)"
+    }
+  },
+  "reverse_ast_equivalence": true,
+  "schema": "commit-bradbury-compact-source-map-v1",
+  "selected_variant": "alpha_strings_usererror_module_constants",
+  "storage_identifier_map": {
+    "attestation_authority": "s62",
+    "attestation_authority_version": "s63",
+    "attestation_exists": "s61",
+    "attestation_expires_at": "s72",
+    "attestation_issuer": "s64",
+    "attestation_mission": "s67",
+    "attestation_mission_version": "s68",
+    "attestation_published_at": "s71",
+    "attestation_record_hash": "s70",
+    "attestation_record_id": "s65",
+    "attestation_record_version": "s66",
+    "attestation_url": "s69",
+    "authority_active": "s39",
+    "authority_exists": "s38",
+    "authority_host": "s40",
+    "authority_issuer": "s42",
+    "authority_path_prefix": "s41",
+    "authority_version": "s43",
+    "claimable_balance": "s98",
+    "effect_beneficiary": "s34",
+    "effect_digest": "s32",
+    "effect_exists": "s28",
+    "effect_expiry": "s36",
+    "effect_id": "s31",
+    "effect_mission": "s29",
+    "effect_parent": "s33",
+    "effect_supplier": "s30",
+    "effect_value": "s35",
+    "evidence_authority": "s49",
+    "evidence_authority_version": "s54",
+    "evidence_exists": "s46",
+    "evidence_expires_at": "s53",
+    "evidence_failure_attempt": "s81",
+    "evidence_failure_code": "s76",
+    "evidence_failure_count": "s73",
+    "evidence_failure_evidence_id": "s77",
+    "evidence_failure_exists": "s74",
+    "evidence_failure_mission_version": "s80",
+    "evidence_failure_record_id": "s78",
+    "evidence_failure_record_version": "s79",
+    "evidence_failure_status": "s75",
+    "evidence_id": "s48",
+    "evidence_issuer": "s55",
+    "evidence_latest_failure_key": "s82",
+    "evidence_latest_repair_key": "s96",
+    "evidence_mission": "s47",
+    "evidence_mission_version": "s58",
+    "evidence_published_at": "s59",
+    "evidence_record_hash": "s51",
+    "evidence_record_id": "s56",
+    "evidence_record_version": "s57",
+    "evidence_repair_active_record_version": "s91",
+    "evidence_repair_authority": "s86",
+    "evidence_repair_authority_version": "s87",
+    "evidence_repair_count": "s83",
+    "evidence_repair_exists": "s84",
+    "evidence_repair_expires_at": "s95",
+    "evidence_repair_issuer": "s88",
+    "evidence_repair_original_record_version": "s90",
+    "evidence_repair_published_at": "s94",
+    "evidence_repair_record_hash": "s93",
+    "evidence_repair_record_id": "s89",
+    "evidence_repair_status": "s85",
+    "evidence_repair_url": "s92",
+    "evidence_subject": "s52",
+    "evidence_url": "s50",
+    "mission_allocation_applied": "s18",
+    "mission_budget": "s11",
+    "mission_claimable": "s97",
+    "mission_count": "s1",
+    "mission_created_at": "s25",
+    "mission_decision": "s20",
+    "mission_decision_nonce": "s16",
+    "mission_effect_count": "s27",
+    "mission_effect_key": "s37",
+    "mission_effect_root": "s9",
+    "mission_evaluation_count": "s22",
+    "mission_evaluation_evidence_root": "s17",
+    "mission_evidence_count": "s19",
+    "mission_evidence_key": "s60",
+    "mission_evidence_root": "s10",
+    "mission_exists": "s2",
+    "mission_funded_value": "s12",
+    "mission_intent_digest": "s8",
+    "mission_key": "s3",
+    "mission_objective": "s6",
+    "mission_policy_digest": "s7",
+    "mission_prepare_deadline": "s23",
+    "mission_prepared_value": "s13",
+    "mission_principal": "s4",
+    "mission_reason_code": "s21",
+    "mission_recovery_deadline": "s24",
+    "mission_refund_beneficiary": "s14",
+    "mission_refund_entitlement": "s15",
+    "mission_state": "s5",
+    "mission_version": "s26",
+    "owner": "s0",
+    "supplier_authorized": "s44",
+    "supplier_count": "s45",
+    "withdrawal_amount": "s103",
+    "withdrawal_beneficiary": "s102",
+    "withdrawal_count": "s99",
+    "withdrawal_exists": "s100",
+    "withdrawal_mission": "s101",
+    "withdrawal_status": "s104"
+  },
+  "user_error_alias": "e0",
+  "variants": [
+    {
+      "bytes": 68967,
+      "name": "format_only",
+      "sha256": "7b50348e038c137b64cd131cdf68ceb22b3f46c07fa29d4c80835ed8e584ef68"
+    },
+    {
+      "bytes": 58521,
+      "name": "storage_alpha",
+      "sha256": "0360c9d25aa3755f2478712910d156fc6a3bf520eb091bcd5af5acfd31864dae"
+    },
+    {
+      "bytes": 56503,
+      "name": "storage_private_alpha",
+      "sha256": "59e342b63f1989e8728fba090f1e5f54cac7ca77575f01f482e820b25a451144"
+    },
+    {
+      "bytes": 53489,
+      "name": "storage_private_local_alpha",
+      "sha256": "788f180f7aee585d39acfba6e5a15fe1592f27b4a9a4fb0a7a829b1e628f6dba"
+    },
+    {
+      "bytes": 51505,
+      "name": "alpha_plus_string_pool",
+      "sha256": "cdab0e0fd1a19efc47b2e5944cb616d6de3461d53ce1df427e2e95bd12d10695"
+    },
+    {
+      "bytes": 49367,
+      "name": "alpha_strings_usererror_alias",
+      "sha256": "9b5d784d2170760f61c55532a77f685ea7672fb7a5018870fc3383d4eab6fbe4"
+    },
+    {
+      "bytes": 48589,
+      "name": "alpha_strings_usererror_module_constants",
+      "sha256": "a298b2697846adbcddf88272a0fbd514778a7fee733fa8b6d6fa489ee973e33b"
+    }
+  ]
+}

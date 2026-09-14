@@ -1,2464 +1,1094 @@
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
-"""COMMIT semantic-atomicity coordinator with native-GEN escrow.
-
-The contract binds a mission's intent, evidence, and effect graph; evaluates
-sealed evidence through independent GenLayer reads; applies the result only
-through a finalized self-message; and allocates escrow into claimable
-entitlements in one state transition. External withdrawals remain one-way
-until the network provides an authenticated delivery/non-delivery proof.
-"""
-
-from datetime import datetime, timezone
+from datetime import datetime ,timezone
 import json
-
 from genlayer import *
-from genlayer.py.keccak import Keccak256
-
-PROTOCOL = "commit"
-REVISION = "0.7.0-reviewable-manifest"
-STATE_PREPARING = "PREPARING"
-STATE_SEALED = "SEALED"
-STATE_DECISION_PENDING = "DECISION_PENDING"
-STATE_COMMITTED = "COMMITTED"
-STATE_ABORTED = "ABORTED"
-WITHDRAWAL_DISPATCHED = "DISPATCHED"
-MAX_TEXT = 512
-MAX_EFFECTS = 32
-MAX_EVIDENCE = 16
-MAX_REASON = 128
-MAX_REMOTE_BODY = 16 * 1024
-MAX_U256 = (1 << 256) - 1
-EVIDENCE_SCHEMA = "commit-evidence-v2"
-POLICY_RULE = "all-evidence-and-effects-v1"
-POLICY_DIGEST = "983307fac383ac4a92be6c0c361ea8f3c9d9efa20ad5e6e8bc8dee932f2a6103"
-DECISION_ENVELOPE = "commit-decision-v3"
-RECEIPT_SCHEMA = "commit-mission-receipt-v2"
-MANIFEST_SCHEMA = "commit-mission-manifest-v2"
-
-
-@gl.evm.contract_interface
-class _NativeRecipient:
-    class View:
-        pass
-
-    class Write:
-        pass
-
-
-class CommitProtocol(gl.Contract):
-    owner: Address
-    mission_count: u256
-    mission_exists: TreeMap[str, bool]
-    mission_key: TreeMap[str, str]
-    mission_principal: TreeMap[str, Address]
-    mission_state: TreeMap[str, str]
-    mission_objective: TreeMap[str, str]
-    mission_policy_digest: TreeMap[str, str]
-    mission_intent_digest: TreeMap[str, str]
-    mission_effect_root: TreeMap[str, str]
-    mission_evidence_root: TreeMap[str, str]
-    mission_budget: TreeMap[str, u256]
-    mission_funded_value: TreeMap[str, u256]
-    mission_prepared_value: TreeMap[str, u256]
-    mission_refund_beneficiary: TreeMap[str, Address]
-    mission_refund_entitlement: TreeMap[str, u256]
-    mission_decision_nonce: TreeMap[str, str]
-    mission_evaluation_evidence_root: TreeMap[str, str]
-    mission_allocation_applied: TreeMap[str, bool]
-    mission_evidence_count: TreeMap[str, u256]
-    mission_decision: TreeMap[str, str]
-    mission_reason_code: TreeMap[str, str]
-    mission_evaluation_count: TreeMap[str, u256]
-    mission_prepare_deadline: TreeMap[str, u256]
-    mission_recovery_deadline: TreeMap[str, u256]
-    mission_created_at: TreeMap[str, u256]
-    mission_version: TreeMap[str, u256]
-    mission_effect_count: TreeMap[str, u256]
-    effect_exists: TreeMap[str, bool]
-    effect_mission: TreeMap[str, str]
-    effect_supplier: TreeMap[str, Address]
-    effect_id: TreeMap[str, str]
-    effect_digest: TreeMap[str, str]
-    effect_parent: TreeMap[str, str]
-    effect_beneficiary: TreeMap[str, Address]
-    effect_value: TreeMap[str, u256]
-    effect_expiry: TreeMap[str, u256]
-    mission_effect_key: TreeMap[str, str]
-    authority_exists: TreeMap[str, bool]
-    authority_active: TreeMap[str, bool]
-    authority_host: TreeMap[str, str]
-    authority_path_prefix: TreeMap[str, str]
-    authority_issuer: TreeMap[str, Address]
-    authority_version: TreeMap[str, u256]
-    supplier_authorized: TreeMap[str, bool]
-    supplier_count: TreeMap[str, u256]
-    evidence_exists: TreeMap[str, bool]
-    evidence_mission: TreeMap[str, str]
-    evidence_id: TreeMap[str, str]
-    evidence_authority: TreeMap[str, str]
-    evidence_url: TreeMap[str, str]
-    evidence_record_hash: TreeMap[str, str]
-    evidence_subject: TreeMap[str, str]
-    evidence_expires_at: TreeMap[str, u256]
-    evidence_authority_version: TreeMap[str, u256]
-    evidence_issuer: TreeMap[str, Address]
-    evidence_record_id: TreeMap[str, str]
-    evidence_record_version: TreeMap[str, u256]
-    evidence_mission_version: TreeMap[str, u256]
-    evidence_published_at: TreeMap[str, u256]
-    mission_evidence_key: TreeMap[str, str]
-
-    attestation_exists: TreeMap[str, bool]
-    attestation_authority: TreeMap[str, str]
-    attestation_authority_version: TreeMap[str, u256]
-    attestation_issuer: TreeMap[str, Address]
-    attestation_record_id: TreeMap[str, str]
-    attestation_record_version: TreeMap[str, u256]
-    attestation_mission: TreeMap[str, str]
-    attestation_mission_version: TreeMap[str, u256]
-    attestation_url: TreeMap[str, str]
-    attestation_record_hash: TreeMap[str, str]
-    attestation_published_at: TreeMap[str, u256]
-    attestation_expires_at: TreeMap[str, u256]
-
-    evidence_failure_count: TreeMap[str, u256]
-    evidence_failure_exists: TreeMap[str, bool]
-    evidence_failure_status: TreeMap[str, str]
-    evidence_failure_code: TreeMap[str, str]
-    evidence_failure_evidence_id: TreeMap[str, str]
-    evidence_failure_record_id: TreeMap[str, str]
-    evidence_failure_record_version: TreeMap[str, u256]
-    evidence_failure_mission_version: TreeMap[str, u256]
-    evidence_failure_attempt: TreeMap[str, u256]
-    evidence_latest_failure_key: TreeMap[str, str]
-
-    evidence_repair_count: TreeMap[str, u256]
-    evidence_repair_exists: TreeMap[str, bool]
-    evidence_repair_status: TreeMap[str, str]
-    evidence_repair_authority: TreeMap[str, str]
-    evidence_repair_authority_version: TreeMap[str, u256]
-    evidence_repair_issuer: TreeMap[str, Address]
-    evidence_repair_record_id: TreeMap[str, str]
-    evidence_repair_original_record_version: TreeMap[str, u256]
-    evidence_repair_active_record_version: TreeMap[str, u256]
-    evidence_repair_url: TreeMap[str, str]
-    evidence_repair_record_hash: TreeMap[str, str]
-    evidence_repair_published_at: TreeMap[str, u256]
-    evidence_repair_expires_at: TreeMap[str, u256]
-    evidence_latest_repair_key: TreeMap[str, str]
-
-    mission_claimable: TreeMap[str, u256]
-    claimable_balance: TreeMap[str, u256]
-    withdrawal_count: u256
-    withdrawal_exists: TreeMap[str, bool]
-    withdrawal_mission: TreeMap[str, str]
-    withdrawal_beneficiary: TreeMap[str, Address]
-    withdrawal_amount: TreeMap[str, u256]
-    withdrawal_status: TreeMap[str, str]
-
-    def __init__(self):
-        self.owner = gl.message.sender_address
-        self.mission_count = (0)
-        self.withdrawal_count = (0)
-        # v0.6 storage collections are allocated by the contract runtime.
-
-    def _require_digest(self, value: str, label: str) -> None:
-        if len(value) != 64:
-            raise gl.vm.UserError(f"{label} must be 32-byte lowercase hex")
-        for char in value:
-            if char not in "0123456789abcdef":
-                raise gl.vm.UserError(f"{label} must be 32-byte lowercase hex")
-
-    def _require_uint(self, value: int, label: str, *, positive: bool = False) -> int:
-        """Reject booleans and values outside the GenLayer uint256 domain."""
-        if type(value) is not int or value < (1 if positive else 0) or value > MAX_U256:
-            raise gl.vm.UserError(f"invalid {label}")
-        return value
-
-    def _next_uint(self, value: int, label: str) -> int:
-        """Increment a stored uint only when the next value remains representable."""
-        if value < 0 or value >= MAX_U256:
-            raise gl.vm.UserError(f"{label} overflow")
-        return value + 1
-
-    def _require_ascii_text(self, value: str, label: str, limit: int = MAX_TEXT) -> None:
-        if not value or len(value) > limit:
-            raise gl.vm.UserError(f"invalid {label}")
-        for char in value:
-            if ord(char) < 0x20 or ord(char) > 0x7E:
-                raise gl.vm.UserError(f"invalid {label}")
-
-    def _require_mission_id(self, value: str) -> None:
-        self._require_ascii_text(value, "mission id")
-        if ":" in value:
-            raise gl.vm.UserError("invalid mission id")
-
-    def _require_identifier(self, value: str, label: str, limit: int) -> None:
-        self._require_ascii_text(value, label, limit)
-        for char in value:
-            if char not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_":
-                raise gl.vm.UserError(f"invalid {label}")
-
-    def _require_authority_host(self, value: str) -> None:
-        self._require_ascii_text(value, "authority host", 253)
-        if value != value.lower() or any(char in value for char in "/?:#@%\\"):
-            raise gl.vm.UserError("invalid authority host")
-        if value.startswith(".") or value.endswith(".") or ".." in value:
-            raise gl.vm.UserError("invalid authority host")
-        for label in value.split("."):
-            if not 1 <= len(label) <= 63:
-                raise gl.vm.UserError("invalid authority host")
-            if label[0] == "-" or label[-1] == "-":
-                raise gl.vm.UserError("invalid authority host")
-            if any(char not in "abcdefghijklmnopqrstuvwxyz0123456789-" for char in label):
-                raise gl.vm.UserError("invalid authority host")
-
-    def _require_path_prefix(self, value: str) -> None:
-        self._require_ascii_text(value, "authority path prefix", MAX_TEXT)
-        if not value.startswith("/") or "//" in value or any(
-            marker in value for marker in ("?", "#", "%", "\\")
-        ):
-            raise gl.vm.UserError("invalid authority path prefix")
-        if value != "/" and value.endswith("/"):
-            raise gl.vm.UserError("invalid authority path prefix")
-        if any(segment in (".", "..") for segment in value.split("/")):
-            raise gl.vm.UserError("invalid authority path prefix")
-
-    def _url_matches_authority(self, url: str, host: str, path_prefix: str) -> bool:
-        try:
-            self._require_ascii_text(url, "evidence url", 2048)
-        except Exception:
-            return False
-        origin = "https://" + host
-        if not url.startswith(origin):
-            return False
-        remainder = url[len(origin):]
-        if not remainder.startswith("/") or any(
-            marker in remainder for marker in ("?", "#", "%", "\\")
-        ):
-            return False
-        if remainder == "/":
-            return path_prefix == "/"
-        segments = remainder.split("/")
-        if any(segment in ("", ".", "..") for segment in segments[1:]):
-            return False
-        if path_prefix == "/":
-            return True
-        if remainder == path_prefix:
-            return True
-        boundary = path_prefix if path_prefix.endswith("/") else path_prefix + "/"
-        return remainder.startswith(boundary)
-
-    def _require_authority(self, authority_id: str) -> None:
-        if not self.authority_exists.get(authority_id, False):
-            raise gl.vm.UserError("authority not found")
-
-    def _require_nonzero_address(self, value: Address, label: str) -> None:
-        if value.as_hex == "0x" + "00" * 20:
-            raise gl.vm.UserError(f"{label} cannot be zero")
-
-    def _intent_digest(
-        self,
-        mission_id: str,
-        objective: str,
-        policy_digest: str,
-        budget: int,
-        refund_beneficiary: Address,
-        prepare_deadline: int,
-        recovery_deadline: int,
-    ) -> str:
-        fields = (
-            "2",
-            PROTOCOL,
-            REVISION,
-            str(int(gl.message.chain_id)),
-            gl.message.contract_address.as_hex,
-            mission_id,
-            objective,
-            policy_digest,
-            str(budget),
-            refund_beneficiary.as_hex,
-            str(prepare_deadline),
-            str(recovery_deadline),
-        )
-        payload = "commit-intent-v2" + "".join(self._frame(field) for field in fields)
-        return Keccak256(payload.encode("utf-8")).hexdigest()
-
-    @gl.public.write
-    def register_authority(
-        self,
-        authority_id: str,
-        host: str,
-        path_prefix: str,
-        issuer_address: Address,
-        authority_version: int,
-    ) -> None:
-        if gl.message.sender_address != self.owner:
-            raise gl.vm.UserError("owner required")
-        self._require_identifier(authority_id, "authority id", 64)
-        if self.authority_exists.get(authority_id, False):
-            raise gl.vm.UserError("authority already exists")
-        self._require_authority_host(host)
-        self._require_path_prefix(path_prefix)
-        self._require_nonzero_address(issuer_address, "issuer")
-        self._require_uint(
-            authority_version,
-            "authority version",
-            positive=True,
-        )
-        self.authority_exists[authority_id] = True
-        self.authority_active[authority_id] = True
-        self.authority_host[authority_id] = host
-        self.authority_path_prefix[authority_id] = path_prefix
-        self.authority_issuer[authority_id] = issuer_address
-        self.authority_version[authority_id] = authority_version
-
-    @gl.public.write
-    def deactivate_authority(self, authority_id: str) -> None:
-        """Stop new evidence from using an authority without rewriting history."""
-        if gl.message.sender_address != self.owner:
-            raise gl.vm.UserError("owner required")
-        self._require_authority(authority_id)
-        self.authority_active[authority_id] = False
-
-    @gl.public.write
-    def authorize_supplier(self, mission_id: str, supplier: Address) -> None:
-        """Allow one exact supplier address to prepare effects for a mission."""
-        self._require_principal(mission_id)
-        if self.mission_state[mission_id] != STATE_PREPARING:
-            raise gl.vm.UserError("mission is not preparing")
-        if int(datetime.now(timezone.utc).timestamp()) > int(self.mission_prepare_deadline[mission_id]):
-            raise gl.vm.UserError("preparation deadline has passed")
-        self._require_nonzero_address(supplier, "supplier")
-        supplier_key = mission_id + ":" + supplier.as_hex
-        if self.supplier_authorized.get(supplier_key, False):
-            raise gl.vm.UserError("supplier already authorized")
-        self.supplier_authorized[supplier_key] = True
-        self.supplier_count[mission_id] = (self._next_uint(
-                int(self.supplier_count.get(mission_id, (0))),
-                "supplier count",
-            ))
-
-    @gl.public.write
-    def revoke_supplier(self, mission_id: str, supplier: Address) -> None:
-        """Revoke a supplier before sealing, but never rewrite a prepared effect."""
-        self._require_principal(mission_id)
-        if self.mission_state[mission_id] != STATE_PREPARING:
-            raise gl.vm.UserError("mission is not preparing")
-        if supplier == self.mission_principal[mission_id]:
-            raise gl.vm.UserError("principal cannot be revoked")
-        supplier_key = mission_id + ":" + supplier.as_hex
-        if not self.supplier_authorized.get(supplier_key, False):
-            raise gl.vm.UserError("supplier is not authorized")
-        for index in range(int(self.mission_effect_count[mission_id])):
-            effect_key = self.mission_effect_key[mission_id + ":" + str(index)]
-            if self.effect_supplier[effect_key] == supplier:
-                raise gl.vm.UserError("supplier has a prepared effect")
-        self.supplier_authorized[supplier_key] = False
-        current_count = int(self.supplier_count.get(mission_id, (0)))
-        if current_count > 0:
-            self.supplier_count[mission_id] = (current_count - 1)
-
-    def _attestation_key(
-        self,
-        authority_id: str,
-        record_id: str,
-        record_version: int,
-    ) -> str:
-        return authority_id + ":" + record_id + ":" + str(record_version)
-
-    @gl.public.write
-    def attest_evidence(
-        self,
-        authority_id: str,
-        authority_version: int,
-        record_id: str,
-        record_version: int,
-        mission_id: str,
-        mission_version: int,
-        url: str,
-        record_hash: str,
-        published_at: int,
-        expires_at: int,
-    ) -> None:
-        self._require_authority(authority_id)
-        if not self.authority_active.get(authority_id, False):
-            raise gl.vm.UserError("authority is inactive")
-        self._require_uint(
-            authority_version,
-            "authority version",
-            positive=True,
-        )
-        if authority_version != int(self.authority_version[authority_id]):
-            raise gl.vm.UserError("authority version mismatch")
-        if gl.message.sender_address != self.authority_issuer[authority_id]:
-            raise gl.vm.UserError("issuer required")
-
-        self._require_identifier(record_id, "record id", MAX_TEXT)
-        self._require_uint(record_version, "record version", positive=True)
-
-        if not self.mission_exists.get(mission_id, False):
-            raise gl.vm.UserError("mission not found")
-        self._require_uint(mission_version, "mission version", positive=True)
-        if mission_version != int(self.mission_version[mission_id]):
-            raise gl.vm.UserError("mission version mismatch")
-
-        if not self._url_matches_authority(
-            url,
-            self.authority_host[authority_id],
-            self.authority_path_prefix[authority_id],
-        ):
-            raise gl.vm.UserError("evidence URL is outside authority")
-
-        self._require_digest(record_hash, "record hash")
-        self._require_uint(
-            published_at,
-            "evidence publication",
-            positive=True,
-        )
-        self._require_uint(expires_at, "evidence expiry", positive=True)
-
-        mission_created_at = int(self.mission_created_at[mission_id])
-        if published_at < mission_created_at:
-            raise gl.vm.UserError("evidence published before mission")
-        if expires_at < int(self.mission_recovery_deadline[mission_id]):
-            raise gl.vm.UserError("invalid evidence expiry")
-
-        attestation_key = self._attestation_key(
-            authority_id,
-            record_id,
-            record_version,
-        )
-        if self.attestation_exists.get(attestation_key, False):
-            raise gl.vm.UserError("attestation already exists")
-
-        self.attestation_exists[attestation_key] = True
-        self.attestation_authority[attestation_key] = authority_id
-        self.attestation_authority_version[attestation_key] = authority_version
-        self.attestation_issuer[attestation_key] = gl.message.sender_address
-        self.attestation_record_id[attestation_key] = record_id
-        self.attestation_record_version[attestation_key] = record_version
-        self.attestation_mission[attestation_key] = mission_id
-        self.attestation_mission_version[attestation_key] = mission_version
-        self.attestation_url[attestation_key] = url
-        self.attestation_record_hash[attestation_key] = record_hash
-        self.attestation_published_at[attestation_key] = published_at
-        self.attestation_expires_at[attestation_key] = expires_at
-
-    @gl.public.write
-    def register_evidence(
-        self,
-        mission_id: str,
-        evidence_id: str,
-        authority_id: str,
-        authority_version: int,
-        record_id: str,
-        record_version: int,
-    ) -> None:
-        self._require_principal(mission_id)
-        if self.mission_state[mission_id] != STATE_PREPARING:
-            raise gl.vm.UserError("mission is not preparing")
-        if int(datetime.now(timezone.utc).timestamp()) > int(
-            self.mission_prepare_deadline[mission_id]
-        ):
-            raise gl.vm.UserError("preparation deadline has passed")
-
-        self._require_identifier(evidence_id, "evidence id", MAX_TEXT)
-        evidence_key = mission_id + ":" + evidence_id
-        if self.evidence_exists.get(evidence_key, False):
-            raise gl.vm.UserError("evidence already exists")
-
-        evidence_index = int(self.mission_evidence_count[mission_id])
-        if evidence_index >= MAX_EVIDENCE:
-            raise gl.vm.UserError("evidence limit exceeded")
-
-        self._require_authority(authority_id)
-        self._require_uint(
-            authority_version,
-            "authority version",
-            positive=True,
-        )
-        self._require_identifier(record_id, "record id", MAX_TEXT)
-        self._require_uint(record_version, "record version", positive=True)
-
-        attestation_key = self._attestation_key(
-            authority_id,
-            record_id,
-            record_version,
-        )
-        if not self.attestation_exists.get(attestation_key, False):
-            raise gl.vm.UserError("evidence attestation not found")
-
-        if (
-            int(self.attestation_authority_version[attestation_key])
-            != authority_version
-        ):
-            raise gl.vm.UserError("authority version mismatch")
-        if self.attestation_mission[attestation_key] != mission_id:
-            raise gl.vm.UserError("attestation mission mismatch")
-
-        current_mission_version = int(self.mission_version[mission_id])
-        if (
-            int(self.attestation_mission_version[attestation_key])
-            != current_mission_version
-        ):
-            raise gl.vm.UserError("attestation mission version mismatch")
-
-        self.evidence_exists[evidence_key] = True
-        self.evidence_mission[evidence_key] = mission_id
-        self.evidence_id[evidence_key] = evidence_id
-        self.evidence_authority[evidence_key] = authority_id
-        self.evidence_authority_version[evidence_key] = authority_version
-        self.evidence_issuer[evidence_key] = self.attestation_issuer[attestation_key]
-        self.evidence_record_id[evidence_key] = record_id
-        self.evidence_record_version[evidence_key] = record_version
-        self.evidence_mission_version[evidence_key] = current_mission_version
-        self.evidence_url[evidence_key] = self.attestation_url[attestation_key]
-        self.evidence_record_hash[evidence_key] = (
-            self.attestation_record_hash[attestation_key]
-        )
-        self.evidence_subject[evidence_key] = mission_id
-        self.evidence_published_at[evidence_key] = (
-            self.attestation_published_at[attestation_key]
-        )
-        self.evidence_expires_at[evidence_key] = (
-            self.attestation_expires_at[attestation_key]
-        )
-        self.mission_evidence_key[
-            mission_id + ":" + str(evidence_index)
-        ] = evidence_key
-        self.mission_evidence_count[mission_id] = self._next_uint(
-            evidence_index,
-            "evidence count",
-        )
-
-    @gl.public.write
-    def create_mission(
-        self,
-        mission_id: str,
-        objective: str,
-        policy_digest: str,
-        budget: int,
-        refund_beneficiary: Address,
-        prepare_deadline: int,
-        recovery_deadline: int,
-    ) -> None:
-        self._require_mission_id(mission_id)
-        self._require_ascii_text(objective, "objective")
-        self._require_digest(policy_digest, "policy digest")
-        self._require_uint(budget, "mission budget", positive=True)
-        self._require_uint(prepare_deadline, "preparation deadline", positive=True)
-        self._require_uint(recovery_deadline, "recovery deadline", positive=True)
-        if policy_digest != POLICY_DIGEST:
-            raise gl.vm.UserError("unsupported policy rule")
-        if self.mission_exists.get(mission_id, False):
-            raise gl.vm.UserError("mission already exists")
-        self._require_nonzero_address(refund_beneficiary, "refund beneficiary")
-        if recovery_deadline <= prepare_deadline:
-            raise gl.vm.UserError("invalid deadline order")
-
-        self.mission_exists[mission_id] = True
-        self.mission_principal[mission_id] = gl.message.sender_address
-        self.mission_state[mission_id] = STATE_PREPARING
-        self.mission_objective[mission_id] = objective
-        self.mission_policy_digest[mission_id] = policy_digest
-        self.mission_intent_digest[mission_id] = self._intent_digest(
-            mission_id,
-            objective,
-            policy_digest,
-            budget,
-            refund_beneficiary,
-            prepare_deadline,
-            recovery_deadline,
-        )
-        self.mission_effect_root[mission_id] = ""
-        self.mission_evidence_root[mission_id] = ""
-        self.mission_budget[mission_id] = (budget)
-        self.mission_funded_value[mission_id] = (0)
-        self.mission_prepared_value[mission_id] = (0)
-        self.mission_refund_beneficiary[mission_id] = refund_beneficiary
-        self.mission_refund_entitlement[mission_id] = (0)
-        self.mission_decision_nonce[mission_id] = ""
-        self.mission_evaluation_evidence_root[mission_id] = ""
-        self.mission_allocation_applied[mission_id] = False
-        self.mission_evidence_count[mission_id] = (0)
-        self.mission_decision[mission_id] = ""
-        self.mission_reason_code[mission_id] = ""
-        self.mission_evaluation_count[mission_id] = (0)
-        self.mission_prepare_deadline[mission_id] = (prepare_deadline)
-        self.mission_recovery_deadline[mission_id] = (recovery_deadline)
-        self.mission_created_at[mission_id] = int(
-            datetime.now(timezone.utc).timestamp()
-        )
-        self.mission_version[mission_id] = (1)
-        self.mission_effect_count[mission_id] = (0)
-        # The principal may prepare its own effects. Other participants must
-        # be explicitly authorized before they can contribute any effect.
-        self.supplier_authorized[mission_id + ":" + gl.message.sender_address.as_hex] = True
-        self.supplier_count[mission_id] = (1)
-        mission_index = int(self.mission_count)
-        self.mission_key[str(mission_index)] = mission_id
-        self.mission_count = (self._next_uint(mission_index, "mission count"))
-
-    @gl.public.write.payable
-    def fund_mission(self, mission_id: str) -> None:
-        self._require_principal(mission_id)
-        if self.mission_state[mission_id] != STATE_PREPARING:
-            raise gl.vm.UserError("mission is not preparing")
-        if int(datetime.now(timezone.utc).timestamp()) > int(self.mission_prepare_deadline[mission_id]):
-            raise gl.vm.UserError("preparation deadline has passed")
-        amount = int(gl.message.value)
-        if amount <= 0:
-            raise gl.vm.UserError("funding value must be positive")
-        funded = int(self.mission_funded_value[mission_id])
-        if funded + amount > int(self.mission_budget[mission_id]):
-            raise gl.vm.UserError("funding exceeds mission budget")
-        self.mission_funded_value[mission_id] = (funded + amount)
-
-    @gl.public.write
-    def prepare_effect(
-        self,
-        mission_id: str,
-        effect_id: str,
-        effect_digest: str,
-        beneficiary: Address,
-        value: int,
-        expiry: int,
-    ) -> None:
-        self._prepare_effect(
-            mission_id, effect_id, effect_digest, beneficiary, value, expiry, ""
-        )
-
-    @gl.public.write
-    def prepare_effect_with_dependency(
-        self,
-        mission_id: str,
-        effect_id: str,
-        effect_digest: str,
-        beneficiary: Address,
-        value: int,
-        expiry: int,
-        dependency_id: str,
-    ) -> None:
-        """Prepare an effect and bind it to an earlier effect in this mission."""
-        self._prepare_effect(
-            mission_id, effect_id, effect_digest, beneficiary, value, expiry, dependency_id
-        )
-
-    def _prepare_effect(
-        self,
-        mission_id: str,
-        effect_id: str,
-        effect_digest: str,
-        beneficiary: Address,
-        value: int,
-        expiry: int,
-        dependency_id: str,
-    ) -> None:
-        if not self.mission_exists.get(mission_id, False):
-            raise gl.vm.UserError("mission not found")
-        if self.mission_state[mission_id] != STATE_PREPARING:
-            raise gl.vm.UserError("mission is not preparing")
-        if int(datetime.now(timezone.utc).timestamp()) > int(self.mission_prepare_deadline[mission_id]):
-            raise gl.vm.UserError("preparation deadline has passed")
-        self._require_uint(value, "effect value", positive=True)
-        self._require_uint(expiry, "effect expiry", positive=True)
-        supplier_key = mission_id + ":" + gl.message.sender_address.as_hex
-        if not self.supplier_authorized.get(supplier_key, False):
-            raise gl.vm.UserError("supplier is not authorized")
-        if not effect_id or len(effect_id) > MAX_TEXT or ":" in effect_id:
-            raise gl.vm.UserError("invalid effect id")
-        self._require_ascii_text(effect_id, "effect id")
-        effect_key = mission_id + ":" + effect_id
-        if self.effect_exists.get(effect_key, False):
-            raise gl.vm.UserError("effect already exists")
-        effect_index = int(self.mission_effect_count[mission_id])
-        if effect_index >= MAX_EFFECTS:
-            raise gl.vm.UserError("effect limit exceeded")
-        self._require_digest(effect_digest, "effect digest")
-        if dependency_id:
-            self._require_identifier(dependency_id, "dependency id", MAX_TEXT)
-            if dependency_id == effect_id:
-                raise gl.vm.UserError("effect cannot depend on itself")
-            dependency_key = mission_id + ":" + dependency_id
-            if not self.effect_exists.get(dependency_key, False):
-                raise gl.vm.UserError("dependency effect not found")
-        self._require_nonzero_address(beneficiary, "effect beneficiary")
-        if int(self.mission_prepared_value[mission_id]) + value > int(self.mission_budget[mission_id]):
-            raise gl.vm.UserError("prepared effects exceed mission budget")
-        if expiry < int(self.mission_recovery_deadline[mission_id]):
-            raise gl.vm.UserError("invalid effect expiry")
-
-        self.effect_exists[effect_key] = True
-        self.effect_mission[effect_key] = mission_id
-        self.effect_supplier[effect_key] = gl.message.sender_address
-        self.effect_id[effect_key] = effect_id
-        self.effect_digest[effect_key] = effect_digest
-        self.effect_parent[effect_key] = dependency_id
-        self.effect_beneficiary[effect_key] = beneficiary
-        self.effect_value[effect_key] = (value)
-        self.effect_expiry[effect_key] = (expiry)
-        self.mission_prepared_value[mission_id] = (int(self.mission_prepared_value[mission_id]) + value)
-        self.mission_effect_key[mission_id + ":" + str(effect_index)] = effect_key
-        self.mission_effect_count[mission_id] = (self._next_uint(effect_index, "effect count"))
-
-    @gl.public.write
-    def seal_mission(self, mission_id: str, effect_root: str, evidence_root: str) -> None:
-        self._require_principal(mission_id)
-        if self.mission_state[mission_id] != STATE_PREPARING:
-            raise gl.vm.UserError("mission is not preparing")
-        if int(datetime.now(timezone.utc).timestamp()) > int(self.mission_prepare_deadline[mission_id]):
-            raise gl.vm.UserError("preparation deadline has passed")
-        if self.mission_effect_count[mission_id] <= 0:
-            raise gl.vm.UserError("mission has no prepared effects")
-        if self.mission_evidence_count[mission_id] < 2:
-            raise gl.vm.UserError("mission needs two evidence records")
-        if self.mission_funded_value[mission_id] < self.mission_prepared_value[mission_id]:
-            raise gl.vm.UserError("mission is underfunded")
-        if not self._has_distinct_evidence_authorities(mission_id):
-            raise gl.vm.UserError("evidence authorities must be distinct")
-        self._require_acyclic_effect_graph(mission_id)
-        self._require_digest(effect_root, "effect root")
-        self._require_digest(evidence_root, "evidence root")
-        if effect_root != self.derive_effect_root(mission_id):
-            raise gl.vm.UserError("effect root does not match prepared effects")
-        if evidence_root != self.derive_evidence_root(mission_id):
-            raise gl.vm.UserError("evidence root does not match registered evidence")
-        self.mission_effect_root[mission_id] = effect_root
-        self.mission_evidence_root[mission_id] = evidence_root
-        self.mission_state[mission_id] = STATE_SEALED
-
-    @gl.public.write
-    def cancel_mission(self, mission_id: str) -> None:
-        self._require_principal(mission_id)
-        if self.mission_state[mission_id] != STATE_PREPARING:
-            raise gl.vm.UserError("sealed mission cannot be cancelled")
-        self._allocate_abort(mission_id, "cancelled_by_principal")
-
-    def _evidence_failure_key(
-        self,
-        evidence_key: str,
-        attempt: int,
-    ) -> str:
-        return evidence_key + ":failure:" + str(attempt)
-
-    def _evidence_repair_key(
-        self,
-        evidence_key: str,
-        repair_index: int,
-    ) -> str:
-        return evidence_key + ":repair:" + str(repair_index)
-
-    @gl.public.write
-    def repair_evidence(
-        self,
-        mission_id: str,
-        evidence_id: str,
-        authority_id: str,
-        authority_version: int,
-        record_id: str,
-        record_version: int,
-    ) -> None:
-        self._require_principal(mission_id)
-
-        if self.mission_state[mission_id] != STATE_SEALED:
-            raise gl.vm.UserError("mission is not sealed")
-
-        if self.mission_decision[mission_id]:
-            raise gl.vm.UserError("mission already evaluated")
-
-        now = int(datetime.now(timezone.utc).timestamp())
-
-        if now >= int(self.mission_recovery_deadline[mission_id]):
-            raise gl.vm.UserError("recovery deadline has passed")
-
-        evidence_key = mission_id + ":" + evidence_id
-
-        if not self.evidence_exists.get(evidence_key, False):
-            raise gl.vm.UserError("evidence not found")
-
-        failure_key = self.evidence_latest_failure_key.get(
-            evidence_key,
-            "",
-        )
-
-        if (
-            not failure_key
-            or not self.evidence_failure_exists.get(
-                failure_key,
-                False,
-            )
-        ):
-            raise gl.vm.UserError("evidence failure not found")
-
-        if (
-            self.evidence_failure_status[failure_key]
-            != "REPAIR_REQUIRED"
-        ):
-            raise gl.vm.UserError("evidence is not repairable")
-
-        if authority_id != self.evidence_authority[evidence_key]:
-            raise gl.vm.UserError("repair authority mismatch")
-
-        if authority_version != int(
-            self.evidence_authority_version[evidence_key]
-        ):
-            raise gl.vm.UserError(
-                "repair authority version mismatch"
-            )
-
-        if record_id != self.evidence_record_id[evidence_key]:
-            raise gl.vm.UserError(
-                "repair record identity mismatch"
-            )
-
-        self._require_uint(
-            record_version,
-            "record version",
-            positive=True,
-        )
-
-        current_version = int(
-            self.evidence_record_version[evidence_key]
-        )
-
-        latest_repair_key = self.evidence_latest_repair_key.get(
-            evidence_key,
-            "",
-        )
-
-        if (
-            latest_repair_key
-            and self.evidence_repair_exists.get(
-                latest_repair_key,
-                False,
-            )
-        ):
-            current_version = int(
-                self.evidence_repair_active_record_version[
-                    latest_repair_key
-                ]
-            )
-
-        if record_version <= current_version:
-            raise gl.vm.UserError(
-                "repair record version must be newer"
-            )
-
-        attestation_key = self._attestation_key(
-            authority_id,
-            record_id,
-            record_version,
-        )
-
-        if not self.attestation_exists.get(
-            attestation_key,
-            False,
-        ):
-            raise gl.vm.UserError(
-                "repair evidence attestation not found"
-            )
-
-        if int(
-            self.attestation_authority_version[
-                attestation_key
-            ]
-        ) != authority_version:
-            raise gl.vm.UserError(
-                "repair authority version mismatch"
-            )
-
-        if (
-            self.attestation_mission[attestation_key]
-            != mission_id
-        ):
-            raise gl.vm.UserError(
-                "repair attestation mission mismatch"
-            )
-
-        if int(
-            self.attestation_mission_version[
-                attestation_key
-            ]
-        ) != int(self.mission_version[mission_id]):
-            raise gl.vm.UserError(
-                "repair attestation mission version mismatch"
-            )
-
-        if (
-            self.attestation_record_id[attestation_key]
-            != self.evidence_record_id[evidence_key]
-        ):
-            raise gl.vm.UserError(
-                "repair record identity mismatch"
-            )
-
-        if (
-            self.attestation_issuer[attestation_key]
-            != self.evidence_issuer[evidence_key]
-        ):
-            raise gl.vm.UserError("repair issuer mismatch")
-
-        repair_index = (
-            int(
-                self.evidence_repair_count.get(
-                    evidence_key,
-                    0,
-                )
-            )
-            + 1
-        )
-
-        repair_key = self._evidence_repair_key(
-            evidence_key,
-            repair_index,
-        )
-
-        if self.evidence_repair_exists.get(
-            repair_key,
-            False,
-        ):
-            raise gl.vm.UserError(
-                "repair record already exists"
-            )
-
-        self.evidence_repair_exists[repair_key] = True
-        self.evidence_repair_status[repair_key] = "READY"
-
-        self.evidence_repair_authority[
-            repair_key
-        ] = authority_id
-
-        self.evidence_repair_authority_version[
-            repair_key
-        ] = authority_version
-
-        self.evidence_repair_issuer[
-            repair_key
-        ] = self.attestation_issuer[attestation_key]
-
-        self.evidence_repair_record_id[
-            repair_key
-        ] = record_id
-
-        self.evidence_repair_original_record_version[
-            repair_key
-        ] = int(self.evidence_record_version[evidence_key])
-
-        self.evidence_repair_active_record_version[
-            repair_key
-        ] = record_version
-
-        self.evidence_repair_url[
-            repair_key
-        ] = self.attestation_url[attestation_key]
-
-        self.evidence_repair_record_hash[
-            repair_key
-        ] = self.attestation_record_hash[attestation_key]
-
-        self.evidence_repair_published_at[
-            repair_key
-        ] = self.attestation_published_at[attestation_key]
-
-        self.evidence_repair_expires_at[
-            repair_key
-        ] = self.attestation_expires_at[attestation_key]
-
-        self.evidence_repair_count[
-            evidence_key
-        ] = repair_index
-
-        self.evidence_latest_repair_key[
-            evidence_key
-        ] = repair_key
-
-    @gl.public.write
-    def evaluate_mission(self, mission_id: str) -> None:
-        if not self.mission_exists.get(mission_id, False):
-            raise gl.vm.UserError("mission not found")
-
-        if self.mission_state[mission_id] != STATE_SEALED:
-            raise gl.vm.UserError("mission is not sealed")
-
-        if self.mission_decision[mission_id]:
-            raise gl.vm.UserError("mission already evaluated")
-
-        now = int(datetime.now(timezone.utc).timestamp())
-
-        if now >= int(self.mission_recovery_deadline[mission_id]):
-            raise gl.vm.UserError("recovery deadline has passed")
-
-        source_specs = []
-
-        for index in range(
-            int(self.mission_evidence_count[mission_id])
-        ):
-            evidence_key = self.mission_evidence_key[
-                mission_id + ":" + str(index)
-            ]
-
-            authority_id = self.evidence_authority[evidence_key]
-            url = self.evidence_url[evidence_key]
-            record_hash = self.evidence_record_hash[evidence_key]
-            expires_at = int(
-                self.evidence_expires_at[evidence_key]
-            )
-            record_id = self.evidence_record_id[evidence_key]
-            record_version = int(
-                self.evidence_record_version[evidence_key]
-            )
-
-            repair_key = self.evidence_latest_repair_key.get(
-                evidence_key,
-                "",
-            )
-
-            if (
-                repair_key
-                and self.evidence_repair_exists.get(
-                    repair_key,
-                    False,
-                )
-                and self.evidence_repair_status[repair_key]
-                == "READY"
-            ):
-                authority_id = (
-                    self.evidence_repair_authority[repair_key]
-                )
-                url = self.evidence_repair_url[repair_key]
-                record_hash = (
-                    self.evidence_repair_record_hash[repair_key]
-                )
-                expires_at = int(
-                    self.evidence_repair_expires_at[repair_key]
-                )
-                record_id = (
-                    self.evidence_repair_record_id[repair_key]
-                )
-                record_version = int(
-                    self.evidence_repair_active_record_version[
-                        repair_key
-                    ]
-                )
-
-            source_specs.append(
-                (
-                    evidence_key,
-                    self.evidence_id[evidence_key],
-                    authority_id,
-                    url,
-                    record_hash,
-                    expires_at,
-                    record_id,
-                    record_version,
-                )
-            )
-
-        mission_id_snapshot = mission_id
-
-        mission_version_snapshot = int(
-            self.mission_version[mission_id]
-        )
-
-        objective_snapshot = self.mission_objective[
-            mission_id
-        ]
-
-        policy_digest_snapshot = (
-            self.mission_policy_digest[mission_id]
-        )
-
-        intent_digest_snapshot = (
-            self.mission_intent_digest[mission_id]
-        )
-
-        effect_root_snapshot = (
-            self.mission_effect_root[mission_id]
-        )
-
-        evidence_root_snapshot = (
-            self.mission_evidence_root[mission_id]
-        )
-
-        active_evidence_root_snapshot = (
-            self.derive_active_evidence_root(
-                mission_id
-            )
-        )
-
-        effect_specs = []
-
-        for index in range(
-            int(self.mission_effect_count[mission_id])
-        ):
-            effect_key = self.mission_effect_key[
-                mission_id + ":" + str(index)
-            ]
-
-            effect_specs.append(
-                (
-                    self.effect_id[effect_key],
-                    self.effect_parent.get(
-                        effect_key,
-                        "",
-                    ),
-                    self.effect_digest[effect_key],
-                    self.effect_beneficiary[
-                        effect_key
-                    ].as_hex,
-                    int(self.effect_value[effect_key]),
-                    int(self.effect_expiry[effect_key]),
-                )
-            )
-
-        def repair_required(
-            evidence_id: str,
-            record_id: str,
-            record_version: int,
-            failure_code: str,
-        ) -> dict:
-            return {
-                "outcome": "REPAIR_REQUIRED",
-                "failure_code": failure_code,
-                "evidence_id": evidence_id,
-                "record_id": record_id,
-                "record_version": record_version,
-                "mission_id": mission_id_snapshot,
-                "mission_version": mission_version_snapshot,
-            }
-
-        def leader_fn() -> dict:
-            all_eligible = True
-
-            for (
-                _evidence_key,
-                evidence_id,
-                authority_id,
-                url,
-                expected_hash,
-                expected_expiry,
-                record_id,
-                record_version,
-            ) in source_specs:
-                response = gl.nondet.web.get(url)
-
-                if response.status != 200:
-                    return repair_required(
-                        evidence_id,
-                        record_id,
-                        record_version,
-                        "source_unavailable",
-                    )
-
-                if not isinstance(response.body, bytes):
-                    return repair_required(
-                        evidence_id,
-                        record_id,
-                        record_version,
-                        "response_body_missing",
-                    )
-
-                if len(response.body) > MAX_REMOTE_BODY:
-                    return repair_required(
-                        evidence_id,
-                        record_id,
-                        record_version,
-                        "record_too_large",
-                    )
-
-                def reject_duplicate_keys(pairs):
-                    parsed = {}
-
-                    for key, value in pairs:
-                        if key in parsed:
-                            raise gl.vm.UserError(
-                                "invalid evidence JSON"
-                            )
-
-                        parsed[key] = value
-
-                    return parsed
-
-                def reject_nonstandard_number(value):
-                    raise gl.vm.UserError(
-                        "invalid evidence JSON"
-                    )
-
-                try:
-                    record = json.loads(
-                        response.body.decode("utf-8"),
-                        object_pairs_hook=reject_duplicate_keys,
-                        parse_constant=reject_nonstandard_number,
-                    )
-                except (
-                    UnicodeDecodeError,
-                    json.JSONDecodeError,
-                    RecursionError,
-                    gl.vm.UserError,
-                ):
-                    return repair_required(
-                        evidence_id,
-                        record_id,
-                        record_version,
-                        "invalid_json",
-                    )
-
-                if not isinstance(record, dict):
-                    return repair_required(
-                        evidence_id,
-                        record_id,
-                        record_version,
-                        "unsupported_record",
-                    )
-
-                if record.get("schema") != EVIDENCE_SCHEMA:
-                    return repair_required(
-                        evidence_id,
-                        record_id,
-                        record_version,
-                        "unsupported_schema",
-                    )
-
-                expected_record_keys = {
-                    "schema",
-                    "evidence_id",
-                    "authority_id",
-                    "url",
-                    "subject",
-                    "expires_at",
-                    "mission_id",
-                    "objective",
-                    "policy_digest",
-                    "policy_rule",
-                    "intent_digest",
-                    "effect_root",
-                    "payload",
-                }
-
-                if set(record.keys()) != expected_record_keys:
-                    return repair_required(
-                        evidence_id,
-                        record_id,
-                        record_version,
-                        "unsupported_record",
-                    )
-
-                if (
-                    record.get("evidence_id") != evidence_id
-                    or record.get("authority_id")
-                    != authority_id
-                    or record.get("url") != url
-                    or record.get("subject")
-                    != mission_id_snapshot
-                    or type(record.get("expires_at"))
-                    is not int
-                    or record.get("expires_at")
-                    != int(expected_expiry)
-                    or record.get("mission_id")
-                    != mission_id_snapshot
-                    or record.get("objective")
-                    != objective_snapshot
-                    or record.get("policy_digest")
-                    != policy_digest_snapshot
-                    or record.get("policy_rule")
-                    != POLICY_RULE
-                    or record.get("intent_digest")
-                    != intent_digest_snapshot
-                    or record.get("effect_root")
-                    != effect_root_snapshot
-                ):
-                    return repair_required(
-                        evidence_id,
-                        record_id,
-                        record_version,
-                        "snapshot_mismatch",
-                    )
-
-                payload = record.get("payload")
-
-                if not isinstance(payload, dict):
-                    return repair_required(
-                        evidence_id,
-                        record_id,
-                        record_version,
-                        "invalid_payload",
-                    )
-
-                if set(payload.keys()) != {
-                    "eligible",
-                    "reason_code",
-                    "effect_claims",
-                }:
-                    return repair_required(
-                        evidence_id,
-                        record_id,
-                        record_version,
-                        "invalid_payload",
-                    )
-
-                if type(payload.get("eligible")) is not bool:
-                    return repair_required(
-                        evidence_id,
-                        record_id,
-                        record_version,
-                        "invalid_payload",
-                    )
-
-                if (
-                    type(payload.get("reason_code"))
-                    is not str
-                    or not payload["reason_code"]
-                ):
-                    return repair_required(
-                        evidence_id,
-                        record_id,
-                        record_version,
-                        "invalid_payload",
-                    )
-
-                reason_code = payload["reason_code"]
-
-                if (
-                    len(reason_code) > MAX_REASON
-                    or any(
-                        ord(char) < 0x20
-                        or ord(char) > 0x7E
-                        for char in reason_code
-                    )
-                ):
-                    return repair_required(
-                        evidence_id,
-                        record_id,
-                        record_version,
-                        "invalid_payload",
-                    )
-
-                effect_claims = payload.get(
-                    "effect_claims"
-                )
-
-                if not isinstance(effect_claims, dict):
-                    return repair_required(
-                        evidence_id,
-                        record_id,
-                        record_version,
-                        "invalid_payload",
-                    )
-
-                expected_effect_ids = {
-                    spec[0]
-                    for spec in effect_specs
-                }
-
-                if (
-                    set(effect_claims.keys())
-                    != expected_effect_ids
-                ):
-                    return repair_required(
-                        evidence_id,
-                        record_id,
-                        record_version,
-                        "snapshot_mismatch",
-                    )
-
-                all_effects_eligible = True
-
-                for (
-                    effect_id,
-                    _parent,
-                    _digest,
-                    _beneficiary,
-                    _value,
-                    _expiry,
-                ) in effect_specs:
-                    if (
-                        type(
-                            effect_claims.get(effect_id)
-                        )
-                        is not bool
-                    ):
-                        return repair_required(
-                            evidence_id,
-                            record_id,
-                            record_version,
-                            "invalid_payload",
-                        )
-
-                    if not effect_claims[effect_id]:
-                        all_effects_eligible = False
-
-                canonical_payload = json.dumps(
-                    payload,
-                    ensure_ascii=True,
-                    sort_keys=True,
-                    separators=(",", ":"),
-                )
-
-                computed_hash = Keccak256(
-                    canonical_payload.encode("utf-8")
-                ).hexdigest()
-
-                if computed_hash != expected_hash:
-                    return repair_required(
-                        evidence_id,
-                        record_id,
-                        record_version,
-                        "payload_hash_mismatch",
-                    )
-
-                if (
-                    not payload["eligible"]
-                    or not all_effects_eligible
-                ):
-                    all_eligible = False
-
-            return {
-                "outcome": "DECISION",
-                "decision": (
-                    "COMMIT"
-                    if all_eligible
-                    else "ABORT"
-                ),
-                "reason_code": (
-                    "all_sources_and_effects_eligible"
-                    if all_eligible
-                    else "policy_or_source_ineligible"
-                ),
-                "mission_id": mission_id_snapshot,
-                "revision": REVISION,
-                "intent_digest": intent_digest_snapshot,
-                "policy_digest": policy_digest_snapshot,
-                "policy_rule": POLICY_RULE,
-                "effect_root": effect_root_snapshot,
-                "evidence_root": evidence_root_snapshot,
-                "active_evidence_root": (
-                    active_evidence_root_snapshot
-                ),
-                "effect_count": len(effect_specs),
-                "evidence_count": len(source_specs),
-            }
-
-        def validator_fn(leader_result) -> bool:
-            if not isinstance(
-                leader_result,
-                gl.vm.Return,
-            ):
-                return False
-
-            try:
-                validator_data = leader_fn()
-            except Exception:
-                return False
-
-            leader_data = leader_result.calldata
-
-            if not isinstance(leader_data, dict):
-                return False
-
-            if (
-                leader_data.get("outcome")
-                != validator_data.get("outcome")
-            ):
-                return False
-
-            return leader_data == validator_data
-
-        result = gl.vm.run_nondet(
-            leader_fn,
-            validator_fn,
-        )
-
-        if result.get("outcome") == "REPAIR_REQUIRED":
-            evidence_key = (
-                mission_id
-                + ":"
-                + result["evidence_id"]
-            )
-
-            if not self.evidence_exists.get(
-                evidence_key,
-                False,
-            ):
-                raise gl.vm.UserError(
-                    "repair evidence not found"
-                )
-
-            attempt = (
-                int(
-                    self.evidence_failure_count.get(
-                        evidence_key,
-                        0,
-                    )
-                )
-                + 1
-            )
-
-            failure_key = self._evidence_failure_key(
-                evidence_key,
-                attempt,
-            )
-
-            self.evidence_failure_exists[
-                failure_key
-            ] = True
-
-            self.evidence_failure_status[
-                failure_key
-            ] = "REPAIR_REQUIRED"
-
-            self.evidence_failure_code[
-                failure_key
-            ] = result["failure_code"]
-
-            self.evidence_failure_evidence_id[
-                failure_key
-            ] = result["evidence_id"]
-
-            self.evidence_failure_record_id[
-                failure_key
-            ] = result["record_id"]
-
-            self.evidence_failure_record_version[
-                failure_key
-            ] = result["record_version"]
-
-            self.evidence_failure_mission_version[
-                failure_key
-            ] = result["mission_version"]
-
-            self.evidence_failure_attempt[
-                failure_key
-            ] = attempt
-
-            self.evidence_failure_count[
-                evidence_key
-            ] = attempt
-
-            self.evidence_latest_failure_key[
-                evidence_key
-            ] = failure_key
-
-            return
-
-        if result.get("outcome") != "DECISION":
-            raise gl.vm.UserError(
-                "invalid consensus outcome"
-            )
-
-        if result["decision"] not in (
-            "COMMIT",
-            "ABORT",
-        ):
-            raise gl.vm.UserError(
-                "invalid consensus decision"
-            )
-
-        self.mission_decision[
-            mission_id
-        ] = result["decision"]
-
-        self.mission_reason_code[
-            mission_id
-        ] = result["reason_code"]
-
-        self.mission_evaluation_count[
-            mission_id
-        ] = self._next_uint(
-            int(
-                self.mission_evaluation_count[
-                    mission_id
-                ]
-            ),
-            "evaluation count",
-        )
-
-        self.mission_evaluation_evidence_root[
-            mission_id
-        ] = result["active_evidence_root"]
-
-        decision_nonce = Keccak256(
-            (
-                DECISION_ENVELOPE
-                + self._frame(mission_id)
-                + self._frame(
-                    str(
-                        int(
-                            self.mission_version[
-                                mission_id
-                            ]
-                        )
-                    )
-                )
-                + self._frame(
-                    result["decision"]
-                )
-                + self._frame(
-                    result["reason_code"]
-                )
-                + self._frame(
-                    self.mission_effect_root[
-                        mission_id
-                    ]
-                )
-                + self._frame(
-                    self.mission_evidence_root[
-                        mission_id
-                    ]
-                )
-                + self._frame(
-                    result[
-                        "active_evidence_root"
-                    ]
-                )
-            ).encode("utf-8")
-        ).hexdigest()
-
-        self.mission_decision_nonce[
-            mission_id
-        ] = decision_nonce
-
-        self.mission_state[
-            mission_id
-        ] = STATE_DECISION_PENDING
-
-        gl.get_contract_at(
-            gl.message.contract_address
-        ).emit(
-            on="finalized"
-        ).apply_decision(
-            mission_id,
-            decision_nonce,
-        )
-
-    @gl.public.write
-    def apply_decision(self, mission_id: str, decision_nonce: str) -> None:
-        if gl.message.sender_address != gl.message.contract_address:
-            raise gl.vm.UserError("self message required")
-        # A recovery transaction may win the race after the parent decision
-        # was produced. A late authenticated callback must be harmless.
-        if self.mission_allocation_applied[mission_id]:
-            return
-        if decision_nonce != self.mission_decision_nonce[mission_id]:
-            raise gl.vm.UserError("decision nonce mismatch")
-        if self.mission_state[mission_id] != STATE_DECISION_PENDING:
-            raise gl.vm.UserError("decision is not pending")
-        if self.mission_decision[mission_id] == "COMMIT":
-            self._allocate_commit(mission_id)
-        elif self.mission_decision[mission_id] == "ABORT":
-            self._allocate_abort(mission_id, self.mission_reason_code[mission_id])
-        else:
-            raise gl.vm.UserError("invalid decision")
-
-    @gl.public.write
-    def claim_mission(self, mission_id: str) -> None:
-        if not self.mission_exists.get(mission_id, False):
-            raise gl.vm.UserError("mission not found")
-        if self.mission_state[mission_id] not in (STATE_COMMITTED, STATE_ABORTED):
-            raise gl.vm.UserError("mission is not allocated")
-        beneficiary = gl.message.sender_address
-        claim_key = mission_id + ":" + beneficiary.as_hex
-        amount = int(self.mission_claimable.get(claim_key, (0)))
-        if amount <= 0:
-            raise gl.vm.UserError("no claimable balance")
-        withdrawal_id = str(int(self.withdrawal_count))
-        if self.withdrawal_exists.get(withdrawal_id, False):
-            raise gl.vm.UserError("withdrawal id collision")
-        self.mission_claimable[claim_key] = (0)
-        global_key = beneficiary.as_hex
-        current_global = int(self.claimable_balance.get(global_key, (0)))
-        if current_global < amount:
-            raise gl.vm.UserError("claimable balance underflow")
-        self.claimable_balance[global_key] = (current_global - amount)
-        self.withdrawal_exists[withdrawal_id] = True
-        self.withdrawal_mission[withdrawal_id] = mission_id
-        self.withdrawal_beneficiary[withdrawal_id] = beneficiary
-        self.withdrawal_amount[withdrawal_id] = (amount)
-        self.withdrawal_status[withdrawal_id] = WITHDRAWAL_DISPATCHED
-        self.withdrawal_count = (self._next_uint(int(self.withdrawal_count), "withdrawal count"))
-        # External GEN transfers are finalized child messages. The entitlement
-        # is consumed before dispatch and is never retried without a verified
-        # delivery/non-delivery proof, preventing double payment.
-        _NativeRecipient(beneficiary).emit_transfer(value=amount)
-
-    @gl.public.write
-    def expire_mission(self, mission_id: str) -> None:
-        if not self.mission_exists.get(mission_id, False):
-            raise gl.vm.UserError("mission not found")
-        if self.mission_state[mission_id] not in (
-            STATE_PREPARING, STATE_SEALED, STATE_DECISION_PENDING
-        ):
-            raise gl.vm.UserError("mission is already terminal")
-        now = int(datetime.now(timezone.utc).timestamp())
-        if now < int(self.mission_recovery_deadline[mission_id]):
-            raise gl.vm.UserError("recovery deadline has not passed")
-        self._allocate_abort(mission_id, "recovery_deadline_expired")
-
-    @gl.public.view
-    def protocol_info(self) -> dict:
-        return {
-            "protocol": PROTOCOL,
-            "revision": REVISION,
-            "custody_enabled": True,
-            "semantic_evaluation_enabled": True,
-            "equivalence_primitive": "run_nondet",
-            "decision_envelope": DECISION_ENVELOPE,
-            "receipt_schema": RECEIPT_SCHEMA,
-            "manifest_schema": MANIFEST_SCHEMA,
-            "evaluation_trigger": "permissionless-after-seal",
-            "authority_provenance": "https-origin-path",
-            "mission_count": int(self.mission_count),
-            "external_withdrawal_recovery": False,
-            "supplier_authorization_required": True,
-            "effect_graph": "single-parent-acyclic",
-            "evidence_schema": EVIDENCE_SCHEMA,
-            "policy_rule": POLICY_RULE,
-            "policy_digest": POLICY_DIGEST,
-            "remote_body_limit": MAX_REMOTE_BODY,
-        }
-
-    @gl.public.view
-    def get_claimable(self, beneficiary: Address) -> int:
-        return int(self.claimable_balance.get(beneficiary.as_hex, (0)))
-
-    @gl.public.view
-    def get_mission_claimable(self, mission_id: str, beneficiary: Address) -> int:
-        """Return only this beneficiary's entitlement for this mission."""
-        if not self.mission_exists.get(mission_id, False):
-            raise gl.vm.UserError("mission not found")
-        return int(
-            self.mission_claimable.get(
-                mission_id + ":" + beneficiary.as_hex, (0)
-            )
-        )
-
-    @gl.public.view
-    def get_mission_receipt(self, mission_id: str) -> dict:
-        """Return one auditable proof envelope for clients and reviewers."""
-        if not self.mission_exists.get(mission_id, False):
-            raise gl.vm.UserError("mission not found")
-        return {
-            "receipt_schema": RECEIPT_SCHEMA,
-            "manifest_schema": MANIFEST_SCHEMA,
-            "protocol": PROTOCOL,
-            "revision": REVISION,
-            "chain_id": int(gl.message.chain_id),
-            "coordinator": gl.message.contract_address.as_hex,
-            "mission_id": mission_id,
-            "principal": self.mission_principal[mission_id].as_hex,
-            "version": int(self.mission_version[mission_id]),
-            "objective": self.mission_objective[mission_id],
-            "state": self.mission_state[mission_id],
-            "decision": self.mission_decision[mission_id],
-            "reason_code": self.mission_reason_code[mission_id],
-            "decision_nonce": self.mission_decision_nonce[mission_id],
-            "policy_rule": POLICY_RULE,
-            "policy_digest": self.mission_policy_digest[mission_id],
-            "intent_digest": self.mission_intent_digest[mission_id],
-            "effect_root": self.mission_effect_root[mission_id],
-            "evidence_root": self.mission_evidence_root[mission_id],
-            "evaluation_evidence_root": (
-                self.mission_evaluation_evidence_root[
-                    mission_id
-                ]
-            ),
-            "effect_count": int(self.mission_effect_count[mission_id]),
-            "evidence_count": int(self.mission_evidence_count[mission_id]),
-            "budget": int(self.mission_budget[mission_id]),
-            "funded_value": int(self.mission_funded_value[mission_id]),
-            "prepared_value": int(self.mission_prepared_value[mission_id]),
-            "refund_beneficiary": self.mission_refund_beneficiary[mission_id].as_hex,
-            "refund_entitlement": int(self.mission_refund_entitlement[mission_id]),
-            "prepare_deadline": int(self.mission_prepare_deadline[mission_id]),
-            "recovery_deadline": int(self.mission_recovery_deadline[mission_id]),
-            "evaluation_count": int(self.mission_evaluation_count[mission_id]),
-            "allocation_applied": self.mission_allocation_applied[mission_id],
-            "external_withdrawal_recovery": False,
-        }
-
-    @gl.public.view
-    def get_withdrawal(self, withdrawal_id: str) -> dict:
-        if not self.withdrawal_exists.get(withdrawal_id, False):
-            raise gl.vm.UserError("withdrawal not found")
-        return {
-            "withdrawal_id": withdrawal_id,
-            "mission_id": self.withdrawal_mission[withdrawal_id],
-            "beneficiary": self.withdrawal_beneficiary[withdrawal_id].as_hex,
-            "amount": int(self.withdrawal_amount[withdrawal_id]),
-            "status": self.withdrawal_status[withdrawal_id],
-        }
-
-    @gl.public.view
-    def get_withdrawal_count(self) -> int:
-        return int(self.withdrawal_count)
-
-    @gl.public.view
-    def get_withdrawal_by_index(self, index: int) -> dict:
-        if index < 0 or index >= int(self.withdrawal_count):
-            raise gl.vm.UserError("withdrawal index out of range")
-        return self.get_withdrawal(str(index))
-
-    @gl.public.view
-    def derive_intent_digest(self, mission_id: str) -> str:
-        if not self.mission_exists.get(mission_id, False):
-            raise gl.vm.UserError("mission not found")
-        return self._intent_digest(
-            mission_id,
-            self.mission_objective[mission_id],
-            self.mission_policy_digest[mission_id],
-            int(self.mission_budget[mission_id]),
-            self.mission_refund_beneficiary[mission_id],
-            int(self.mission_prepare_deadline[mission_id]),
-            int(self.mission_recovery_deadline[mission_id]),
-        )
-
-    def _require_principal(self, mission_id: str) -> None:
-        if not self.mission_exists.get(mission_id, False):
-            raise gl.vm.UserError("mission not found")
-        if gl.message.sender_address != self.mission_principal[mission_id]:
-            raise gl.vm.UserError("principal required")
-
-    def _credit_claimable(self, mission_id: str, beneficiary: Address, amount: int) -> None:
-        if amount <= 0:
-            return
-        claim_key = mission_id + ":" + beneficiary.as_hex
-        mission_current = int(self.mission_claimable.get(claim_key, (0)))
-        global_key = beneficiary.as_hex
-        global_current = int(self.claimable_balance.get(global_key, (0)))
-        if amount > MAX_U256 - mission_current:
-            raise gl.vm.UserError("mission claimable balance overflow")
-        if amount > MAX_U256 - global_current:
-            raise gl.vm.UserError("global claimable balance overflow")
-        self.mission_claimable[claim_key] = (mission_current + amount)
-        self.claimable_balance[global_key] = (global_current + amount)
-
-    def _allocate_commit(self, mission_id: str) -> None:
-        funded = int(self.mission_funded_value[mission_id])
-        prepared = int(self.mission_prepared_value[mission_id])
-        if funded < prepared:
-            raise gl.vm.UserError("mission is underfunded")
-        for index in range(int(self.mission_effect_count[mission_id])):
-            effect_key = self.mission_effect_key[mission_id + ":" + str(index)]
-            amount = int(self.effect_value[effect_key])
-            self._credit_claimable(
-                mission_id, self.effect_beneficiary[effect_key], amount
-            )
-        refund = funded - prepared
-        self.mission_refund_entitlement[mission_id] = (refund)
-        self._credit_claimable(
-            mission_id, self.mission_refund_beneficiary[mission_id], refund
-        )
-        self.mission_allocation_applied[mission_id] = True
-        self.mission_state[mission_id] = STATE_COMMITTED
-
-    def _allocate_abort(self, mission_id: str, reason_code: str) -> None:
-        if self.mission_allocation_applied[mission_id]:
-            return
-        funded = int(self.mission_funded_value[mission_id])
-        # Deterministic cancellation and timeout are still explicit ABORT
-        # decisions. This also invalidates any unresolved COMMIT callback that
-        # races with recovery, so the public receipt cannot lie about outcome.
-        self.mission_decision[mission_id] = "ABORT"
-        self.mission_reason_code[mission_id] = reason_code
-        self.mission_refund_entitlement[mission_id] = (funded)
-        self._credit_claimable(
-            mission_id, self.mission_refund_beneficiary[mission_id], funded
-        )
-        self.mission_allocation_applied[mission_id] = True
-        self.mission_state[mission_id] = STATE_ABORTED
-
-    def _has_distinct_evidence_authorities(self, mission_id: str) -> bool:
-        first_key = self.mission_evidence_key[mission_id + ":0"]
-        first_issuer = self.evidence_issuer[first_key]
-        count = int(self.mission_evidence_count[mission_id])
-        for index in range(1, count):
-            key = self.mission_evidence_key[mission_id + ":" + str(index)]
-            if self.evidence_issuer[key] != first_issuer:
-                return True
-        return False
-
-    def _require_acyclic_effect_graph(self, mission_id: str) -> None:
-        """Validate the bounded single-parent effect graph before sealing."""
-        count = int(self.mission_effect_count[mission_id])
-        for index in range(count):
-            current_key = self.mission_effect_key[mission_id + ":" + str(index)]
-            visited = 0
-            while True:
-                parent_id = self.effect_parent.get(current_key, "")
-                if not parent_id:
-                    break
-                parent_key = mission_id + ":" + parent_id
-                if not self.effect_exists.get(parent_key, False):
-                    raise gl.vm.UserError("dependency effect not found")
-                if self.effect_mission[parent_key] != mission_id:
-                    raise gl.vm.UserError("dependency mission mismatch")
-                visited += 1
-                if visited >= count:
-                    raise gl.vm.UserError("effect graph contains a cycle")
-                current_key = parent_key
-
-    def _frame(self, value: str) -> str:
-        return str(len(value)) + ":" + value
-
-    def _effect_leaf(self, effect_key: str) -> str:
-        fields = (
-            self.effect_id[effect_key],
-            self.effect_digest[effect_key],
-            self.effect_parent.get(effect_key, ""),
-            self.effect_supplier[effect_key].as_hex,
-            self.effect_beneficiary[effect_key].as_hex,
-            str(int(self.effect_value[effect_key])),
-            str(int(self.effect_expiry[effect_key])),
-        )
-        payload = "commit-effect-leaf-v1" + "".join(self._frame(field) for field in fields)
-        return Keccak256(payload.encode("utf-8")).hexdigest()
-
-    def _evidence_leaf(self, evidence_key: str) -> str:
-        fields = (
-            self.evidence_id[evidence_key],
-            self.evidence_authority[evidence_key],
-            str(int(self.evidence_authority_version[evidence_key])),
-            self.evidence_issuer[evidence_key].as_hex,
-            self.evidence_record_id[evidence_key],
-            str(int(self.evidence_record_version[evidence_key])),
-            self.evidence_mission[evidence_key],
-            str(int(self.evidence_mission_version[evidence_key])),
-            self.evidence_url[evidence_key],
-            self.evidence_record_hash[evidence_key],
-            self.evidence_subject[evidence_key],
-            str(int(self.evidence_published_at[evidence_key])),
-            str(int(self.evidence_expires_at[evidence_key])),
-        )
-        payload = "commit-evidence-leaf-v2" + "".join(
-            self._frame(field) for field in fields
-        )
-        return Keccak256(payload.encode("utf-8")).hexdigest()
-
-    @gl.public.view
-    def derive_effect_root(self, mission_id: str) -> str:
-        if not self.mission_exists.get(mission_id, False):
-            raise gl.vm.UserError("mission not found")
-        count = int(self.mission_effect_count[mission_id])
-        payload = "commit-effect-root-v1" + self._frame(str(count))
-        for index in range(count):
-            effect_key = self.mission_effect_key[mission_id + ":" + str(index)]
-            payload += self._frame(self._effect_leaf(effect_key))
-        return Keccak256(payload.encode("utf-8")).hexdigest()
-
-    def _active_evidence_leaf(
-        self,
-        evidence_key: str,
-    ) -> str:
-        repair_key = self.evidence_latest_repair_key.get(
-            evidence_key,
-            "",
-        )
-
-        if (
-            not repair_key
-            or not self.evidence_repair_exists.get(
-                repair_key,
-                False,
-            )
-            or self.evidence_repair_status[repair_key]
-            != "READY"
-        ):
-            return self._evidence_leaf(evidence_key)
-
-        fields = (
-            self.evidence_id[evidence_key],
-            self.evidence_repair_authority[
-                repair_key
-            ],
-            str(
-                int(
-                    self.evidence_repair_authority_version[
-                        repair_key
-                    ]
-                )
-            ),
-            self.evidence_repair_issuer[
-                repair_key
-            ].as_hex,
-            self.evidence_repair_record_id[
-                repair_key
-            ],
-            str(
-                int(
-                    self.evidence_repair_active_record_version[
-                        repair_key
-                    ]
-                )
-            ),
-            self.evidence_mission[evidence_key],
-            str(
-                int(
-                    self.evidence_mission_version[
-                        evidence_key
-                    ]
-                )
-            ),
-            self.evidence_repair_url[
-                repair_key
-            ],
-            self.evidence_repair_record_hash[
-                repair_key
-            ],
-            self.evidence_subject[evidence_key],
-            str(
-                int(
-                    self.evidence_repair_published_at[
-                        repair_key
-                    ]
-                )
-            ),
-            str(
-                int(
-                    self.evidence_repair_expires_at[
-                        repair_key
-                    ]
-                )
-            ),
-        )
-
-        payload = (
-            "commit-evidence-leaf-v2"
-            + "".join(
-                self._frame(value)
-                for value in fields
-            )
-        )
-
-        return Keccak256(
-            payload.encode("utf-8")
-        ).hexdigest()
-
-    @gl.public.view
-    def derive_active_evidence_root(
-        self,
-        mission_id: str,
-    ) -> str:
-        if not self.mission_exists.get(
-            mission_id,
-            False,
-        ):
-            raise gl.vm.UserError(
-                "mission not found"
-            )
-
-        count = int(
-            self.mission_evidence_count[
-                mission_id
-            ]
-        )
-
-        payload = (
-            "commit-evidence-root-v2"
-            + self._frame(str(count))
-        )
-
-        for index in range(count):
-            evidence_key = (
-                self.mission_evidence_key[
-                    mission_id
-                    + ":"
-                    + str(index)
-                ]
-            )
-
-            payload += self._frame(
-                self._active_evidence_leaf(
-                    evidence_key
-                )
-            )
-
-        return Keccak256(
-            payload.encode("utf-8")
-        ).hexdigest()
-
-    @gl.public.view
-    def derive_evidence_root(self, mission_id: str) -> str:
-        if not self.mission_exists.get(mission_id, False):
-            raise gl.vm.UserError("mission not found")
-        count = int(self.mission_evidence_count[mission_id])
-        payload = "commit-evidence-root-v2" + self._frame(str(count))
-        for index in range(count):
-            evidence_key = self.mission_evidence_key[mission_id + ":" + str(index)]
-            payload += self._frame(self._evidence_leaf(evidence_key))
-        return Keccak256(payload.encode("utf-8")).hexdigest()
-
-    @gl.public.view
-    def get_evidence_failure(
-        self,
-        mission_id: str,
-        evidence_id: str,
-    ) -> dict:
-        evidence_key = mission_id + ":" + evidence_id
-
-        if not self.evidence_exists.get(
-            evidence_key,
-            False,
-        ):
-            raise gl.vm.UserError("evidence not found")
-
-        failure_key = self.evidence_latest_failure_key.get(
-            evidence_key,
-            "",
-        )
-
-        if (
-            not failure_key
-            or not self.evidence_failure_exists.get(
-                failure_key,
-                False,
-            )
-        ):
-            raise gl.vm.UserError(
-                "evidence failure not found"
-            )
-
-        return {
-            "status": self.evidence_failure_status[
-                failure_key
-            ],
-            "failure_code": self.evidence_failure_code[
-                failure_key
-            ],
-            "evidence_id": (
-                self.evidence_failure_evidence_id[
-                    failure_key
-                ]
-            ),
-            "record_id": (
-                self.evidence_failure_record_id[
-                    failure_key
-                ]
-            ),
-            "failed_record_version": int(
-                self.evidence_failure_record_version[
-                    failure_key
-                ]
-            ),
-            "mission_version": int(
-                self.evidence_failure_mission_version[
-                    failure_key
-                ]
-            ),
-            "attempt": int(
-                self.evidence_failure_attempt[
-                    failure_key
-                ]
-            ),
-        }
-
-    @gl.public.view
-    def get_evidence_repair(
-        self,
-        mission_id: str,
-        evidence_id: str,
-    ) -> dict:
-        evidence_key = mission_id + ":" + evidence_id
-
-        if not self.evidence_exists.get(
-            evidence_key,
-            False,
-        ):
-            raise gl.vm.UserError("evidence not found")
-
-        repair_key = self.evidence_latest_repair_key.get(
-            evidence_key,
-            "",
-        )
-
-        if (
-            not repair_key
-            or not self.evidence_repair_exists.get(
-                repair_key,
-                False,
-            )
-        ):
-            raise gl.vm.UserError(
-                "evidence repair not found"
-            )
-
-        return {
-            "status": self.evidence_repair_status[
-                repair_key
-            ],
-            "authority_id": (
-                self.evidence_repair_authority[
-                    repair_key
-                ]
-            ),
-            "authority_version": int(
-                self.evidence_repair_authority_version[
-                    repair_key
-                ]
-            ),
-            "issuer_address": (
-                self.evidence_repair_issuer[
-                    repair_key
-                ]
-            ),
-            "record_id": (
-                self.evidence_repair_record_id[
-                    repair_key
-                ]
-            ),
-            "original_record_version": int(
-                self.evidence_repair_original_record_version[
-                    repair_key
-                ]
-            ),
-            "active_record_version": int(
-                self.evidence_repair_active_record_version[
-                    repair_key
-                ]
-            ),
-            "url": self.evidence_repair_url[
-                repair_key
-            ],
-            "record_hash": (
-                self.evidence_repair_record_hash[
-                    repair_key
-                ]
-            ),
-            "published_at": int(
-                self.evidence_repair_published_at[
-                    repair_key
-                ]
-            ),
-            "expires_at": int(
-                self.evidence_repair_expires_at[
-                    repair_key
-                ]
-            ),
-        }
-
-    @gl.public.view
-    def get_mission(self, mission_id: str) -> dict:
-        if not self.mission_exists.get(mission_id, False):
-            raise gl.vm.UserError("mission not found")
-        return {
-            "mission_id": mission_id,
-            "principal": self.mission_principal[mission_id].as_hex,
-            "state": self.mission_state[mission_id],
-            "version": int(self.mission_version[mission_id]),
-            "objective": self.mission_objective[mission_id],
-            "policy_digest": self.mission_policy_digest[mission_id],
-            "intent_digest": self.mission_intent_digest[mission_id],
-            "effect_root": self.mission_effect_root[mission_id],
-            "evidence_root": self.mission_evidence_root[mission_id],
-            "policy_rule": POLICY_RULE,
-            "budget": int(self.mission_budget[mission_id]),
-            "funded_value": int(self.mission_funded_value[mission_id]),
-            "prepared_value": int(self.mission_prepared_value[mission_id]),
-            "refund_beneficiary": self.mission_refund_beneficiary[mission_id].as_hex,
-            "effect_count": int(self.mission_effect_count[mission_id]),
-            "evidence_count": int(self.mission_evidence_count[mission_id]),
-            "supplier_count": int(self.supplier_count.get(mission_id, (0))),
-            "decision": self.mission_decision[mission_id],
-            "reason_code": self.mission_reason_code[mission_id],
-            "decision_nonce": self.mission_decision_nonce[mission_id],
-            "evaluation_evidence_root": (
-                self.mission_evaluation_evidence_root[
-                    mission_id
-                ]
-            ),
-            "allocation_applied": self.mission_allocation_applied[mission_id],
-            "refund_entitlement": int(self.mission_refund_entitlement[mission_id]),
-            "evaluation_count": int(self.mission_evaluation_count[mission_id]),
-            "prepare_deadline": int(self.mission_prepare_deadline[mission_id]),
-            "recovery_deadline": int(self.mission_recovery_deadline[mission_id]),
-            "created_at": int(self.mission_created_at[mission_id]),
-        }
-
-    @gl.public.view
-    def get_mission_by_index(self, index: int) -> dict:
-        if index < 0 or index >= int(self.mission_count):
-            raise gl.vm.UserError("mission index out of range")
-        return self.get_mission(self.mission_key[str(index)])
-
-    @gl.public.view
-    def get_effect(self, mission_id: str, effect_id: str) -> dict:
-        effect_key = mission_id + ":" + effect_id
-        if not self.effect_exists.get(effect_key, False):
-            raise gl.vm.UserError("effect not found")
-        if self.effect_mission[effect_key] != mission_id:
-            raise gl.vm.UserError("effect mission mismatch")
-        return {
-            "mission_id": mission_id,
-            "effect_id": effect_id,
-            "supplier": self.effect_supplier[effect_key].as_hex,
-            "digest": self.effect_digest[effect_key],
-            "dependency_id": self.effect_parent.get(effect_key, ""),
-            "beneficiary": self.effect_beneficiary[effect_key].as_hex,
-            "value": int(self.effect_value[effect_key]),
-            "expiry": int(self.effect_expiry[effect_key]),
-        }
-
-    @gl.public.view
-    def get_effect_by_index(self, mission_id: str, index: int) -> dict:
-        if not self.mission_exists.get(mission_id, False):
-            raise gl.vm.UserError("mission not found")
-        if index < 0 or index >= int(self.mission_effect_count[mission_id]):
-            raise gl.vm.UserError("effect index out of range")
-        effect_key = self.mission_effect_key[mission_id + ":" + str(index)]
-        return self.get_effect(mission_id, self.effect_id[effect_key])
-
-    @gl.public.view
-    def get_authority(self, authority_id: str) -> dict:
-        self._require_authority(authority_id)
-        return {
-            "authority_id": authority_id,
-            "active": self.authority_active.get(authority_id, False),
-            "host": self.authority_host[authority_id],
-            "path_prefix": self.authority_path_prefix[authority_id],
-            "issuer_address": self.authority_issuer[authority_id],
-            "authority_version": int(self.authority_version[authority_id]),
-        }
-
-    @gl.public.view
-    def authorities_are_independent(
-        self,
-        authority_a: str,
-        authority_b: str,
-    ) -> bool:
-        self._require_authority(authority_a)
-        self._require_authority(authority_b)
-        if authority_a == authority_b:
-            return False
-        return self.authority_issuer[authority_a] != self.authority_issuer[authority_b]
-
-    @gl.public.view
-    def get_evidence_attestation(
-        self,
-        authority_id: str,
-        record_id: str,
-        record_version: int,
-    ) -> dict:
-        self._require_authority(authority_id)
-        self._require_identifier(record_id, "record id", MAX_TEXT)
-        self._require_uint(record_version, "record version", positive=True)
-
-        attestation_key = self._attestation_key(
-            authority_id,
-            record_id,
-            record_version,
-        )
-        if not self.attestation_exists.get(attestation_key, False):
-            raise gl.vm.UserError("evidence attestation not found")
-
-        return {
-            "authority_id": self.attestation_authority[attestation_key],
-            "authority_version": int(
-                self.attestation_authority_version[attestation_key]
-            ),
-            "issuer_address": self.attestation_issuer[attestation_key],
-            "record_id": self.attestation_record_id[attestation_key],
-            "record_version": int(
-                self.attestation_record_version[attestation_key]
-            ),
-            "mission_id": self.attestation_mission[attestation_key],
-            "mission_version": int(
-                self.attestation_mission_version[attestation_key]
-            ),
-            "url": self.attestation_url[attestation_key],
-            "record_hash": self.attestation_record_hash[attestation_key],
-            "published_at": int(
-                self.attestation_published_at[attestation_key]
-            ),
-            "expires_at": int(
-                self.attestation_expires_at[attestation_key]
-            ),
-        }
-
-    @gl.public.view
-    def get_evidence(self, mission_id: str, evidence_id: str) -> dict:
-        evidence_key = mission_id + ":" + evidence_id
-        if not self.evidence_exists.get(evidence_key, False):
-            raise gl.vm.UserError("evidence not found")
-        if self.evidence_mission[evidence_key] != mission_id:
-            raise gl.vm.UserError("evidence mission mismatch")
-        return {
-            "mission_id": mission_id,
-            "evidence_id": evidence_id,
-            "authority_id": self.evidence_authority[evidence_key],
-            "authority_version": int(
-                self.evidence_authority_version[evidence_key]
-            ),
-            "issuer_address": self.evidence_issuer[evidence_key],
-            "record_id": self.evidence_record_id[evidence_key],
-            "record_version": int(
-                self.evidence_record_version[evidence_key]
-            ),
-            "mission_version": int(
-                self.evidence_mission_version[evidence_key]
-            ),
-            "url": self.evidence_url[evidence_key],
-            "record_hash": self.evidence_record_hash[evidence_key],
-            "subject": self.evidence_subject[evidence_key],
-            "published_at": int(
-                self.evidence_published_at[evidence_key]
-            ),
-            "expires_at": int(self.evidence_expires_at[evidence_key]),
-        }
-
-    @gl.public.view
-    def get_evidence_by_index(self, mission_id: str, index: int) -> dict:
-        if not self.mission_exists.get(mission_id, False):
-            raise gl.vm.UserError("mission not found")
-        if index < 0 or index >= int(self.mission_evidence_count[mission_id]):
-            raise gl.vm.UserError("evidence index out of range")
-        evidence_key = self.mission_evidence_key[mission_id + ":" + str(index)]
-        return self.get_evidence(mission_id, self.evidence_id[evidence_key])
-
-    @gl.public.view
-    def get_mission_manifest(self, mission_id: str) -> dict:
-        """Return the bounded inputs behind both sealed roots for reviewers."""
-        if not self.mission_exists.get(mission_id, False):
-            raise gl.vm.UserError("mission not found")
-        effects = []
-        for index in range(int(self.mission_effect_count[mission_id])):
-            effects.append(self.get_effect_by_index(mission_id, index))
-        evidence = []
-        for index in range(int(self.mission_evidence_count[mission_id])):
-            item = self.get_evidence_by_index(mission_id, index)
-            item["authority"] = self.get_authority(item["authority_id"])
-            evidence.append(item)
-        return {
-            "manifest_schema": MANIFEST_SCHEMA,
-            "protocol": PROTOCOL,
-            "revision": REVISION,
-            "chain_id": int(gl.message.chain_id),
-            "coordinator": gl.message.contract_address.as_hex,
-            "mission_id": mission_id,
-            "principal": self.mission_principal[mission_id].as_hex,
-            "objective": self.mission_objective[mission_id],
-            "policy_rule": POLICY_RULE,
-            "policy_digest": self.mission_policy_digest[mission_id],
-            "intent_digest": self.mission_intent_digest[mission_id],
-            "state": self.mission_state[mission_id],
-            "decision": self.mission_decision[mission_id],
-            "reason_code": self.mission_reason_code[mission_id],
-            "prepare_deadline": int(self.mission_prepare_deadline[mission_id]),
-            "recovery_deadline": int(self.mission_recovery_deadline[mission_id]),
-            "effect_count": int(self.mission_effect_count[mission_id]),
-            "evidence_count": int(self.mission_evidence_count[mission_id]),
-            "effect_root": self.mission_effect_root[mission_id],
-            "evidence_root": self.mission_evidence_root[mission_id],
-            "evaluation_evidence_root": (
-                self.mission_evaluation_evidence_root[
-                    mission_id
-                ]
-            ),
-            "allocation_applied": self.mission_allocation_applied[mission_id],
-            "effects": effects,
-            "evidence": evidence,
-        }
-
-    @gl.public.view
-    def is_supplier_authorized(self, mission_id: str, supplier: Address) -> bool:
-        if not self.mission_exists.get(mission_id, False):
-            raise gl.vm.UserError("mission not found")
-        return self.supplier_authorized.get(mission_id + ":" + supplier.as_hex, False)
+from genlayer .py .keccak import Keccak256
+e0 =gl .vm .UserError
+k0 ='mission not found'
+k1 ='preparation deadline has passed'
+k10 ='evidence_id'
+k11 ='policy_rule'
+k12 ='intent_digest'
+k13 ='mission_version'
+k14 ='evidence not found'
+k15 ='effect_root'
+k16 ='evaluation_evidence_root'
+k17 ='authority_version'
+k18 ='expires_at'
+k19 ='decision'
+k2 ='mission is not preparing'
+k20 ='repair authority version mismatch'
+k21 ='REPAIR_REQUIRED'
+k22 ='active_evidence_root'
+k23 ='objective'
+k24 ='record_id'
+k25 ='repair record identity mismatch'
+k26 ='evidence attestation not found'
+k27 ='evidence_count'
+k28 ='issuer_address'
+k29 ='record version'
+k3 ='mission_id'
+k30 ='record_version'
+k31 ='allocation_applied'
+k32 ='evidence_root'
+k33 ='external_withdrawal_recovery'
+k34 ='recovery deadline has passed'
+k35 ='dependency effect not found'
+k36 ='authority version'
+k37 ='recovery_deadline'
+k38 ='authority version mismatch'
+k39 ='effect_count'
+k4 ='reason_code'
+k40 ='evidence failure not found'
+k41 ='supplier is not authorized'
+k42 ='mission already evaluated'
+k43 ='outcome'
+k44 ='prepare_deadline'
+k45 ='manifest_schema'
+k46 ='commit-evidence-leaf-v2'
+k47 ='commit-evidence-root-v2'
+k48 ='mission is underfunded'
+k49 ='invalid evidence JSON'
+k5 ='invalid authority host'
+k50 ='mission is not sealed'
+k51 ='failure_code'
+k52 ='published_at'
+k53 ='refund_beneficiary'
+k54 ='refund_entitlement'
+k55 ='revision'
+k56 ='unsupported_record'
+k57 ='record_hash'
+k58 ='snapshot_mismatch'
+k59 ='evaluation_count'
+k6 ='invalid_payload'
+k60 ='principal'
+k61 ='record id'
+k62 ='decision_nonce'
+k63 ='owner required'
+k64 ='prepared_value'
+k65 ='receipt_schema'
+k66 ='effect_claims'
+k67 ='eligible'
+k68 ='protocol'
+k7 ='policy_digest'
+k70 ='subject'
+k8 ='authority_id'
+k9 ='invalid authority path prefix'
+PROTOCOL ='commit'
+REVISION ='0.7.0-reviewable-manifest'
+c15 ='PREPARING'
+c16 ='SEALED'
+c14 ='DECISION_PENDING'
+c13 ='COMMITTED'
+c12 ='ABORTED'
+c17 ='DISPATCHED'
+c7 =512
+c3 =32
+c4 =16
+c5 =128
+c6 =16 *1024
+c8 =(1 <<256 )-1
+c1 ='commit-evidence-v2'
+c10 ='all-evidence-and-effects-v1'
+c9 ='983307fac383ac4a92be6c0c361ea8f3c9d9efa20ad5e6e8bc8dee932f2a6103'
+c0 ='commit-decision-v3'
+c11 ='commit-mission-receipt-v2'
+c2 ='commit-mission-manifest-v2'
+@gl .evm .contract_interface
+class _NativeRecipient :
+ class View :
+  pass
+ class Write :
+  pass
+class CommitProtocol (gl .Contract ):
+ s0 :Address
+ s1 :u256
+ s2 :TreeMap [str ,bool ]
+ s3 :TreeMap [str ,str ]
+ s4 :TreeMap [str ,Address ]
+ s5 :TreeMap [str ,str ]
+ s6 :TreeMap [str ,str ]
+ s7 :TreeMap [str ,str ]
+ s8 :TreeMap [str ,str ]
+ s9 :TreeMap [str ,str ]
+ s10 :TreeMap [str ,str ]
+ s11 :TreeMap [str ,u256 ]
+ s12 :TreeMap [str ,u256 ]
+ s13 :TreeMap [str ,u256 ]
+ s14 :TreeMap [str ,Address ]
+ s15 :TreeMap [str ,u256 ]
+ s16 :TreeMap [str ,str ]
+ s17 :TreeMap [str ,str ]
+ s18 :TreeMap [str ,bool ]
+ s19 :TreeMap [str ,u256 ]
+ s20 :TreeMap [str ,str ]
+ s21 :TreeMap [str ,str ]
+ s22 :TreeMap [str ,u256 ]
+ s23 :TreeMap [str ,u256 ]
+ s24 :TreeMap [str ,u256 ]
+ s25 :TreeMap [str ,u256 ]
+ s26 :TreeMap [str ,u256 ]
+ s27 :TreeMap [str ,u256 ]
+ s28 :TreeMap [str ,bool ]
+ s29 :TreeMap [str ,str ]
+ s30 :TreeMap [str ,Address ]
+ s31 :TreeMap [str ,str ]
+ s32 :TreeMap [str ,str ]
+ s33 :TreeMap [str ,str ]
+ s34 :TreeMap [str ,Address ]
+ s35 :TreeMap [str ,u256 ]
+ s36 :TreeMap [str ,u256 ]
+ s37 :TreeMap [str ,str ]
+ s38 :TreeMap [str ,bool ]
+ s39 :TreeMap [str ,bool ]
+ s40 :TreeMap [str ,str ]
+ s41 :TreeMap [str ,str ]
+ s42 :TreeMap [str ,Address ]
+ s43 :TreeMap [str ,u256 ]
+ s44 :TreeMap [str ,bool ]
+ s45 :TreeMap [str ,u256 ]
+ s46 :TreeMap [str ,bool ]
+ s47 :TreeMap [str ,str ]
+ s48 :TreeMap [str ,str ]
+ s49 :TreeMap [str ,str ]
+ s50 :TreeMap [str ,str ]
+ s51 :TreeMap [str ,str ]
+ s52 :TreeMap [str ,str ]
+ s53 :TreeMap [str ,u256 ]
+ s54 :TreeMap [str ,u256 ]
+ s55 :TreeMap [str ,Address ]
+ s56 :TreeMap [str ,str ]
+ s57 :TreeMap [str ,u256 ]
+ s58 :TreeMap [str ,u256 ]
+ s59 :TreeMap [str ,u256 ]
+ s60 :TreeMap [str ,str ]
+ s61 :TreeMap [str ,bool ]
+ s62 :TreeMap [str ,str ]
+ s63 :TreeMap [str ,u256 ]
+ s64 :TreeMap [str ,Address ]
+ s65 :TreeMap [str ,str ]
+ s66 :TreeMap [str ,u256 ]
+ s67 :TreeMap [str ,str ]
+ s68 :TreeMap [str ,u256 ]
+ s69 :TreeMap [str ,str ]
+ s70 :TreeMap [str ,str ]
+ s71 :TreeMap [str ,u256 ]
+ s72 :TreeMap [str ,u256 ]
+ s73 :TreeMap [str ,u256 ]
+ s74 :TreeMap [str ,bool ]
+ s75 :TreeMap [str ,str ]
+ s76 :TreeMap [str ,str ]
+ s77 :TreeMap [str ,str ]
+ s78 :TreeMap [str ,str ]
+ s79 :TreeMap [str ,u256 ]
+ s80 :TreeMap [str ,u256 ]
+ s81 :TreeMap [str ,u256 ]
+ s82 :TreeMap [str ,str ]
+ s83 :TreeMap [str ,u256 ]
+ s84 :TreeMap [str ,bool ]
+ s85 :TreeMap [str ,str ]
+ s86 :TreeMap [str ,str ]
+ s87 :TreeMap [str ,u256 ]
+ s88 :TreeMap [str ,Address ]
+ s89 :TreeMap [str ,str ]
+ s90 :TreeMap [str ,u256 ]
+ s91 :TreeMap [str ,u256 ]
+ s92 :TreeMap [str ,str ]
+ s93 :TreeMap [str ,str ]
+ s94 :TreeMap [str ,u256 ]
+ s95 :TreeMap [str ,u256 ]
+ s96 :TreeMap [str ,str ]
+ s97 :TreeMap [str ,u256 ]
+ s98 :TreeMap [str ,u256 ]
+ s99 :u256
+ s100 :TreeMap [str ,bool ]
+ s101 :TreeMap [str ,str ]
+ s102 :TreeMap [str ,Address ]
+ s103 :TreeMap [str ,u256 ]
+ s104 :TreeMap [str ,str ]
+ def __init__ (self ):
+  self .s0 =gl .message .sender_address
+  self .s1 =0
+  self .s99 =0
+ def p0 (self ,value :str ,label :str )->None :
+  if len (value )!=64 :
+   raise e0 (f'{label } must be 32-byte lowercase hex')
+  for v29 in value :
+   if v29 not in '0123456789abcdef':
+    raise e0 (f'{label } must be 32-byte lowercase hex')
+ def p1 (self ,value :int ,label :str ,*,positive :bool =False )->int :
+  if type (value )is not int or value <(1 if positive else 0 )or value >c8 :
+   raise e0 (f'invalid {label }')
+  return value
+ def p2 (self ,value :int ,label :str )->int :
+  if value <0 or value >=c8 :
+   raise e0 (f'{label } overflow')
+  return value +1
+ def p3 (self ,value :str ,label :str ,limit :int =c7 )->None :
+  if not value or len (value )>limit :
+   raise e0 (f'invalid {label }')
+  for v29 in value :
+   if ord (v29 )<32 or ord (v29 )>126 :
+    raise e0 (f'invalid {label }')
+ def p4 (self ,value :str )->None :
+  self .p3 (value ,'mission id')
+  if ':'in value :
+   raise e0 ('invalid mission id')
+ def p5 (self ,value :str ,label :str ,limit :int )->None :
+  self .p3 (value ,label ,limit )
+  for v29 in value :
+   if v29 not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_':
+    raise e0 (f'invalid {label }')
+ def p6 (self ,value :str )->None :
+  self .p3 (value ,'authority host',253 )
+  if value !=value .lower ()or any ((v29 in value for v29 in '/?:#@%\\')):
+   raise e0 (k5 )
+  if value .startswith ('.')or value .endswith ('.')or '..'in value :
+   raise e0 (k5 )
+  for label in value .split ('.'):
+   if not 1 <=len (label )<=63 :
+    raise e0 (k5 )
+   if label [0 ]=='-'or label [-1 ]=='-':
+    raise e0 (k5 )
+   if any ((v29 not in 'abcdefghijklmnopqrstuvwxyz0123456789-'for v29 in label )):
+    raise e0 (k5 )
+ def p7 (self ,value :str )->None :
+  self .p3 (value ,'authority path prefix',c7 )
+  if not value .startswith ('/')or '//'in value or any ((v109 in value for v109 in ('?','#','%','\\'))):
+   raise e0 (k9 )
+  if value !='/'and value .endswith ('/'):
+   raise e0 (k9 )
+  if any ((v159 in ('.','..')for v159 in value .split ('/'))):
+   raise e0 (k9 )
+ def p8 (self ,url :str ,host :str ,path_prefix :str )->bool :
+  try :
+   self .p3 (url ,'evidence url',2048 )
+  except Exception :
+   return False
+  v145 ='https://'+host
+  if not url .startswith (v145 ):
+   return False
+  v155 =url [len (v145 ):]
+  if not v155 .startswith ('/')or any ((v109 in v155 for v109 in ('?','#','%','\\'))):
+   return False
+  if v155 =='/':
+   return path_prefix =='/'
+  v160 =v155 .split ('/')
+  if any ((v159 in ('','.','..')for v159 in v160 [1 :])):
+   return False
+  if path_prefix =='/':
+   return True
+  if v155 ==path_prefix :
+   return True
+  v27 =path_prefix if path_prefix .endswith ('/')else path_prefix +'/'
+  return v155 .startswith (v27 )
+ def p9 (self ,authority_id :str )->None :
+  if not self .s38 .get (authority_id ,False ):
+   raise e0 ('authority not found')
+ def p10 (self ,value :Address ,label :str )->None :
+  if value .as_hex =='0x'+'00'*20 :
+   raise e0 (f'{label } cannot be zero')
+ def p11 (self ,mission_id :str ,objective :str ,policy_digest :str ,budget :int ,refund_beneficiary :Address ,prepare_deadline :int ,recovery_deadline :int )->str :
+  v98 =('2',PROTOCOL ,REVISION ,str (int (gl .message .chain_id )),gl .message .contract_address .as_hex ,mission_id ,objective ,policy_digest ,str (budget ),refund_beneficiary .as_hex ,str (prepare_deadline ),str (recovery_deadline ))
+  v150 ='commit-intent-v2'+''.join ((self .p22 (v97 )for v97 in v98 ))
+  return Keccak256 (v150 .encode ('utf-8')).hexdigest ()
+ @gl .public .write
+ def register_authority (self ,authority_id :str ,host :str ,path_prefix :str ,issuer_address :Address ,authority_version :int )->None :
+  if gl .message .sender_address !=self .s0 :
+   raise e0 (k63 )
+  self .p5 (authority_id ,'authority id',64 )
+  if self .s38 .get (authority_id ,False ):
+   raise e0 ('authority already exists')
+  self .p6 (host )
+  self .p7 (path_prefix )
+  self .p10 (issuer_address ,'issuer')
+  self .p1 (authority_version ,k36 ,positive =True )
+  self .s38 [authority_id ]=True
+  self .s39 [authority_id ]=True
+  self .s40 [authority_id ]=host
+  self .s41 [authority_id ]=path_prefix
+  self .s42 [authority_id ]=issuer_address
+  self .s43 [authority_id ]=authority_version
+ @gl .public .write
+ def deactivate_authority (self ,authority_id :str )->None :
+  if gl .message .sender_address !=self .s0 :
+   raise e0 (k63 )
+  self .p9 (authority_id )
+  self .s39 [authority_id ]=False
+ @gl .public .write
+ def authorize_supplier (self ,mission_id :str ,supplier :Address )->None :
+  self .p16 (mission_id )
+  if self .s5 [mission_id ]!=c15 :
+   raise e0 (k2 )
+  if int (datetime .now (timezone .utc ).timestamp ())>int (self .s23 [mission_id ]):
+   raise e0 (k1 )
+  self .p10 (supplier ,'supplier')
+  v165 =mission_id +':'+supplier .as_hex
+  if self .s44 .get (v165 ,False ):
+   raise e0 ('supplier already authorized')
+  self .s44 [v165 ]=True
+  self .s45 [mission_id ]=self .p2 (int (self .s45 .get (mission_id ,0 )),'supplier count')
+ @gl .public .write
+ def revoke_supplier (self ,mission_id :str ,supplier :Address )->None :
+  self .p16 (mission_id )
+  if self .s5 [mission_id ]!=c15 :
+   raise e0 (k2 )
+  if supplier ==self .s4 [mission_id ]:
+   raise e0 ('principal cannot be revoked')
+  v165 =mission_id +':'+supplier .as_hex
+  if not self .s44 .get (v165 ,False ):
+   raise e0 (k41 )
+  for index in range (int (self .s27 [mission_id ])):
+   effect_key =self .s37 [mission_id +':'+str (index )]
+   if self .s30 [effect_key ]==supplier :
+    raise e0 ('supplier has a prepared effect')
+  self .s44 [v165 ]=False
+  v34 =int (self .s45 .get (mission_id ,0 ))
+  if v34 >0 :
+   self .s45 [mission_id ]=v34 -1
+ def p12 (self ,authority_id :str ,record_id :str ,record_version :int )->str :
+  return authority_id +':'+record_id +':'+str (record_version )
+ @gl .public .write
+ def attest_evidence (self ,authority_id :str ,authority_version :int ,record_id :str ,record_version :int ,mission_id :str ,mission_version :int ,url :str ,record_hash :str ,published_at :int ,expires_at :int )->None :
+  self .p9 (authority_id )
+  if not self .s39 .get (authority_id ,False ):
+   raise e0 ('authority is inactive')
+  self .p1 (authority_version ,k36 ,positive =True )
+  if authority_version !=int (self .s43 [authority_id ]):
+   raise e0 (k38 )
+  if gl .message .sender_address !=self .s42 [authority_id ]:
+   raise e0 ('issuer required')
+  self .p5 (record_id ,k61 ,c7 )
+  self .p1 (record_version ,k29 ,positive =True )
+  if not self .s2 .get (mission_id ,False ):
+   raise e0 (k0 )
+  self .p1 (mission_version ,'mission version',positive =True )
+  if mission_version !=int (self .s26 [mission_id ]):
+   raise e0 ('mission version mismatch')
+  if not self .p8 (url ,self .s40 [authority_id ],self .s41 [authority_id ]):
+   raise e0 ('evidence URL is outside authority')
+  self .p0 (record_hash ,'record hash')
+  self .p1 (published_at ,'evidence publication',positive =True )
+  self .p1 (expires_at ,'evidence expiry',positive =True )
+  v114 =int (self .s25 [mission_id ])
+  if published_at <v114 :
+   raise e0 ('evidence published before mission')
+  if expires_at <int (self .s24 [mission_id ]):
+   raise e0 ('invalid evidence expiry')
+  v14 =self .p12 (authority_id ,record_id ,record_version )
+  if self .s61 .get (v14 ,False ):
+   raise e0 ('attestation already exists')
+  self .s61 [v14 ]=True
+  self .s62 [v14 ]=authority_id
+  self .s63 [v14 ]=authority_version
+  self .s64 [v14 ]=gl .message .sender_address
+  self .s65 [v14 ]=record_id
+  self .s66 [v14 ]=record_version
+  self .s67 [v14 ]=mission_id
+  self .s68 [v14 ]=mission_version
+  self .s69 [v14 ]=url
+  self .s70 [v14 ]=record_hash
+  self .s71 [v14 ]=published_at
+  self .s72 [v14 ]=expires_at
+ @gl .public .write
+ def register_evidence (self ,mission_id :str ,evidence_id :str ,authority_id :str ,authority_version :int ,record_id :str ,record_version :int )->None :
+  self .p16 (mission_id )
+  if self .s5 [mission_id ]!=c15 :
+   raise e0 (k2 )
+  if int (datetime .now (timezone .utc ).timestamp ())>int (self .s23 [mission_id ]):
+   raise e0 (k1 )
+  self .p5 (evidence_id ,'evidence id',c7 )
+  evidence_key =mission_id +':'+evidence_id
+  if self .s46 .get (evidence_key ,False ):
+   raise e0 ('evidence already exists')
+  v66 =int (self .s19 [mission_id ])
+  if v66 >=c4 :
+   raise e0 ('evidence limit exceeded')
+  self .p9 (authority_id )
+  self .p1 (authority_version ,k36 ,positive =True )
+  self .p5 (record_id ,k61 ,c7 )
+  self .p1 (record_version ,k29 ,positive =True )
+  v14 =self .p12 (authority_id ,record_id ,record_version )
+  if not self .s61 .get (v14 ,False ):
+   raise e0 (k26 )
+  if int (self .s63 [v14 ])!=authority_version :
+   raise e0 (k38 )
+  if self .s67 [v14 ]!=mission_id :
+   raise e0 ('attestation mission mismatch')
+  v37 =int (self .s26 [mission_id ])
+  if int (self .s68 [v14 ])!=v37 :
+   raise e0 ('attestation mission version mismatch')
+  self .s46 [evidence_key ]=True
+  self .s47 [evidence_key ]=mission_id
+  self .s48 [evidence_key ]=evidence_id
+  self .s49 [evidence_key ]=authority_id
+  self .s54 [evidence_key ]=authority_version
+  self .s55 [evidence_key ]=self .s64 [v14 ]
+  self .s56 [evidence_key ]=record_id
+  self .s57 [evidence_key ]=record_version
+  self .s58 [evidence_key ]=v37
+  self .s50 [evidence_key ]=self .s69 [v14 ]
+  self .s51 [evidence_key ]=self .s70 [v14 ]
+  self .s52 [evidence_key ]=mission_id
+  self .s59 [evidence_key ]=self .s71 [v14 ]
+  self .s53 [evidence_key ]=self .s72 [v14 ]
+  self .s60 [mission_id +':'+str (v66 )]=evidence_key
+  self .s19 [mission_id ]=self .p2 (v66 ,'evidence count')
+ @gl .public .write
+ def create_mission (self ,mission_id :str ,objective :str ,policy_digest :str ,budget :int ,refund_beneficiary :Address ,prepare_deadline :int ,recovery_deadline :int )->None :
+  self .p4 (mission_id )
+  self .p3 (objective ,k23 )
+  self .p0 (policy_digest ,'policy digest')
+  self .p1 (budget ,'mission budget',positive =True )
+  self .p1 (prepare_deadline ,'preparation deadline',positive =True )
+  self .p1 (recovery_deadline ,'recovery deadline',positive =True )
+  if policy_digest !=c9 :
+   raise e0 ('unsupported policy rule')
+  if self .s2 .get (mission_id ,False ):
+   raise e0 ('mission already exists')
+  self .p10 (refund_beneficiary ,'refund beneficiary')
+  if recovery_deadline <=prepare_deadline :
+   raise e0 ('invalid deadline order')
+  self .s2 [mission_id ]=True
+  self .s4 [mission_id ]=gl .message .sender_address
+  self .s5 [mission_id ]=c15
+  self .s6 [mission_id ]=objective
+  self .s7 [mission_id ]=policy_digest
+  self .s8 [mission_id ]=self .p11 (mission_id ,objective ,policy_digest ,budget ,refund_beneficiary ,prepare_deadline ,recovery_deadline )
+  self .s9 [mission_id ]=''
+  self .s10 [mission_id ]=''
+  self .s11 [mission_id ]=budget
+  self .s12 [mission_id ]=0
+  self .s13 [mission_id ]=0
+  self .s14 [mission_id ]=refund_beneficiary
+  self .s15 [mission_id ]=0
+  self .s16 [mission_id ]=''
+  self .s17 [mission_id ]=''
+  self .s18 [mission_id ]=False
+  self .s19 [mission_id ]=0
+  self .s20 [mission_id ]=''
+  self .s21 [mission_id ]=''
+  self .s22 [mission_id ]=0
+  self .s23 [mission_id ]=prepare_deadline
+  self .s24 [mission_id ]=recovery_deadline
+  self .s25 [mission_id ]=int (datetime .now (timezone .utc ).timestamp ())
+  self .s26 [mission_id ]=1
+  self .s27 [mission_id ]=0
+  self .s44 [mission_id +':'+gl .message .sender_address .as_hex ]=True
+  self .s45 [mission_id ]=1
+  v129 =int (self .s1 )
+  self .s3 [str (v129 )]=mission_id
+  self .s1 =self .p2 (v129 ,'mission count')
+ @gl .public .write .payable
+ def fund_mission (self ,mission_id :str )->None :
+  self .p16 (mission_id )
+  if self .s5 [mission_id ]!=c15 :
+   raise e0 (k2 )
+  if int (datetime .now (timezone .utc ).timestamp ())>int (self .s23 [mission_id ]):
+   raise e0 (k1 )
+  amount =int (gl .message .value )
+  if amount <=0 :
+   raise e0 ('funding value must be positive')
+  v101 =int (self .s12 [mission_id ])
+  if v101 +amount >int (self .s11 [mission_id ]):
+   raise e0 ('funding exceeds mission budget')
+  self .s12 [mission_id ]=v101 +amount
+ @gl .public .write
+ def prepare_effect (self ,mission_id :str ,effect_id :str ,effect_digest :str ,beneficiary :Address ,value :int ,expiry :int )->None :
+  self .p13 (mission_id ,effect_id ,effect_digest ,beneficiary ,value ,expiry ,'')
+ @gl .public .write
+ def prepare_effect_with_dependency (self ,mission_id :str ,effect_id :str ,effect_digest :str ,beneficiary :Address ,value :int ,expiry :int ,dependency_id :str )->None :
+  self .p13 (mission_id ,effect_id ,effect_digest ,beneficiary ,value ,expiry ,dependency_id )
+ def p13 (self ,mission_id :str ,effect_id :str ,effect_digest :str ,beneficiary :Address ,value :int ,expiry :int ,dependency_id :str )->None :
+  if not self .s2 .get (mission_id ,False ):
+   raise e0 (k0 )
+  if self .s5 [mission_id ]!=c15 :
+   raise e0 (k2 )
+  if int (datetime .now (timezone .utc ).timestamp ())>int (self .s23 [mission_id ]):
+   raise e0 (k1 )
+  self .p1 (value ,'effect value',positive =True )
+  self .p1 (expiry ,'effect expiry',positive =True )
+  v165 =mission_id +':'+gl .message .sender_address .as_hex
+  if not self .s44 .get (v165 ,False ):
+   raise e0 (k41 )
+  if not effect_id or len (effect_id )>c7 or ':'in effect_id :
+   raise e0 ('invalid effect id')
+  self .p3 (effect_id ,'effect id')
+  effect_key =mission_id +':'+effect_id
+  if self .s28 .get (effect_key ,False ):
+   raise e0 ('effect already exists')
+  v44 =int (self .s27 [mission_id ])
+  if v44 >=c3 :
+   raise e0 ('effect limit exceeded')
+  self .p0 (effect_digest ,'effect digest')
+  if dependency_id :
+   self .p5 (dependency_id ,'dependency id',c7 )
+   if dependency_id ==effect_id :
+    raise e0 ('effect cannot depend on itself')
+   v39 =mission_id +':'+dependency_id
+   if not self .s28 .get (v39 ,False ):
+    raise e0 (k35 )
+  self .p10 (beneficiary ,'effect beneficiary')
+  if int (self .s13 [mission_id ])+value >int (self .s11 [mission_id ]):
+   raise e0 ('prepared effects exceed mission budget')
+  if expiry <int (self .s24 [mission_id ]):
+   raise e0 ('invalid effect expiry')
+  self .s28 [effect_key ]=True
+  self .s29 [effect_key ]=mission_id
+  self .s30 [effect_key ]=gl .message .sender_address
+  self .s31 [effect_key ]=effect_id
+  self .s32 [effect_key ]=effect_digest
+  self .s33 [effect_key ]=dependency_id
+  self .s34 [effect_key ]=beneficiary
+  self .s35 [effect_key ]=value
+  self .s36 [effect_key ]=expiry
+  self .s13 [mission_id ]=int (self .s13 [mission_id ])+value
+  self .s37 [mission_id +':'+str (v44 )]=effect_key
+  self .s27 [mission_id ]=self .p2 (v44 ,'effect count')
+ @gl .public .write
+ def seal_mission (self ,mission_id :str ,effect_root :str ,evidence_root :str )->None :
+  self .p16 (mission_id )
+  if self .s5 [mission_id ]!=c15 :
+   raise e0 (k2 )
+  if int (datetime .now (timezone .utc ).timestamp ())>int (self .s23 [mission_id ]):
+   raise e0 (k1 )
+  if self .s27 [mission_id ]<=0 :
+   raise e0 ('mission has no prepared effects')
+  if self .s19 [mission_id ]<2 :
+   raise e0 ('mission needs two evidence records')
+  if self .s12 [mission_id ]<self .s13 [mission_id ]:
+   raise e0 (k48 )
+  if not self .p20 (mission_id ):
+   raise e0 ('evidence authorities must be distinct')
+  self .p21 (mission_id )
+  self .p0 (effect_root ,'effect root')
+  self .p0 (evidence_root ,'evidence root')
+  if effect_root !=self .derive_effect_root (mission_id ):
+   raise e0 ('effect root does not match prepared effects')
+  if evidence_root !=self .derive_evidence_root (mission_id ):
+   raise e0 ('evidence root does not match registered evidence')
+  self .s9 [mission_id ]=effect_root
+  self .s10 [mission_id ]=evidence_root
+  self .s5 [mission_id ]=c16
+ @gl .public .write
+ def cancel_mission (self ,mission_id :str )->None :
+  self .p16 (mission_id )
+  if self .s5 [mission_id ]!=c15 :
+   raise e0 ('sealed mission cannot be cancelled')
+  self .p19 (mission_id ,'cancelled_by_principal')
+ def p14 (self ,evidence_key :str ,attempt :int )->str :
+  return evidence_key +':failure:'+str (attempt )
+ def p15 (self ,evidence_key :str ,repair_index :int )->str :
+  return evidence_key +':repair:'+str (repair_index )
+ @gl .public .write
+ def repair_evidence (self ,mission_id :str ,evidence_id :str ,authority_id :str ,authority_version :int ,record_id :str ,record_version :int )->None :
+  self .p16 (mission_id )
+  if self .s5 [mission_id ]!=c16 :
+   raise e0 (k50 )
+  if self .s20 [mission_id ]:
+   raise e0 (k42 )
+  v143 =int (datetime .now (timezone .utc ).timestamp ())
+  if v143 >=int (self .s24 [mission_id ]):
+   raise e0 (k34 )
+  evidence_key =mission_id +':'+evidence_id
+  if not self .s46 .get (evidence_key ,False ):
+   raise e0 (k14 )
+  v96 =self .s82 .get (evidence_key ,'')
+  if not v96 or not self .s74 .get (v96 ,False ):
+   raise e0 (k40 )
+  if self .s75 [v96 ]!=k21 :
+   raise e0 ('evidence is not repairable')
+  if authority_id !=self .s49 [evidence_key ]:
+   raise e0 ('repair authority mismatch')
+  if authority_version !=int (self .s54 [evidence_key ]):
+   raise e0 (k20 )
+  if record_id !=self .s56 [evidence_key ]:
+   raise e0 (k25 )
+  self .p1 (record_version ,k29 ,positive =True )
+  v38 =int (self .s57 [evidence_key ])
+  v107 =self .s96 .get (evidence_key ,'')
+  if v107 and self .s84 .get (v107 ,False ):
+   v38 =int (self .s91 [v107 ])
+  if record_version <=v38 :
+   raise e0 ('repair record version must be newer')
+  v14 =self .p12 (authority_id ,record_id ,record_version )
+  if not self .s61 .get (v14 ,False ):
+   raise e0 ('repair evidence attestation not found')
+  if int (self .s63 [v14 ])!=authority_version :
+   raise e0 (k20 )
+  if self .s67 [v14 ]!=mission_id :
+   raise e0 ('repair attestation mission mismatch')
+  if int (self .s68 [v14 ])!=int (self .s26 [mission_id ]):
+   raise e0 ('repair attestation mission version mismatch')
+  if self .s65 [v14 ]!=self .s56 [evidence_key ]:
+   raise e0 (k25 )
+  if self .s64 [v14 ]!=self .s55 [evidence_key ]:
+   raise e0 ('repair issuer mismatch')
+  repair_index =int (self .s83 .get (evidence_key ,0 ))+1
+  v156 =self .p15 (evidence_key ,repair_index )
+  if self .s84 .get (v156 ,False ):
+   raise e0 ('repair record already exists')
+  self .s84 [v156 ]=True
+  self .s85 [v156 ]='READY'
+  self .s86 [v156 ]=authority_id
+  self .s87 [v156 ]=authority_version
+  self .s88 [v156 ]=self .s64 [v14 ]
+  self .s89 [v156 ]=record_id
+  self .s90 [v156 ]=int (self .s57 [evidence_key ])
+  self .s91 [v156 ]=record_version
+  self .s92 [v156 ]=self .s69 [v14 ]
+  self .s93 [v156 ]=self .s70 [v14 ]
+  self .s94 [v156 ]=self .s71 [v14 ]
+  self .s95 [v156 ]=self .s72 [v14 ]
+  self .s83 [evidence_key ]=repair_index
+  self .s96 [evidence_key ]=v156
+ @gl .public .write
+ def evaluate_mission (self ,mission_id :str )->None :
+  if not self .s2 .get (mission_id ,False ):
+   raise e0 (k0 )
+  if self .s5 [mission_id ]!=c16 :
+   raise e0 (k50 )
+  if self .s20 [mission_id ]:
+   raise e0 (k42 )
+  v143 =int (datetime .now (timezone .utc ).timestamp ())
+  if v143 >=int (self .s24 [mission_id ]):
+   raise e0 (k34 )
+  v161 =[]
+  for index in range (int (self .s19 [mission_id ])):
+   evidence_key =self .s60 [mission_id +':'+str (index )]
+   authority_id =self .s49 [evidence_key ]
+   url =self .s50 [evidence_key ]
+   record_hash =self .s51 [evidence_key ]
+   expires_at =int (self .s53 [evidence_key ])
+   record_id =self .s56 [evidence_key ]
+   record_version =int (self .s57 [evidence_key ])
+   v156 =self .s96 .get (evidence_key ,'')
+   if v156 and self .s84 .get (v156 ,False )and (self .s85 [v156 ]=='READY'):
+    authority_id =self .s86 [v156 ]
+    url =self .s92 [v156 ]
+    record_hash =self .s93 [v156 ]
+    expires_at =int (self .s95 [v156 ])
+    record_id =self .s89 [v156 ]
+    record_version =int (self .s91 [v156 ])
+   v161 .append ((evidence_key ,self .s48 [evidence_key ],authority_id ,url ,record_hash ,expires_at ,record_id ,record_version ))
+  v128 =mission_id
+  v142 =int (self .s26 [mission_id ])
+  v144 =self .s6 [mission_id ]
+  v151 =self .s7 [mission_id ]
+  v104 =self .s8 [mission_id ]
+  v47 =self .s9 [mission_id ]
+  v89 =self .s10 [mission_id ]
+  v6 =self .derive_active_evidence_root (mission_id )
+  v48 =[]
+  for index in range (int (self .s27 [mission_id ])):
+   effect_key =self .s37 [mission_id +':'+str (index )]
+   v48 .append ((self .s31 [effect_key ],self .s33 .get (effect_key ,''),self .s32 [effect_key ],self .s34 [effect_key ].as_hex ,int (self .s35 [effect_key ]),int (self .s36 [effect_key ])))
+  def f3 (evidence_id :str ,record_id :str ,record_version :int ,failure_code :str )->dict :
+   return {k43 :k21 ,k51 :failure_code ,k10 :evidence_id ,k24 :record_id ,k30 :record_version ,k3 :v128 ,k13 :v142 }
+  def f0 ()->dict :
+   v8 =True
+   for v2 ,evidence_id ,authority_id ,url ,v94 ,v93 ,record_id ,record_version in v161 :
+    v157 =gl .nondet .web .get (url )
+    if v157 .status !=200 :
+     return f3 (evidence_id ,record_id ,record_version ,'source_unavailable')
+    if not isinstance (v157 .body ,bytes ):
+     return f3 (evidence_id ,record_id ,record_version ,'response_body_missing')
+    if len (v157 .body )>c6 :
+     return f3 (evidence_id ,record_id ,record_version ,'record_too_large')
+    def f1 (pairs ):
+     v149 ={}
+     for v106 ,value in pairs :
+      if v106 in v149 :
+       raise e0 (k49 )
+      v149 [v106 ]=value
+     return v149
+    def f2 (value ):
+     raise e0 (k49 )
+    try :
+     v153 =json .loads (v157 .body .decode ('utf-8'),object_pairs_hook =f1 ,parse_constant =f2 )
+    except (UnicodeDecodeError ,json .JSONDecodeError ,RecursionError ,e0 ):
+     return f3 (evidence_id ,record_id ,record_version ,'invalid_json')
+    if not isinstance (v153 ,dict ):
+     return f3 (evidence_id ,record_id ,record_version ,k56 )
+    if v153 .get ('schema')!=c1 :
+     return f3 (evidence_id ,record_id ,record_version ,'unsupported_schema')
+    v95 ={'schema',k10 ,k8 ,'url',k70 ,k18 ,k3 ,k23 ,k7 ,k11 ,k12 ,k15 ,'payload'}
+    if set (v153 .keys ())!=v95 :
+     return f3 (evidence_id ,record_id ,record_version ,k56 )
+    if v153 .get (k10 )!=evidence_id or v153 .get (k8 )!=authority_id or v153 .get ('url')!=url or (v153 .get (k70 )!=v128 )or (type (v153 .get (k18 ))is not int )or (v153 .get (k18 )!=int (v93 ))or (v153 .get (k3 )!=v128 )or (v153 .get (k23 )!=v144 )or (v153 .get (k7 )!=v151 )or (v153 .get (k11 )!=c10 )or (v153 .get (k12 )!=v104 )or (v153 .get (k15 )!=v47 ):
+     return f3 (evidence_id ,record_id ,record_version ,k58 )
+    v150 =v153 .get ('payload')
+    if not isinstance (v150 ,dict ):
+     return f3 (evidence_id ,record_id ,record_version ,k6 )
+    if set (v150 .keys ())!={k67 ,k4 ,k66 }:
+     return f3 (evidence_id ,record_id ,record_version ,k6 )
+    if type (v150 .get (k67 ))is not bool :
+     return f3 (evidence_id ,record_id ,record_version ,k6 )
+    if type (v150 .get (k4 ))is not str or not v150 [k4 ]:
+     return f3 (evidence_id ,record_id ,record_version ,k6 )
+    reason_code =v150 [k4 ]
+    if len (reason_code )>c5 or any ((ord (v29 )<32 or ord (v29 )>126 for v29 in reason_code )):
+     return f3 (evidence_id ,record_id ,record_version ,k6 )
+    v41 =v150 .get (k66 )
+    if not isinstance (v41 ,dict ):
+     return f3 (evidence_id ,record_id ,record_version ,k6 )
+    v92 ={v162 [0 ]for v162 in v48 }
+    if set (v41 .keys ())!=v92 :
+     return f3 (evidence_id ,record_id ,record_version ,k58 )
+    v7 =True
+    for effect_id ,v4 ,v1 ,v0 ,v5 ,v3 in v48 :
+     if type (v41 .get (effect_id ))is not bool :
+      return f3 (evidence_id ,record_id ,record_version ,k6 )
+     if not v41 [effect_id ]:
+      v7 =False
+    v28 =json .dumps (v150 ,ensure_ascii =True ,sort_keys =True ,separators =(',',':'))
+    v32 =Keccak256 (v28 .encode ('utf-8')).hexdigest ()
+    if v32 !=v94 :
+     return f3 (evidence_id ,record_id ,record_version ,'payload_hash_mismatch')
+    if not v150 [k67 ]or not v7 :
+     v8 =False
+   return {k43 :'DECISION',k19 :'COMMIT'if v8 else 'ABORT',k4 :'all_sources_and_effects_eligible'if v8 else 'policy_or_source_ineligible',k3 :v128 ,k55 :REVISION ,k12 :v104 ,k7 :v151 ,k11 :c10 ,k15 :v47 ,k32 :v89 ,k22 :v6 ,k39 :len (v48 ),k27 :len (v161 )}
+  def f4 (leader_result )->bool :
+   if not isinstance (leader_result ,gl .vm .Return ):
+    return False
+   try :
+    v166 =f0 ()
+   except Exception :
+    return False
+   v108 =leader_result .calldata
+   if not isinstance (v108 ,dict ):
+    return False
+   if v108 .get (k43 )!=v166 .get (k43 ):
+    return False
+   return v108 ==v166
+  v158 =gl .vm .run_nondet (f0 ,f4 )
+  if v158 .get (k43 )==k21 :
+   evidence_key =mission_id +':'+v158 [k10 ]
+   if not self .s46 .get (evidence_key ,False ):
+    raise e0 ('repair evidence not found')
+   attempt =int (self .s73 .get (evidence_key ,0 ))+1
+   v96 =self .p14 (evidence_key ,attempt )
+   self .s74 [v96 ]=True
+   self .s75 [v96 ]=k21
+   self .s76 [v96 ]=v158 [k51 ]
+   self .s77 [v96 ]=v158 [k10 ]
+   self .s78 [v96 ]=v158 [k24 ]
+   self .s79 [v96 ]=v158 [k30 ]
+   self .s80 [v96 ]=v158 [k13 ]
+   self .s81 [v96 ]=attempt
+   self .s73 [evidence_key ]=attempt
+   self .s82 [evidence_key ]=v96
+   return
+  if v158 .get (k43 )!='DECISION':
+   raise e0 ('invalid consensus outcome')
+  if v158 [k19 ]not in ('COMMIT','ABORT'):
+   raise e0 ('invalid consensus decision')
+  self .s20 [mission_id ]=v158 [k19 ]
+  self .s21 [mission_id ]=v158 [k4 ]
+  self .s22 [mission_id ]=self .p2 (int (self .s22 [mission_id ]),'evaluation count')
+  self .s17 [mission_id ]=v158 [k22 ]
+  decision_nonce =Keccak256 ((c0 +self .p22 (mission_id )+self .p22 (str (int (self .s26 [mission_id ])))+self .p22 (v158 [k19 ])+self .p22 (v158 [k4 ])+self .p22 (self .s9 [mission_id ])+self .p22 (self .s10 [mission_id ])+self .p22 (v158 [k22 ])).encode ('utf-8')).hexdigest ()
+  self .s16 [mission_id ]=decision_nonce
+  self .s5 [mission_id ]=c14
+  gl .get_contract_at (gl .message .contract_address ).emit (on ='finalized').apply_decision (mission_id ,decision_nonce )
+ @gl .public .write
+ def apply_decision (self ,mission_id :str ,decision_nonce :str )->None :
+  if gl .message .sender_address !=gl .message .contract_address :
+   raise e0 ('self message required')
+  if self .s18 [mission_id ]:
+   return
+  if decision_nonce !=self .s16 [mission_id ]:
+   raise e0 ('decision nonce mismatch')
+  if self .s5 [mission_id ]!=c14 :
+   raise e0 ('decision is not pending')
+  if self .s20 [mission_id ]=='COMMIT':
+   self .p18 (mission_id )
+  elif self .s20 [mission_id ]=='ABORT':
+   self .p19 (mission_id ,self .s21 [mission_id ])
+  else :
+   raise e0 ('invalid decision')
+ @gl .public .write
+ def claim_mission (self ,mission_id :str )->None :
+  if not self .s2 .get (mission_id ,False ):
+   raise e0 (k0 )
+  if self .s5 [mission_id ]not in (c13 ,c12 ):
+   raise e0 ('mission is not allocated')
+  beneficiary =gl .message .sender_address
+  v30 =mission_id +':'+beneficiary .as_hex
+  amount =int (self .s97 .get (v30 ,0 ))
+  if amount <=0 :
+   raise e0 ('no claimable balance')
+  withdrawal_id =str (int (self .s99 ))
+  if self .s100 .get (withdrawal_id ,False ):
+   raise e0 ('withdrawal id collision')
+  self .s97 [v30 ]=0
+  v103 =beneficiary .as_hex
+  v35 =int (self .s98 .get (v103 ,0 ))
+  if v35 <amount :
+   raise e0 ('claimable balance underflow')
+  self .s98 [v103 ]=v35 -amount
+  self .s100 [withdrawal_id ]=True
+  self .s101 [withdrawal_id ]=mission_id
+  self .s102 [withdrawal_id ]=beneficiary
+  self .s103 [withdrawal_id ]=amount
+  self .s104 [withdrawal_id ]=c17
+  self .s99 =self .p2 (int (self .s99 ),'withdrawal count')
+  _NativeRecipient (beneficiary ).emit_transfer (value =amount )
+ @gl .public .write
+ def expire_mission (self ,mission_id :str )->None :
+  if not self .s2 .get (mission_id ,False ):
+   raise e0 (k0 )
+  if self .s5 [mission_id ]not in (c15 ,c16 ,c14 ):
+   raise e0 ('mission is already terminal')
+  v143 =int (datetime .now (timezone .utc ).timestamp ())
+  if v143 <int (self .s24 [mission_id ]):
+   raise e0 ('recovery deadline has not passed')
+  self .p19 (mission_id ,'recovery_deadline_expired')
+ @gl .public .view
+ def protocol_info (self )->dict :
+  return {k68 :PROTOCOL ,k55 :REVISION ,'custody_enabled':True ,'semantic_evaluation_enabled':True ,'equivalence_primitive':'run_nondet','decision_envelope':c0 ,k65 :c11 ,k45 :c2 ,'evaluation_trigger':'permissionless-after-seal','authority_provenance':'https-origin-path','mission_count':int (self .s1 ),k33 :False ,'supplier_authorization_required':True ,'effect_graph':'single-parent-acyclic','evidence_schema':c1 ,k11 :c10 ,k7 :c9 ,'remote_body_limit':c6 }
+ @gl .public .view
+ def get_claimable (self ,beneficiary :Address )->int :
+  return int (self .s98 .get (beneficiary .as_hex ,0 ))
+ @gl .public .view
+ def get_mission_claimable (self ,mission_id :str ,beneficiary :Address )->int :
+  if not self .s2 .get (mission_id ,False ):
+   raise e0 (k0 )
+  return int (self .s97 .get (mission_id +':'+beneficiary .as_hex ,0 ))
+ @gl .public .view
+ def get_mission_receipt (self ,mission_id :str )->dict :
+  if not self .s2 .get (mission_id ,False ):
+   raise e0 (k0 )
+  return {k65 :c11 ,k45 :c2 ,k68 :PROTOCOL ,k55 :REVISION ,'chain_id':int (gl .message .chain_id ),'coordinator':gl .message .contract_address .as_hex ,k3 :mission_id ,k60 :self .s4 [mission_id ].as_hex ,'version':int (self .s26 [mission_id ]),k23 :self .s6 [mission_id ],'state':self .s5 [mission_id ],k19 :self .s20 [mission_id ],k4 :self .s21 [mission_id ],k62 :self .s16 [mission_id ],k11 :c10 ,k7 :self .s7 [mission_id ],k12 :self .s8 [mission_id ],k15 :self .s9 [mission_id ],k32 :self .s10 [mission_id ],k16 :self .s17 [mission_id ],k39 :int (self .s27 [mission_id ]),k27 :int (self .s19 [mission_id ]),'budget':int (self .s11 [mission_id ]),'funded_value':int (self .s12 [mission_id ]),k64 :int (self .s13 [mission_id ]),k53 :self .s14 [mission_id ].as_hex ,k54 :int (self .s15 [mission_id ]),k44 :int (self .s23 [mission_id ]),k37 :int (self .s24 [mission_id ]),k59 :int (self .s22 [mission_id ]),k31 :self .s18 [mission_id ],k33 :False }
+ @gl .public .view
+ def get_withdrawal (self ,withdrawal_id :str )->dict :
+  if not self .s100 .get (withdrawal_id ,False ):
+   raise e0 ('withdrawal not found')
+  return {'withdrawal_id':withdrawal_id ,k3 :self .s101 [withdrawal_id ],'beneficiary':self .s102 [withdrawal_id ].as_hex ,'amount':int (self .s103 [withdrawal_id ]),'status':self .s104 [withdrawal_id ]}
+ @gl .public .view
+ def get_withdrawal_count (self )->int :
+  return int (self .s99 )
+ @gl .public .view
+ def get_withdrawal_by_index (self ,index :int )->dict :
+  if index <0 or index >=int (self .s99 ):
+   raise e0 ('withdrawal index out of range')
+  return self .get_withdrawal (str (index ))
+ @gl .public .view
+ def derive_intent_digest (self ,mission_id :str )->str :
+  if not self .s2 .get (mission_id ,False ):
+   raise e0 (k0 )
+  return self .p11 (mission_id ,self .s6 [mission_id ],self .s7 [mission_id ],int (self .s11 [mission_id ]),self .s14 [mission_id ],int (self .s23 [mission_id ]),int (self .s24 [mission_id ]))
+ def p16 (self ,mission_id :str )->None :
+  if not self .s2 .get (mission_id ,False ):
+   raise e0 (k0 )
+  if gl .message .sender_address !=self .s4 [mission_id ]:
+   raise e0 ('principal required')
+ def p17 (self ,mission_id :str ,beneficiary :Address ,amount :int )->None :
+  if amount <=0 :
+   return
+  v30 =mission_id +':'+beneficiary .as_hex
+  v115 =int (self .s97 .get (v30 ,0 ))
+  v103 =beneficiary .as_hex
+  v102 =int (self .s98 .get (v103 ,0 ))
+  if amount >c8 -v115 :
+   raise e0 ('mission claimable balance overflow')
+  if amount >c8 -v102 :
+   raise e0 ('global claimable balance overflow')
+  self .s97 [v30 ]=v115 +amount
+  self .s98 [v103 ]=v102 +amount
+ def p18 (self ,mission_id :str )->None :
+  v101 =int (self .s12 [mission_id ])
+  v152 =int (self .s13 [mission_id ])
+  if v101 <v152 :
+   raise e0 (k48 )
+  for index in range (int (self .s27 [mission_id ])):
+   effect_key =self .s37 [mission_id +':'+str (index )]
+   amount =int (self .s35 [effect_key ])
+   self .p17 (mission_id ,self .s34 [effect_key ],amount )
+  v154 =v101 -v152
+  self .s15 [mission_id ]=v154
+  self .p17 (mission_id ,self .s14 [mission_id ],v154 )
+  self .s18 [mission_id ]=True
+  self .s5 [mission_id ]=c13
+ def p19 (self ,mission_id :str ,reason_code :str )->None :
+  if self .s18 [mission_id ]:
+   return
+  v101 =int (self .s12 [mission_id ])
+  self .s20 [mission_id ]='ABORT'
+  self .s21 [mission_id ]=reason_code
+  self .s15 [mission_id ]=v101
+  self .p17 (mission_id ,self .s14 [mission_id ],v101 )
+  self .s18 [mission_id ]=True
+  self .s5 [mission_id ]=c12
+ def p20 (self ,mission_id :str )->bool :
+  v100 =self .s60 [mission_id +':0']
+  v99 =self .s55 [v100 ]
+  v33 =int (self .s19 [mission_id ])
+  for index in range (1 ,v33 ):
+   v106 =self .s60 [mission_id +':'+str (index )]
+   if self .s55 [v106 ]!=v99 :
+    return True
+  return False
+ def p21 (self ,mission_id :str )->None :
+  v33 =int (self .s27 [mission_id ])
+  for index in range (v33 ):
+   v36 =self .s37 [mission_id +':'+str (index )]
+   v167 =0
+   while True :
+    v147 =self .s33 .get (v36 ,'')
+    if not v147 :
+     break
+    v148 =mission_id +':'+v147
+    if not self .s28 .get (v148 ,False ):
+     raise e0 (k35 )
+    if self .s29 [v148 ]!=mission_id :
+     raise e0 ('dependency mission mismatch')
+    v167 +=1
+    if v167 >=v33 :
+     raise e0 ('effect graph contains a cycle')
+    v36 =v148
+ def p22 (self ,value :str )->str :
+  return str (len (value ))+':'+value
+ def p23 (self ,effect_key :str )->str :
+  v98 =(self .s31 [effect_key ],self .s32 [effect_key ],self .s33 .get (effect_key ,''),self .s30 [effect_key ].as_hex ,self .s34 [effect_key ].as_hex ,str (int (self .s35 [effect_key ])),str (int (self .s36 [effect_key ])))
+  v150 ='commit-effect-leaf-v1'+''.join ((self .p22 (v97 )for v97 in v98 ))
+  return Keccak256 (v150 .encode ('utf-8')).hexdigest ()
+ def p24 (self ,evidence_key :str )->str :
+  v98 =(self .s48 [evidence_key ],self .s49 [evidence_key ],str (int (self .s54 [evidence_key ])),self .s55 [evidence_key ].as_hex ,self .s56 [evidence_key ],str (int (self .s57 [evidence_key ])),self .s47 [evidence_key ],str (int (self .s58 [evidence_key ])),self .s50 [evidence_key ],self .s51 [evidence_key ],self .s52 [evidence_key ],str (int (self .s59 [evidence_key ])),str (int (self .s53 [evidence_key ])))
+  v150 =k46 +''.join ((self .p22 (v97 )for v97 in v98 ))
+  return Keccak256 (v150 .encode ('utf-8')).hexdigest ()
+ @gl .public .view
+ def derive_effect_root (self ,mission_id :str )->str :
+  if not self .s2 .get (mission_id ,False ):
+   raise e0 (k0 )
+  v33 =int (self .s27 [mission_id ])
+  v150 ='commit-effect-root-v1'+self .p22 (str (v33 ))
+  for index in range (v33 ):
+   effect_key =self .s37 [mission_id +':'+str (index )]
+   v150 +=self .p22 (self .p23 (effect_key ))
+  return Keccak256 (v150 .encode ('utf-8')).hexdigest ()
+ def p25 (self ,evidence_key :str )->str :
+  v156 =self .s96 .get (evidence_key ,'')
+  if not v156 or not self .s84 .get (v156 ,False )or self .s85 [v156 ]!='READY':
+   return self .p24 (evidence_key )
+  v98 =(self .s48 [evidence_key ],self .s86 [v156 ],str (int (self .s87 [v156 ])),self .s88 [v156 ].as_hex ,self .s89 [v156 ],str (int (self .s91 [v156 ])),self .s47 [evidence_key ],str (int (self .s58 [evidence_key ])),self .s92 [v156 ],self .s93 [v156 ],self .s52 [evidence_key ],str (int (self .s94 [v156 ])),str (int (self .s95 [v156 ])))
+  v150 =k46 +''.join ((self .p22 (value )for value in v98 ))
+  return Keccak256 (v150 .encode ('utf-8')).hexdigest ()
+ @gl .public .view
+ def derive_active_evidence_root (self ,mission_id :str )->str :
+  if not self .s2 .get (mission_id ,False ):
+   raise e0 (k0 )
+  v33 =int (self .s19 [mission_id ])
+  v150 =k47 +self .p22 (str (v33 ))
+  for index in range (v33 ):
+   evidence_key =self .s60 [mission_id +':'+str (index )]
+   v150 +=self .p22 (self .p25 (evidence_key ))
+  return Keccak256 (v150 .encode ('utf-8')).hexdigest ()
+ @gl .public .view
+ def derive_evidence_root (self ,mission_id :str )->str :
+  if not self .s2 .get (mission_id ,False ):
+   raise e0 (k0 )
+  v33 =int (self .s19 [mission_id ])
+  v150 =k47 +self .p22 (str (v33 ))
+  for index in range (v33 ):
+   evidence_key =self .s60 [mission_id +':'+str (index )]
+   v150 +=self .p22 (self .p24 (evidence_key ))
+  return Keccak256 (v150 .encode ('utf-8')).hexdigest ()
+ @gl .public .view
+ def get_evidence_failure (self ,mission_id :str ,evidence_id :str )->dict :
+  evidence_key =mission_id +':'+evidence_id
+  if not self .s46 .get (evidence_key ,False ):
+   raise e0 (k14 )
+  v96 =self .s82 .get (evidence_key ,'')
+  if not v96 or not self .s74 .get (v96 ,False ):
+   raise e0 (k40 )
+  return {'status':self .s75 [v96 ],k51 :self .s76 [v96 ],k10 :self .s77 [v96 ],k24 :self .s78 [v96 ],'failed_record_version':int (self .s79 [v96 ]),k13 :int (self .s80 [v96 ]),'attempt':int (self .s81 [v96 ])}
+ @gl .public .view
+ def get_evidence_repair (self ,mission_id :str ,evidence_id :str )->dict :
+  evidence_key =mission_id +':'+evidence_id
+  if not self .s46 .get (evidence_key ,False ):
+   raise e0 (k14 )
+  v156 =self .s96 .get (evidence_key ,'')
+  if not v156 or not self .s84 .get (v156 ,False ):
+   raise e0 ('evidence repair not found')
+  return {'status':self .s85 [v156 ],k8 :self .s86 [v156 ],k17 :int (self .s87 [v156 ]),k28 :self .s88 [v156 ],k24 :self .s89 [v156 ],'original_record_version':int (self .s90 [v156 ]),'active_record_version':int (self .s91 [v156 ]),'url':self .s92 [v156 ],k57 :self .s93 [v156 ],k52 :int (self .s94 [v156 ]),k18 :int (self .s95 [v156 ])}
+ @gl .public .view
+ def get_mission (self ,mission_id :str )->dict :
+  if not self .s2 .get (mission_id ,False ):
+   raise e0 (k0 )
+  return {k3 :mission_id ,k60 :self .s4 [mission_id ].as_hex ,'state':self .s5 [mission_id ],'version':int (self .s26 [mission_id ]),k23 :self .s6 [mission_id ],k7 :self .s7 [mission_id ],k12 :self .s8 [mission_id ],k15 :self .s9 [mission_id ],k32 :self .s10 [mission_id ],k11 :c10 ,'budget':int (self .s11 [mission_id ]),'funded_value':int (self .s12 [mission_id ]),k64 :int (self .s13 [mission_id ]),k53 :self .s14 [mission_id ].as_hex ,k39 :int (self .s27 [mission_id ]),k27 :int (self .s19 [mission_id ]),'supplier_count':int (self .s45 .get (mission_id ,0 )),k19 :self .s20 [mission_id ],k4 :self .s21 [mission_id ],k62 :self .s16 [mission_id ],k16 :self .s17 [mission_id ],k31 :self .s18 [mission_id ],k54 :int (self .s15 [mission_id ]),k59 :int (self .s22 [mission_id ]),k44 :int (self .s23 [mission_id ]),k37 :int (self .s24 [mission_id ]),'created_at':int (self .s25 [mission_id ])}
+ @gl .public .view
+ def get_mission_by_index (self ,index :int )->dict :
+  if index <0 or index >=int (self .s1 ):
+   raise e0 ('mission index out of range')
+  return self .get_mission (self .s3 [str (index )])
+ @gl .public .view
+ def get_effect (self ,mission_id :str ,effect_id :str )->dict :
+  effect_key =mission_id +':'+effect_id
+  if not self .s28 .get (effect_key ,False ):
+   raise e0 ('effect not found')
+  if self .s29 [effect_key ]!=mission_id :
+   raise e0 ('effect mission mismatch')
+  return {k3 :mission_id ,'effect_id':effect_id ,'supplier':self .s30 [effect_key ].as_hex ,'digest':self .s32 [effect_key ],'dependency_id':self .s33 .get (effect_key ,''),'beneficiary':self .s34 [effect_key ].as_hex ,'value':int (self .s35 [effect_key ]),'expiry':int (self .s36 [effect_key ])}
+ @gl .public .view
+ def get_effect_by_index (self ,mission_id :str ,index :int )->dict :
+  if not self .s2 .get (mission_id ,False ):
+   raise e0 (k0 )
+  if index <0 or index >=int (self .s27 [mission_id ]):
+   raise e0 ('effect index out of range')
+  effect_key =self .s37 [mission_id +':'+str (index )]
+  return self .get_effect (mission_id ,self .s31 [effect_key ])
+ @gl .public .view
+ def get_authority (self ,authority_id :str )->dict :
+  self .p9 (authority_id )
+  return {k8 :authority_id ,'active':self .s39 .get (authority_id ,False ),'host':self .s40 [authority_id ],'path_prefix':self .s41 [authority_id ],k28 :self .s42 [authority_id ],k17 :int (self .s43 [authority_id ])}
+ @gl .public .view
+ def authorities_are_independent (self ,authority_a :str ,authority_b :str )->bool :
+  self .p9 (authority_a )
+  self .p9 (authority_b )
+  if authority_a ==authority_b :
+   return False
+  return self .s42 [authority_a ]!=self .s42 [authority_b ]
+ @gl .public .view
+ def get_evidence_attestation (self ,authority_id :str ,record_id :str ,record_version :int )->dict :
+  self .p9 (authority_id )
+  self .p5 (record_id ,k61 ,c7 )
+  self .p1 (record_version ,k29 ,positive =True )
+  v14 =self .p12 (authority_id ,record_id ,record_version )
+  if not self .s61 .get (v14 ,False ):
+   raise e0 (k26 )
+  return {k8 :self .s62 [v14 ],k17 :int (self .s63 [v14 ]),k28 :self .s64 [v14 ],k24 :self .s65 [v14 ],k30 :int (self .s66 [v14 ]),k3 :self .s67 [v14 ],k13 :int (self .s68 [v14 ]),'url':self .s69 [v14 ],k57 :self .s70 [v14 ],k52 :int (self .s71 [v14 ]),k18 :int (self .s72 [v14 ])}
+ @gl .public .view
+ def get_evidence (self ,mission_id :str ,evidence_id :str )->dict :
+  evidence_key =mission_id +':'+evidence_id
+  if not self .s46 .get (evidence_key ,False ):
+   raise e0 (k14 )
+  if self .s47 [evidence_key ]!=mission_id :
+   raise e0 ('evidence mission mismatch')
+  return {k3 :mission_id ,k10 :evidence_id ,k8 :self .s49 [evidence_key ],k17 :int (self .s54 [evidence_key ]),k28 :self .s55 [evidence_key ],k24 :self .s56 [evidence_key ],k30 :int (self .s57 [evidence_key ]),k13 :int (self .s58 [evidence_key ]),'url':self .s50 [evidence_key ],k57 :self .s51 [evidence_key ],k70 :self .s52 [evidence_key ],k52 :int (self .s59 [evidence_key ]),k18 :int (self .s53 [evidence_key ])}
+ @gl .public .view
+ def get_evidence_by_index (self ,mission_id :str ,index :int )->dict :
+  if not self .s2 .get (mission_id ,False ):
+   raise e0 (k0 )
+  if index <0 or index >=int (self .s19 [mission_id ]):
+   raise e0 ('evidence index out of range')
+  evidence_key =self .s60 [mission_id +':'+str (index )]
+  return self .get_evidence (mission_id ,self .s48 [evidence_key ])
+ @gl .public .view
+ def get_mission_manifest (self ,mission_id :str )->dict :
+  if not self .s2 .get (mission_id ,False ):
+   raise e0 (k0 )
+  v51 =[]
+  for index in range (int (self .s27 [mission_id ])):
+   v51 .append (self .get_effect_by_index (mission_id ,index ))
+  v52 =[]
+  for index in range (int (self .s19 [mission_id ])):
+   v105 =self .get_evidence_by_index (mission_id ,index )
+   v105 ['authority']=self .get_authority (v105 [k8 ])
+   v52 .append (v105 )
+  return {k45 :c2 ,k68 :PROTOCOL ,k55 :REVISION ,'chain_id':int (gl .message .chain_id ),'coordinator':gl .message .contract_address .as_hex ,k3 :mission_id ,k60 :self .s4 [mission_id ].as_hex ,k23 :self .s6 [mission_id ],k11 :c10 ,k7 :self .s7 [mission_id ],k12 :self .s8 [mission_id ],'state':self .s5 [mission_id ],k19 :self .s20 [mission_id ],k4 :self .s21 [mission_id ],k44 :int (self .s23 [mission_id ]),k37 :int (self .s24 [mission_id ]),k39 :int (self .s27 [mission_id ]),k27 :int (self .s19 [mission_id ]),k15 :self .s9 [mission_id ],k32 :self .s10 [mission_id ],k16 :self .s17 [mission_id ],k31 :self .s18 [mission_id ],'effects':v51 ,'evidence':v52 }
+ @gl .public .view
+ def is_supplier_authorized (self ,mission_id :str ,supplier :Address )->bool :
+  if not self .s2 .get (mission_id ,False ):
+   raise e0 (k0 )
+  return self .s44 .get (mission_id +':'+supplier .as_hex ,False )
