@@ -1,106 +1,33 @@
-# Verified Environment Baseline
+# Submission environment
 
-Status: **Revision 0.7.0 local hardening closed; Studio Dev source match and live COMMIT/ABORT proofs recorded; external delivery/recovery remains open**
-Verified: 2026-09-11
+This file records only the environments relevant to the Agent Tank submission.
 
-## Protocol family
+## Live proof environment
 
-The current development-preview documentation describes the Consensus/Node v0.6 release-candidate family. The matching public prereleases were verified directly against npm and PyPI:
+COMMIT's live end-to-end proof is on GenLayer Studio Dev:
 
-| Component | Verified candidate | Registry evidence |
-|---|---:|---|
-| GenLayer CLI | `0.40.0-rc.3` | npm `genlayer` dist-tag `rc` |
-| JavaScript SDK | `2.0.0-rc.1` | npm `genlayer-js` dist-tag `rc` |
-| Python SDK | `0.19.0rc2` | PyPI `genlayer-py` |
-| Test suite / gltest | `0.30.0rc2` | PyPI `genlayer-test` |
-| GenVM linter | `0.11.1rc2` | PyPI `genvm-linter` |
-
-The installed global CLI was rechecked at `0.39.1`; it is **not** the selected COMMIT toolchain. COMMIT will use project-isolated tooling so existing projects remain untouched.
-
-## Network baseline
-
-The current official network table distinguishes the production-like Bradbury testnet from the temporary Studio development preview:
-
-### Bradbury target
-
-- Alias: `testnet-bradbury`
-- GenLayer RPC: `https://rpc-bradbury.genlayer.com`
-- Chain ID: `4221`
-- Consensus main contract: `0x0112Bf6e83497965A5fdD6Dad1E447a6E004271D`
-- Explorer: `https://explorer-bradbury.genlayer.com/`
-- Read-only CLI check on 2026-09-10: `genlayer network info` reported the values above.
-
-### Studio development preview
-
-- Canonical RPC: `https://studio-dev.genlayer.com/api`
+- RPC: `https://studio-dev.genlayer.com/api`
 - Chain ID: `61997`
-- Read-only RPC check on 2026-09-09: `eth_chainId` returned `0xf22d` (`61997`).
-- This environment is temporary and may reset; it is not Bradbury.
+- Source-matched v0.7 contract: `0x10c708517b4465596E2dc40De92B30A610Cb7a10`
+- Deployment result: `FINALIZED`, `FINISHED_WITH_RETURN`
 
-COMMIT must not reuse preview addresses, fee assumptions, or runtime conclusions
-across networks. The current target is Studio Dev. The source-matched 0.7.0
-deployment and live branch proofs are recorded there. Bradbury is a separate
-persistent follow-up target and must not be used to infer Studio Dev compatibility.
+The detailed transaction record is in [`DEPLOYMENT_LOG_STUDIO_DEV.md`](./DEPLOYMENT_LOG_STUDIO_DEV.md).
 
-## Remaining environment questions
+Studio Dev is a preview environment and may reset. The repository therefore preserves transaction IDs, source hashes, and exact contract addresses for the recorded proof.
 
-- Transaction Kit source is resolved, but its compatibility remains untested (see below).
-- Recheck the GenVM runtime hash and runner after any Studio Dev network or runner upgrade.
-- Whether Agent Tank judging requires a specific network rather than a reproducible preview deployment.
+## Current source verification environment
 
-The isolated probe harness pins the verified Python packages in `pyproject.toml`
-and all resolved dependencies in `uv.lock`; this does not by itself establish
-compatibility with the live network. Studio Dev has now proven the source-
-matched v0.7 mission-008 COMMIT and mission-009 ABORT evaluations, finalized
-callback allocations, reviewer manifest reads, and finalized one-way
-claim/refund dispatch. It has not proven authenticated external delivery,
-failed-payment recovery, or deadline recovery. The probe runtime header is taken from a
-checksum-verified release archive.
+The newer repository checkpoint `c152ec75d935a4cb5cf37e2f31aaae89c1bdc525` was certified with:
 
-## Transaction Kit investigation
+- Python `3.12`
+- `genlayer-py==0.19.0rc2`
+- `genlayer-test==0.30.0rc2`
+- `genvm-linter==0.11.1rc2`
+- isolated Pyright `1.1.408`
+- verified GenVM archive SHA-256 `bd30580f911338d5533460eca8ed714dec371de5803c04e41dbb96430aea7b6e`
 
-The [official integration instructions](https://docs.genlayer.com/developers/decentralized-applications/transaction-kit-integration) use `github:genlayerlabs/genlayer-transaction-kit#pkg/core` before registry publication. The branch resolved on 2026-09-09 to `7a32d40a3e0c1d9962491b7e78423e2b969848ef`.
+The current repository source is a later certified checkpoint and is not claimed to be source-identical to the Studio Dev v0.7 deployment.
 
-Its [manifest at that commit](https://github.com/genlayerlabs/genlayer-transaction-kit/blob/7a32d40a3e0c1d9962491b7e78423e2b969848ef/package.json) declares `@genlayer/transaction-kit` version `0.1.0`, Node `>=18.6.0`, and a floating `genlayer-js#v2-dev` dependency. This is evidence of package location, not evidence of a compatible locked stack. A later SDK integration must resolve and test that dependency explicitly. The kit is not needed for the protocol specification.
+## Agent Tank scope
 
-## Corrections to the initial progress report
-
-Phase 2 was previously described as completed too early. Published package versions and documented network settings did not verify the deployed Studio/consensus versions, runtime hash, hackathon network requirement, or withdrawal failure semantics. Source-matched v0.7 missions 008 and 009 now close the deployment, evaluation, finality-gated allocation, reviewer-manifest, and one-way dispatch portions on Studio Dev; withdrawal delivery/recovery semantics remain open for the current protocol.
-
-The public hackathon page initially returned no readable rules through text retrieval. Subsequent browser inspection on 2026-09-09 resolved this: the actual submission form supports Studio, Bradbury or Asimov address links, requires a website, and requires a public repository belonging to the linked GitHub account. No exclusive Bradbury requirement appears. The reference track is Agentic Commerce Infrastructure. Source: https://portal.genlayer.foundation/agent-tank/hackathon/submit
-
-## Isolated v0.6 runtime and Bradbury compatibility
-
-- Host interpreter: Python 3.12.14 (the test suite requires Python >=3.12).
-- GenVM manager Direct-runtime baseline: `v0.6.0-rc3`.
-- Archive: `genvm-universal.tar.xz`.
-- Published and locally verified SHA-256: `bd30580f911338d5533460eca8ed714dec371de5803c04e41dbb96430aea7b6e`.
-- The current COMMIT source and probes use the v0.6 runner `py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng` and the modern `genlayer as gl` package layout. Its runner manifest resolves `py-lib-genlayer-std:kzr02ndm9et4qkmbqpq5djjt5sme2yt76n7sz1qbzax0knt6mam0`.
-- A bounded historical Bradbury canary proved that the v0.6 `5jyc...` runner is not available on Bradbury: the transaction trace returned `runner ...5jyc... not found`.
-- Bradbury’s documented first-contract path specifies `py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6`, the legacy `from genlayer import *` package layout, `gl.Contract`, and `gl.get_contract_at`.
-- The same verified manager archive contains the legacy runner and its dependency `py-lib-genlayer-std:11rhn002yfajawsz7fai6mykznbxkxs6l91iskj5cm82c92qhy3v`, but that is a separate Bradbury compatibility path. It is not the current Studio Dev source.
-- Direct-runtime tests load the v0.6 package, storage, calldata, message, and consensus APIs directly. No legacy adapter is used.
-- The accepted legacy Bradbury canary remains useful historical evidence for that probe only. It does not verify the current COMMIT source or establish Studio Dev deployment.
-
-Direct-runtime release source: https://github.com/genlayerlabs/genvm-manager/releases/tag/v0.6.0-rc3
-
-## Required transaction semantics
-
-- `ACCEPTED` is provisional; irreversible value movement is finality-gated.
-- A successful operation must have an acceptable consensus status **and** successful execution (`FINISHED_WITH_RETURN`).
-- Internal messages are asynchronous and do not provide synchronous child results.
-- External messages execute only after finalization.
-- Failed value-bearing child messages do not imply automatic refund.
-- User value and protocol fee deposits are separate.
-- Fee distributions must be generated from measured profiles and estimated against current network pricing.
-- Appeals use the supported high-level appeal flow and current appeal charge.
-
-## Sources
-
-- [Networks](https://docs.genlayer.com/developers/networks)
-- [First Intelligent Contract](https://docs.genlayer.com/developers/intelligent-contracts/first-contract)
-- [Consensus v0.6 migration](https://docs.genlayer.com/developers/consensus-v06-migration)
-- [GenLayerJS](https://docs.genlayer.com/api-references/genlayer-js)
-- [GenLayerPY](https://docs.genlayer.com/api-references/genlayer-py)
-- [CLI repository and changelog](https://github.com/genlayerlabs/genlayer-cli)
-- [Testing suite](https://github.com/genlayerlabs/genlayer-testing-suite)
+The project is being prepared specifically for Agent Tank. No additional network deployment is treated as a submission requirement unless the actual Agent Tank submission form explicitly requires it.
