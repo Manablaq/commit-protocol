@@ -8,7 +8,7 @@ POLICY_PATH = ROOT / "fee-profiles/commit-v08-policy.json"
 CONTRACT_PATH = ROOT / "contracts/commit.py"
 
 CONTRACT_SHA = (
-    "a298b2697846adbcddf88272a0fbd514778a7fee733fa8b6d6fa489ee973e33b"
+    "e88d1d78ee8f2d373124bbfbc3f0c8d946385a3250fc028f5956fd74762f8c69"
 )
 
 RUNTIME_ARCHIVE_SHA = (
@@ -214,6 +214,7 @@ def test_fee_policy_requires_reproducible_live_evidence():
         "message_shape_changed",
         "network_changed",
         "network_fee_policy_changed",
+        "helper_contract_changed",
     }
 
     assert (
