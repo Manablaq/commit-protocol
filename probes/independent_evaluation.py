@@ -1,4 +1,4 @@
-# { "Depends": "py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng" }
+# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 """Minimal GenLayer consensus probe for independent evidence evaluation.
 
 This is not the production COMMIT contract. It isolates the v0.6 API and
@@ -9,18 +9,18 @@ registered-authority and provenance enforcement first.
 
 import json
 
-import genlayer as gl
+from genlayer import *
 
 
-class IndependentEvaluationProbe(gl.contract.Contract):
+class IndependentEvaluationProbe(gl.Contract):
     last_decision: str
     last_reason_code: str
-    evaluation_count: gl.u256
+    evaluation_count: u256
 
     def __init__(self):
         self.last_decision = "UNSET"
         self.last_reason_code = "UNSET"
-        self.evaluation_count = gl.u256(0)
+        self.evaluation_count = u256(0)
 
     def _read_record(self, url: str) -> dict:
         response = gl.nondet.web.get(url)
@@ -71,7 +71,7 @@ class IndependentEvaluationProbe(gl.contract.Contract):
             raise gl.vm.UserError("invalid consensus decision")
         self.last_decision = result["decision"]
         self.last_reason_code = result["reason_code"]
-        self.evaluation_count = gl.u256(self.evaluation_count + 1)
+        self.evaluation_count = u256(self.evaluation_count + 1)
 
     @gl.public.view
     def state(self) -> dict:

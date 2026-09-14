@@ -8,7 +8,7 @@ POLICY_PATH = ROOT / "fee-profiles/commit-v08-policy.json"
 CONTRACT_PATH = ROOT / "contracts/commit.py"
 
 CONTRACT_SHA = (
-    "a30ad68c62b589edf68d641092a39a0fa4a3a5c19a3c2993cd68cd6f48df0d37"
+    "1872dd0cbf92cc7edfffc4b4ab30f898584cbbf251f9ac32a1553b8b98f54b73"
 )
 
 RUNTIME_ARCHIVE_SHA = (
@@ -67,7 +67,7 @@ def test_fee_policy_identity_is_exact():
 
     assert (
         policy["runtime"]["version"]
-        == "v0.6.0-rc3"
+        == "v0.6.0-rc5"
     )
 
     assert (

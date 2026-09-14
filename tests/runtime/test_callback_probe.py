@@ -34,7 +34,7 @@ def test_request_emits_zero_value_finalized_self_message(probe_vm):
     contract.request("mission-1")
     assert len(messages) == 1
     message = messages[0]
-    import genlayer as gl
+    import genlayer.gl as gl
     assert message["address"] == gl.message.contract_address
     assert message["on"] == "finalized"
     assert message["value"] == 0
@@ -58,7 +58,7 @@ def test_callback_binding_and_replay(probe_vm):
     contract = load_probe(probe_vm)
     capture(probe_vm)
     contract.request("mission-1")
-    import genlayer as gl
+    import genlayer.gl as gl
     # Explicit test impersonation verifies guards, not real finality delivery.
     probe_vm.sender = gl.message.contract_address
     with pytest.raises(Exception, match="request mismatch"):

@@ -4,10 +4,10 @@
   "candidate": "v0.8-reviewer-hard-gates",
   "contract": {
     "path": "contracts/commit.py",
-    "sha256": "a30ad68c62b589edf68d641092a39a0fa4a3a5c19a3c2993cd68cd6f48df0d37"
+    "sha256": "1872dd0cbf92cc7edfffc4b4ab30f898584cbbf251f9ac32a1553b8b98f54b73"
   },
   "runtime": {
-    "version": "v0.6.0-rc3",
+    "version": "v0.6.0-rc5",
     "archive_sha256": "bd30580f911338d5533460eca8ed714dec371de5803c04e41dbb96430aea7b6e"
   },
   "measurement": {

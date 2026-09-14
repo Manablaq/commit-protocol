@@ -1,4 +1,4 @@
-# { "Depends": "py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng" }
+# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 """COMMIT semantic-atomicity coordinator with native-GEN escrow.
 
 The contract binds a mission's intent, evidence, and effect graph; evaluates
@@ -11,13 +11,8 @@ until the network provides an authenticated delivery/non-delivery proof.
 from datetime import datetime, timezone
 import json
 
-import genlayer as gl
-
-Address = gl.Address
-Keccak256 = gl.Keccak256
-TreeMap = gl.storage.TreeMap
-u256 = gl.u256
-_get_contract_at = gl.contract.get_at
+from genlayer import *
+from genlayer.py.keccak import Keccak256
 
 PROTOCOL = "commit"
 REVISION = "0.7.0-reviewable-manifest"
@@ -50,9 +45,9 @@ class _NativeRecipient:
         pass
 
 
-class CommitProtocol(gl.contract.Contract):
-    owner: gl.Address
-    mission_count: gl.u256
+class CommitProtocol(gl.Contract):
+    owner: Address
+    mission_count: u256
     mission_exists: TreeMap[str, bool]
     mission_key: TreeMap[str, str]
     mission_principal: TreeMap[str, Address]
@@ -258,7 +253,7 @@ class CommitProtocol(gl.contract.Contract):
         if not self.authority_exists.get(authority_id, False):
             raise gl.vm.UserError("authority not found")
 
-    def _require_nonzero_address(self, value: gl.Address, label: str) -> None:
+    def _require_nonzero_address(self, value: Address, label: str) -> None:
         if value.as_hex == "0x" + "00" * 20:
             raise gl.vm.UserError(f"{label} cannot be zero")
 
@@ -268,7 +263,7 @@ class CommitProtocol(gl.contract.Contract):
         objective: str,
         policy_digest: str,
         budget: int,
-        refund_beneficiary: gl.Address,
+        refund_beneficiary: Address,
         prepare_deadline: int,
         recovery_deadline: int,
     ) -> str:
@@ -295,7 +290,7 @@ class CommitProtocol(gl.contract.Contract):
         authority_id: str,
         host: str,
         path_prefix: str,
-        issuer_address: gl.Address,
+        issuer_address: Address,
         authority_version: int,
     ) -> None:
         if gl.message.sender_address != self.owner:
@@ -327,7 +322,7 @@ class CommitProtocol(gl.contract.Contract):
         self.authority_active[authority_id] = False
 
     @gl.public.write
-    def authorize_supplier(self, mission_id: str, supplier: gl.Address) -> None:
+    def authorize_supplier(self, mission_id: str, supplier: Address) -> None:
         """Allow one exact supplier address to prepare effects for a mission."""
         self._require_principal(mission_id)
         if self.mission_state[mission_id] != STATE_PREPARING:
@@ -345,7 +340,7 @@ class CommitProtocol(gl.contract.Contract):
             ))
 
     @gl.public.write
-    def revoke_supplier(self, mission_id: str, supplier: gl.Address) -> None:
+    def revoke_supplier(self, mission_id: str, supplier: Address) -> None:
         """Revoke a supplier before sealing, but never rewrite a prepared effect."""
         self._require_principal(mission_id)
         if self.mission_state[mission_id] != STATE_PREPARING:
@@ -544,7 +539,7 @@ class CommitProtocol(gl.contract.Contract):
         objective: str,
         policy_digest: str,
         budget: int,
-        refund_beneficiary: gl.Address,
+        refund_beneficiary: Address,
         prepare_deadline: int,
         recovery_deadline: int,
     ) -> None:
@@ -626,7 +621,7 @@ class CommitProtocol(gl.contract.Contract):
         mission_id: str,
         effect_id: str,
         effect_digest: str,
-        beneficiary: gl.Address,
+        beneficiary: Address,
         value: int,
         expiry: int,
     ) -> None:
@@ -640,7 +635,7 @@ class CommitProtocol(gl.contract.Contract):
         mission_id: str,
         effect_id: str,
         effect_digest: str,
-        beneficiary: gl.Address,
+        beneficiary: Address,
         value: int,
         expiry: int,
         dependency_id: str,
@@ -655,7 +650,7 @@ class CommitProtocol(gl.contract.Contract):
         mission_id: str,
         effect_id: str,
         effect_digest: str,
-        beneficiary: gl.Address,
+        beneficiary: Address,
         value: int,
         expiry: int,
         dependency_id: str,
@@ -1627,7 +1622,7 @@ class CommitProtocol(gl.contract.Contract):
             mission_id
         ] = STATE_DECISION_PENDING
 
-        _get_contract_at(
+        gl.get_contract_at(
             gl.message.contract_address
         ).emit(
             on="finalized"
@@ -1723,11 +1718,11 @@ class CommitProtocol(gl.contract.Contract):
         }
 
     @gl.public.view
-    def get_claimable(self, beneficiary: gl.Address) -> int:
+    def get_claimable(self, beneficiary: Address) -> int:
         return int(self.claimable_balance.get(beneficiary.as_hex, (0)))
 
     @gl.public.view
-    def get_mission_claimable(self, mission_id: str, beneficiary: gl.Address) -> int:
+    def get_mission_claimable(self, mission_id: str, beneficiary: Address) -> int:
         """Return only this beneficiary's entitlement for this mission."""
         if not self.mission_exists.get(mission_id, False):
             raise gl.vm.UserError("mission not found")
@@ -1823,7 +1818,7 @@ class CommitProtocol(gl.contract.Contract):
         if gl.message.sender_address != self.mission_principal[mission_id]:
             raise gl.vm.UserError("principal required")
 
-    def _credit_claimable(self, mission_id: str, beneficiary: gl.Address, amount: int) -> None:
+    def _credit_claimable(self, mission_id: str, beneficiary: Address, amount: int) -> None:
         if amount <= 0:
             return
         claim_key = mission_id + ":" + beneficiary.as_hex
@@ -2463,7 +2458,7 @@ class CommitProtocol(gl.contract.Contract):
         }
 
     @gl.public.view
-    def is_supplier_authorized(self, mission_id: str, supplier: gl.Address) -> bool:
+    def is_supplier_authorized(self, mission_id: str, supplier: Address) -> bool:
         if not self.mission_exists.get(mission_id, False):
             raise gl.vm.UserError("mission not found")
         return self.supplier_authorized.get(mission_id + ":" + supplier.as_hex, False)

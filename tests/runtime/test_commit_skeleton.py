@@ -524,7 +524,7 @@ def test_deactivated_authority_cannot_be_used_for_new_evidence(probe_vm):
 def test_principal_cannot_revoke_its_required_authorization(probe_vm):
     contract = load_contract(probe_vm)
     create_default(contract, probe_vm)
-    import genlayer as gl
+    import genlayer.gl as gl
 
     with pytest.raises(Exception, match="principal cannot be revoked"):
         contract.revoke_supplier("mission-001", gl.message.sender_address)
@@ -576,7 +576,7 @@ def test_create_mission_binds_principal_and_immutable_inputs(probe_vm):
     assert mission["policy_digest"] == DIGEST
     assert mission["policy_rule"] == "all-evidence-and-effects-v1"
     assert mission["intent_digest"] == contract.derive_intent_digest("mission-001")
-    import genlayer as gl
+    import genlayer.gl as gl
     assert mission["intent_digest"] == intent_digest(
         chain_id=int(gl.message.chain_id),
         coordinator=gl.message.contract_address.as_hex,
@@ -1200,7 +1200,7 @@ def test_evaluation_reaches_commit_only_when_all_sources_are_eligible(probe_vm):
     assert mission["evaluation_count"] == 1
     assert probe_vm.run_validator() is True
 
-    import genlayer as gl
+    import genlayer.gl as gl
 
     probe_vm.sender = gl.message.contract_address
     contract.apply_decision("mission-001", mission["decision_nonce"])
@@ -1212,7 +1212,7 @@ def test_finalized_allocation_credits_effect_and_refund_entitlements(probe_vm):
     seal_evaluable_mission(contract, probe_vm, True, True)
     contract.evaluate_mission("mission-001")
     mission = contract.get_mission("mission-001")
-    import genlayer as gl
+    import genlayer.gl as gl
 
     probe_vm.sender = gl.message.contract_address
     contract.apply_decision("mission-001", mission["decision_nonce"])
@@ -1232,7 +1232,7 @@ def test_decision_callback_requires_exact_nonce_and_is_idempotent(probe_vm):
     seal_evaluable_mission(contract, probe_vm, True, True)
     contract.evaluate_mission("mission-001")
     mission = contract.get_mission("mission-001")
-    import genlayer as gl
+    import genlayer.gl as gl
     from gltest.direct import create_address
 
     probe_vm.sender = gl.message.contract_address
@@ -1248,7 +1248,7 @@ def test_recovery_wins_against_a_late_decision_callback(probe_vm):
     seal_evaluable_mission(contract, probe_vm, True, True)
     contract.evaluate_mission("mission-001")
     mission = contract.get_mission("mission-001")
-    import genlayer as gl
+    import genlayer.gl as gl
     from gltest.direct import create_address
 
     probe_vm.warp("2065-01-24T05:21:41Z")
@@ -1273,7 +1273,7 @@ def test_claim_dispatch_consumes_one_entitlement_and_records_withdrawal(probe_vm
     seal_evaluable_mission(contract, probe_vm, True, True)
     contract.evaluate_mission("mission-001")
     mission = contract.get_mission("mission-001")
-    import genlayer as gl
+    import genlayer.gl as gl
     from gltest.direct import create_address
 
     probe_vm.sender = gl.message.contract_address
@@ -1304,7 +1304,7 @@ def test_mission_receipt_binds_the_decision_proof_envelope(probe_vm):
     mission = contract.get_mission("mission-001")
     receipt = contract.get_mission_receipt("mission-001")
 
-    import genlayer as gl
+    import genlayer.gl as gl
 
     assert receipt["receipt_schema"] == "commit-mission-receipt-v2"
     assert receipt["protocol"] == "commit"
@@ -1338,7 +1338,7 @@ def test_evaluation_aborts_when_one_source_is_ineligible(probe_vm):
     assert mission["decision"] == "ABORT"
     assert mission["reason_code"] == "policy_or_source_ineligible"
     assert mission["state"] == "DECISION_PENDING"
-    import genlayer as gl
+    import genlayer.gl as gl
 
     probe_vm.sender = gl.message.contract_address
     contract.apply_decision("mission-001", mission["decision_nonce"])
