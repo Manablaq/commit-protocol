@@ -186,39 +186,88 @@ export function WorkspaceShell() {
   );
 
   return (
-    <main className="workspace-shell">
-      <header className="workspace-topbar">
-        <div className="workspace-brand-row">
-          <Link className="icon-link" href="/" aria-label="Back to COMMIT home">
-            <ArrowLeft size={17} aria-hidden="true" />
-          </Link>
-          <Link className="brand-lockup" href="/">
-            <span className="brand-mark">
-              <CommitMark className="workspace-commit-mark" />
-            </span>
-            <span>COMMIT</span>
-          </Link>
-        </div>
+    <main className="commit-app-shell commit-verify-shell">
+      <header className="commit-app-header commit-verify-header">
+        <Link
+          className="commit-brand"
+          href="/"
+          aria-label="Back to COMMIT home"
+        >
+          <CommitMark className="commit-brand-mark" />
+          <span className="commit-brand-word">
+            COMMIT
+            <small>Application</small>
+          </span>
+        </Link>
 
-        <div className="api-health" data-state={backendStatus}>
-          <span className="network-dot" aria-hidden="true" />
-          <div>
-            <span>Step 7 GET API</span>
-            <strong>{backendStatus}</strong>
-          </div>
-        </div>
+        <nav className="commit-app-nav" aria-label="Application">
+          <Link href="/app#create">Create</Link>
+          <Link href="/app#fund">Fund</Link>
+          <Link href="/app#prepare">Prepare</Link>
+          <Link href="/app#evidence">Evidence</Link>
+          <Link href="/app#seal">Seal</Link>
+          <Link href="/app#resolve">Resolve</Link>
+          <Link href="/app#claim">Claim</Link>
+          <Link href="/verify" aria-current="page">Verify</Link>
+        </nav>
+
+        <Link className="wallet-button commit-verify-back" href="/app#verify">
+          <ArrowLeft size={16} aria-hidden="true" />
+          Back to app
+        </Link>
       </header>
 
-      <section className="workspace-hero">
+      <section className="commit-app-hero commit-verify-hero">
         <div>
-          <p className="eyebrow">Verification center / live protocol</p>
-          <h1>Verify what the protocol decided.</h1>
+          <p className="commit-app-kicker">
+            VERIFICATION CENTER / LIVE PROTOCOL
+          </p>
+          <h1 className="commit-display">
+            Verify what the protocol <span>decided.</span>
+          </h1>
         </div>
-        <p>
-          This is COMMIT&apos;s advanced verification surface. Inspect exact
-          network, contract, transaction, provenance, and finality state
-          without turning the browser into a second protocol authority.
-        </p>
+
+        <div className="commit-app-hero-copy">
+          <p>
+            Inspect the exact deployment, transaction consequence, evidence
+            provenance, and finality state through COMMIT&apos;s certified
+            read surface. Verification stays read-only and never becomes a
+            second protocol authority.
+          </p>
+
+          <div className="commit-app-anchor">
+            <span>Chain {CURRENT_DEPLOYMENT_ANCHOR.chainId}</span>
+            <span>Read only</span>
+            <span>{backendStatus}</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="commit-app-status commit-verify-status">
+        <article>
+          <ShieldCheck size={20} aria-hidden="true" />
+          <span>Deployment</span>
+          <strong>Existing coordinator</strong>
+          <small>{CURRENT_DEPLOYMENT_ANCHOR.networkLabel}</small>
+        </article>
+
+        <article>
+          <Activity size={20} aria-hidden="true" />
+          <span>Finality basis</span>
+          <strong>{CURRENT_DEPLOYMENT_ANCHOR.stateBasis}</strong>
+          <small>
+            {CURRENT_DEPLOYMENT_ANCHOR.deploymentTransactionStatus}
+            {" / "}
+            {CURRENT_DEPLOYMENT_ANCHOR.deploymentExecutionResult}
+          </small>
+        </article>
+
+        <article>
+          <Search size={20} aria-hidden="true" />
+          <span>Read surface</span>
+          <strong>{backendStatus}</strong>
+          <small>No wallet signature / no protocol write</small>
+        </article>
       </section>
 
       <section className="deployment-anchor" aria-label="Current deployment anchor">
@@ -413,6 +462,14 @@ export function WorkspaceShell() {
       </section>
 
       <SemanticGraph />
+
+      <footer className="commit-app-footer commit-verify-footer">
+        <span>COMMIT / VERIFICATION CENTER</span>
+        <Link href="/app#verify">
+          Back to application
+          <ArrowLeft size={14} aria-hidden="true" />
+        </Link>
+      </footer>
     </main>
   );
 }
