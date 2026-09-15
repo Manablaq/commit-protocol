@@ -2,9 +2,21 @@
 
 This file records only the environments relevant to the Agent Tank submission.
 
-## Live proof environment
+## Required current deployment target
 
-COMMIT's live end-to-end proof is on GenLayer Studio Dev:
+For Agent Tank, the current-source deployment target is **Studio Next**:
+
+- RPC: `https://studio-next.genlayer.com/api`
+- Chain ID: `61997`
+- Explorer: `https://explorer-studio-dev.genlayer.com/`
+
+The current coordinator/helper source is not yet successfully deployed there.
+The exact current blocker and nonce-safe diagnostic record are in
+[`STUDIO_NEXT_CHECKPOINT_2026-09-15.md`](./STUDIO_NEXT_CHECKPOINT_2026-09-15.md).
+
+## Historical live proof environment
+
+COMMIT's historical source-matched end-to-end proof is on GenLayer Studio Dev:
 
 - RPC: `https://studio-dev.genlayer.com/api`
 - Chain ID: `61997`
@@ -30,4 +42,7 @@ The current repository source is a later certified checkpoint and is not claimed
 
 ## Agent Tank scope
 
-The project is being prepared specifically for Agent Tank. No additional network deployment is treated as a submission requirement unless the actual Agent Tank submission form explicitly requires it.
+The project is being prepared specifically for Agent Tank. The current-source
+submission target is Studio Next. Historical Studio Dev v0.7 behavior proof is
+preserved as evidence, but it is not represented as the current-source Studio
+Next deployment.

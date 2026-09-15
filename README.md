@@ -32,7 +32,26 @@ COMMIT needs consensus over facts that ordinary deterministic contracts cannot r
 
 ## Agent Tank proof
 
-### Live Studio Dev proof
+### Current Studio Next deployment status
+
+Agent Tank requires the current-source deployment target to be **Studio Next**
+(chain `61997`, RPC `https://studio-next.genlayer.com/api`).
+
+The current coordinator/helper source is **not yet successfully deployed on
+Studio Next**. The latest safe checkpoint is:
+
+- Studio Next RPC reachable: **yes**
+- chain ID `61997`: **confirmed**
+- fee policy RPC: **working**
+- hosted Studio schema/constructor parsing: **working**
+- simple `storage.py` deployment simulation: **failing inside GenVM**
+- actual deployment transaction from the latest UI diagnostic: **none**
+- worker pending nonce after the diagnostic: **67**
+
+No current-source deployment success is claimed. See
+[`docs/STUDIO_NEXT_CHECKPOINT_2026-09-15.md`](./docs/STUDIO_NEXT_CHECKPOINT_2026-09-15.md).
+
+### Historical live Studio Dev proof
 
 The source-matched Studio Dev proof deployment is:
 
@@ -95,7 +114,8 @@ COMMIT is designed around the failure modes that matter when AI consensus can mo
 - [`docs/EVIDENCE_MODEL.md`](./docs/EVIDENCE_MODEL.md) — evidence and consensus model
 - [`docs/ACCOUNTING_MODEL.md`](./docs/ACCOUNTING_MODEL.md) — escrow and conservation
 - [`docs/THREAT_MODEL.md`](./docs/THREAT_MODEL.md) — adversarial analysis
-- [`docs/DEPLOYMENT_LOG_STUDIO_DEV.md`](./docs/DEPLOYMENT_LOG_STUDIO_DEV.md) — live proof
+- [`docs/DEPLOYMENT_LOG_STUDIO_DEV.md`](./docs/DEPLOYMENT_LOG_STUDIO_DEV.md) — historical live proof
+- [`docs/STUDIO_NEXT_CHECKPOINT_2026-09-15.md`](./docs/STUDIO_NEXT_CHECKPOINT_2026-09-15.md) — exact current deployment checkpoint
 - [`tests/`](./tests) — deterministic, runtime, backend, frontend, and E2E verification
 
 ## Reproduce locally

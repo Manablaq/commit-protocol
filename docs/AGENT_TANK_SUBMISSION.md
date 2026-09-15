@@ -8,7 +8,21 @@ This document is the shortest path for an Agent Tank judge or reviewer to unders
 
 COMMIT freezes a mission's economic intent, evidence identities, and proposed effects before semantic adjudication. GenLayer validators evaluate the external evidence. Only a finalized decision can allocate escrowed COMMIT/ABORT settlement rights.
 
-## Live GenLayer proof
+## Current Studio Next deployment status
+
+The required current-source deployment target is Studio Next
+(`https://studio-next.genlayer.com/api`, chain `61997`).
+
+As of 2026-09-15, current-source deployment is **not complete**. The latest
+hosted Studio diagnostic parses the simple `storage.py` schema and constructor,
+but `sim_estimateTransactionFees` fails during simulated GenVM execution. No
+transaction was submitted by that diagnostic and the worker pending nonce
+remained `67`.
+
+Exact checkpoint:
+[`STUDIO_NEXT_CHECKPOINT_2026-09-15.md`](./STUDIO_NEXT_CHECKPOINT_2026-09-15.md).
+
+## Historical live GenLayer proof
 
 - Network: **Studio Dev**
 - Chain ID: `61997`
@@ -67,7 +81,11 @@ The current source checkpoint passed:
 - stateless/view-only helper guards;
 - read-only deployment-envelope qualification.
 
-No later network deployment is required to understand or reproduce the repository's current verification record.
+This certification record is reproducible locally, but it does **not** replace
+the Agent Tank requirement to deploy the current source on Studio Next. The
+current Studio Next attempt is still blocked at simulated GenVM deployment
+execution and has not produced a successful current-source deployment. See
+[`STUDIO_NEXT_CHECKPOINT_2026-09-15.md`](./STUDIO_NEXT_CHECKPOINT_2026-09-15.md).
 
 ## Judge-facing technical claims
 
