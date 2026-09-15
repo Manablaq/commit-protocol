@@ -542,15 +542,15 @@ def test_component_integration_test_contract_exists() -> None:
     )
 
 
-def test_browser_wallet_certification_matches_pinned_sdk_snap_flow() -> None:
+def test_browser_wallet_certification_matches_studio_dev_compatibility_flow() -> None:
     e2e = _read(
         "tests/e2e/product-ui.spec.ts"
     )
     app = _read(
         "components/application/application-shell.tsx"
     )
-    client = _read(
-        "lib/genlayer-browser.ts"
+    connector = _read(
+        "lib/commit-wallet-connection.ts"
     )
 
     _assert_contains_all(
@@ -568,9 +568,21 @@ def test_browser_wallet_certification_matches_pinned_sdk_snap_flow() -> None:
         ),
     )
 
-    assert "MetaMask + GenLayer Snap" in app
-    assert "GenLayer Snap support" in app
-    assert "MetaMask-compatible browser wallet" in client
+    _assert_contains_all(
+        connector,
+        (
+            "wallet_switchEthereumChain",
+            "wallet_addEthereumChain",
+            "4902",
+            "tryEnableOptionalGenLayerSnap",
+            "walletConnectionErrorMessage",
+            "GenLayer Studio-dev (61997)",
+        ),
+    )
+
+    assert "MetaMask / Studio-dev 61997" in app
+    assert "MetaMask + GenLayer Snap" not in app
+    assert "GenLayer Snap support" not in app
 
 
 def test_browser_e2e_contract_exists() -> None:

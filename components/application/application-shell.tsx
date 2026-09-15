@@ -39,12 +39,15 @@ import {
   ClaimMissionFlow,
 } from "@/components/application/claim-mission-flow";
 import {
-  connectCommitWallet,
   preflightCommitWallet,
   STUDIO_DEV_CHAIN_ID,
   type ConnectedCommitWallet,
   type WalletPreflight,
 } from "@/lib/genlayer-browser";
+import {
+  connectCommitWallet,
+  walletConnectionErrorMessage,
+} from "@/lib/commit-wallet-connection";
 import {
   CURRENT_DEPLOYMENT_ANCHOR,
 } from "@/lib/deployment-anchor";
@@ -156,9 +159,9 @@ export function ApplicationShell() {
         null,
       );
       setWalletError(
-        error instanceof Error
-          ? error.message
-          : "Wallet connection failed.",
+        walletConnectionErrorMessage(
+          error,
+        ),
       );
     } finally {
       setConnecting(
@@ -186,7 +189,7 @@ export function ApplicationShell() {
           <a href="#seal">Seal</a>
           <a href="#resolve">Resolve</a>
           <a href="#claim">Claim</a>
-          <Link href="/verify">Verify</Link>
+          <a href="#verify">Verify</a>
         </nav>
 
         {wallet === null ? (
@@ -289,7 +292,7 @@ export function ApplicationShell() {
           </strong>
           <small>
             {walletPreflight === null
-              ? "MetaMask + GenLayer Snap"
+              ? "MetaMask / Studio-dev 61997"
               : `${walletPreflight.balanceGen} GEN available`}
           </small>
         </article>
@@ -330,9 +333,9 @@ export function ApplicationShell() {
             </h2>
             <p className="wallet-gate-copy">
               COMMIT never asks for a private key. Connect an injected
-              MetaMask-compatible wallet with GenLayer Snap support, switch to
-              GenLayer Studio-dev, and review the exact fee quote before the
-              wallet is asked to sign anything.
+              MetaMask-compatible wallet, connect to GenLayer Studio-dev
+              (chain 61997), and review the exact fee quote before the wallet
+              is asked to sign anything.
             </p>
             <button
               className="commit-action commit-action-hot"
@@ -499,7 +502,7 @@ export function ApplicationShell() {
         )}
       </section>
 
-      <section id="activity" className="commit-app-next">
+      <section id="verify" className="commit-app-next">
         <div>
           <p>COMPLETE PROTOCOL LIFECYCLE</p>
           <h2 className="commit-display">
