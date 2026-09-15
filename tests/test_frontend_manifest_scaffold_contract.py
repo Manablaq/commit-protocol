@@ -16,6 +16,7 @@ DEPENDENCY_PREFLIGHT_PACKET_SHA256 = (
 
 
 RUNTIME_DEPENDENCIES = {
+    "genlayer-js": "github:genlayerlabs/genlayer-js#facd9e9dc9a289d0110fe3b5b1a14a2938fe6e01",
     "lucide-react": "1.45.0",
     "motion": "13.1.1",
     "next": "16.3.3",
@@ -302,7 +303,7 @@ def test_typescript_configuration_is_strict() -> None:
 
     assert compiler.get(
         "jsx"
-    ) == "preserve"
+    ) == "react-jsx"
 
 
 def test_tailwind_postcss_configuration_is_bound() -> None:

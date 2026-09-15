@@ -1,13 +1,15 @@
 import {
   expect,
   test,
+  type Page,
 } from "@playwright/test";
 
 const INDEX_FIXTURE = {
   schema: "commit-backend-index-query-v1",
   found: true,
   chain_id: 61997,
-  contract_address: "0x00000000000000000000000000000000000000ab",
+  contract_address:
+    "0x00000000000000000000000000000000000000ab",
   requested_state_basis: "finalized",
   source_record_key: "stage10i-index-record",
   source_payload_digest:
@@ -23,7 +25,7 @@ const INDEX_FIXTURE = {
 };
 
 async function routeHealth(
-  page: import("@playwright/test").Page,
+  page: Page,
 ) {
   await page.route(
     "**/api/v1/health",
@@ -40,112 +42,151 @@ async function routeHealth(
   );
 }
 
-test("index request binds exact identity and renders finality plus provenance", async ({
+async function expectNoHorizontalOverflow(
+  page: Page,
+) {
+  const fits =
+    await page.evaluate(
+      () => (
+        document.documentElement.scrollWidth
+        <= window.innerWidth + 1
+      ),
+    );
+
+  expect(
+    fits,
+  ).toBe(
+    true,
+  );
+}
+
+test("verification index request binds exact identity and renders finality plus provenance", async ({
   page,
 }) => {
-  await routeHealth(page);
+  await routeHealth(
+    page,
+  );
 
   let observedIndexUrl = "";
 
   await page.route(
     "**/api/v1/index?**",
     async (route) => {
-      observedIndexUrl = route.request().url();
+      observedIndexUrl =
+        route.request().url();
 
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify(INDEX_FIXTURE),
+        body: JSON.stringify(
+          INDEX_FIXTURE,
+        ),
       });
     },
   );
 
-  await page.goto("/app");
+  await page.goto(
+    "/verify",
+  );
 
-  await page.getByLabel("Chain ID").fill("61997");
+  await page
+    .getByLabel("Chain ID")
+    .fill("61997");
 
   await page
     .getByLabel("Contract address")
-    .fill("0x00000000000000000000000000000000000000ab");
+    .fill(
+      "0x00000000000000000000000000000000000000ab",
+    );
 
   await page
     .getByLabel("State basis")
     .fill("finalized");
 
   await page
-    .getByRole("button", {
-      name: "Read index",
-    })
+    .getByRole(
+      "button",
+      {
+        name: "Read index",
+      },
+    )
     .click();
 
   await expect
-    .poll(() => observedIndexUrl)
+    .poll(
+      () => observedIndexUrl,
+    )
     .not
     .toBe("");
 
-  const parsed = new URL(
-    observedIndexUrl
-  );
+  const parsed =
+    new URL(
+      observedIndexUrl,
+    );
 
   expect(
-    parsed.pathname
+    parsed.pathname,
   ).toBe(
-    "/api/v1/index"
-  );
-
-  expect(
-    parsed.searchParams.get(
-      "chain_id"
-    )
-  ).toBe(
-    "61997"
+    "/api/v1/index",
   );
 
   expect(
     parsed.searchParams.get(
-      "contract_address"
-    )
+      "chain_id",
+    ),
   ).toBe(
-    "0x00000000000000000000000000000000000000ab"
+    "61997",
   );
 
   expect(
     parsed.searchParams.get(
-      "state_basis"
-    )
+      "contract_address",
+    ),
   ).toBe(
-    "finalized"
+    "0x00000000000000000000000000000000000000ab",
+  );
+
+  expect(
+    parsed.searchParams.get(
+      "state_basis",
+    ),
+  ).toBe(
+    "finalized",
   );
 
   await expect(
     page.getByText(
-      "Finalized / durable"
-    )
+      "Finalized / durable",
+    ),
   ).toBeVisible();
 
   await expect(
     page.getByText(
-      "stage10i-index-record"
-    )
+      "stage10i-index-record",
+    ),
   ).toBeVisible();
 
   await expect(
     page
       .locator(
-        ".provenance-card"
+        ".provenance-card",
       )
       .getByText(
         "stage10i-test-fixture",
         {
           exact: true,
         },
-      )
+      ),
   ).toBeVisible();
 });
 
-test("landing and workspace stay usable without horizontal overflow across responsive viewports", async ({
+test("landing application and verification center stay usable without horizontal overflow", async ({
   page,
 }) => {
+  await routeHealth(
+    page,
+  );
+
   const viewports = [
     {
       width: 1440,
@@ -166,10 +207,12 @@ test("landing and workspace stay usable without horizontal overflow across respo
     of viewports
   ) {
     await page.setViewportSize(
-      viewport
+      viewport,
     );
 
-    await page.goto("/");
+    await page.goto(
+      "/",
+    );
 
     await expect(
       page.getByRole(
@@ -177,9 +220,9 @@ test("landing and workspace stay usable without horizontal overflow across respo
         {
           level: 1,
           name:
-            /Consequences should follow exact protocol truth/i,
+            /MAKE THE\s*COMMIT\.\s*PROVE THE\s*OUTCOME\./i,
         },
-      )
+      ),
     ).toBeVisible();
 
     await expect(
@@ -187,70 +230,92 @@ test("landing and workspace stay usable without horizontal overflow across respo
         "link",
         {
           name:
-            "Open protocol workspace",
+            "Launch the application",
         },
-      )
+      ),
     ).toBeVisible();
 
-    const landingFits =
-      await page.evaluate(
-        () => (
-          document.documentElement.scrollWidth
-          <= window.innerWidth + 1
-        ),
-      );
-
-    expect(
-      landingFits
-    ).toBe(
-      true
-    );
-
-    await routeHealth(
-      page
+    await expectNoHorizontalOverflow(
+      page,
     );
 
     await page.goto(
-      "/app"
+      "/app",
     );
 
     await expect(
-      page.getByLabel(
-        "Chain ID"
-      )
+      page.getByRole(
+        "heading",
+        {
+          level: 1,
+          name:
+            /CREATE\.\s*COMMIT\.\s*VERIFY\./i,
+        },
+      ),
+    ).toBeVisible();
+
+    await expect(
+      page
+        .getByRole(
+          "button",
+          {
+            name:
+              /connect wallet/i,
+          },
+        )
+        .first(),
+    ).toBeVisible();
+
+    await expectNoHorizontalOverflow(
+      page,
+    );
+
+    await page.goto(
+      "/verify",
+    );
+
+    await expect(
+      page.getByRole(
+        "heading",
+        {
+          level: 1,
+          name:
+            "Verify what the protocol decided.",
+        },
+      ),
     ).toBeVisible();
 
     await expect(
       page.getByLabel(
-        "GenLayer transaction ID"
-      )
+        "Chain ID",
+      ),
     ).toBeVisible();
 
-    const workspaceFits =
-      await page.evaluate(
-        () => (
-          document.documentElement.scrollWidth
-          <= window.innerWidth + 1
-        ),
-      );
+    await expect(
+      page.getByLabel(
+        "GenLayer transaction ID",
+      ),
+    ).toBeVisible();
 
-    expect(
-      workspaceFits
-    ).toBe(
-      true
+    await expectNoHorizontalOverflow(
+      page,
     );
   }
 });
 
-test("workspace exposes semantic landmarks labels and keyboard focus", async ({
+test("verification center exposes semantic landmarks labels and keyboard focus", async ({
   page,
 }) => {
-  await routeHealth(page);
+  await routeHealth(
+    page,
+  );
 
-  await page.goto("/app");
+  await page.goto(
+    "/verify",
+  );
 
   await expect(
-    page.locator("main")
+    page.locator("main"),
   ).toHaveCount(1);
 
   await expect(
@@ -259,43 +324,43 @@ test("workspace exposes semantic landmarks labels and keyboard focus", async ({
       {
         level: 1,
       },
-    )
+    ),
   ).toHaveCount(1);
 
   await expect(
     page.getByLabel(
-      "Chain ID"
-    )
+      "Chain ID",
+    ),
   ).toHaveAttribute(
     "required",
-    ""
+    "",
   );
 
   await expect(
     page.getByLabel(
-      "Contract address"
-    )
+      "Contract address",
+    ),
   ).toHaveAttribute(
     "required",
-    ""
+    "",
   );
 
   await expect(
     page.getByLabel(
-      "State basis"
-    )
+      "State basis",
+    ),
   ).toHaveAttribute(
     "required",
-    ""
+    "",
   );
 
   await expect(
     page.getByLabel(
-      "GenLayer transaction ID"
-    )
+      "GenLayer transaction ID",
+    ),
   ).toHaveAttribute(
     "required",
-    ""
+    "",
   );
 
   await expect(
@@ -304,7 +369,7 @@ test("workspace exposes semantic landmarks labels and keyboard focus", async ({
       {
         name: "Read index",
       },
-    )
+    ),
   ).toBeVisible();
 
   await expect(
@@ -313,11 +378,11 @@ test("workspace exposes semantic landmarks labels and keyboard focus", async ({
       {
         name: "Read transaction",
       },
-    )
+    ),
   ).toBeVisible();
 
   await page.keyboard.press(
-    "Tab"
+    "Tab",
   );
 
   const firstFocusedLabel =
@@ -325,16 +390,16 @@ test("workspace exposes semantic landmarks labels and keyboard focus", async ({
       () => (
         document.activeElement
           ?.getAttribute(
-            "aria-label"
+            "aria-label",
           )
         ?? ""
       ),
     );
 
   expect(
-    firstFocusedLabel
+    firstFocusedLabel,
   ).toBe(
-    "Back to COMMIT home"
+    "Back to COMMIT home",
   );
 });
 
@@ -346,82 +411,175 @@ test("reduced motion and core foreground tokens meet deterministic accessibility
       "reduce",
   });
 
-  await page.goto("/");
+  await page.goto(
+    "/",
+  );
 
   const reducedMotion =
     await page.evaluate(
       () => (
         window.matchMedia(
-          "(prefers-reduced-motion: reduce)"
+          "(prefers-reduced-motion: reduce)",
         ).matches
       ),
     );
 
   expect(
-    reducedMotion
+    reducedMotion,
   ).toBe(
-    true
+    true,
   );
 
-  const motionDurations =
+  const transitionDurations =
     await page.evaluate(
       () => {
-        const ring =
+        const navCta =
           document.querySelector(
-            ".ring-two"
+            ".commit-nav-cta",
           );
 
         const action =
           document.querySelector(
-            ".primary-action"
+            ".commit-action",
           );
 
         if (
-          ring === null
+          navCta === null
           || action === null
         ) {
           throw new Error(
-            "motion targets missing"
+            "current reduced-motion targets missing",
           );
         }
 
-        return {
-          animationDuration:
-            getComputedStyle(
-              ring
-            ).animationDuration,
-
-          transitionDuration:
-            getComputedStyle(
-              action
-            ).transitionDuration,
-        };
+        return [
+          getComputedStyle(
+            navCta,
+          ).transitionDuration,
+          getComputedStyle(
+            action,
+          ).transitionDuration,
+        ];
       },
     );
 
-  expect(
-    parseFloat(
-      motionDurations.animationDuration
-    )
-  ).toBeLessThanOrEqual(
-    0.001
-  );
+  for (
+    const duration
+    of transitionDurations
+  ) {
+    const seconds =
+      duration
+        .split(",")
+        .map(
+          (part) => parseFloat(
+            part.trim(),
+          ),
+        );
 
-  expect(
-    parseFloat(
-      motionDurations.transitionDuration
-    )
-  ).toBeLessThanOrEqual(
-    0.001
-  );
+    for (
+      const value
+      of seconds
+    ) {
+      expect(
+        Number.isFinite(value),
+      ).toBe(
+        true,
+      );
+
+      expect(
+        value,
+      ).toBeLessThanOrEqual(
+        0.001,
+      );
+    }
+  }
 
   const ratios =
     await page.evaluate(
       () => {
         const style =
           getComputedStyle(
-            document.documentElement
+            document.documentElement,
           );
+
+        function parseColor(
+          raw: string,
+        ): [
+          number,
+          number,
+          number,
+        ] {
+          const value =
+            raw.trim();
+
+          if (
+            /^#[0-9a-fA-F]{3}$/.test(
+              value,
+            )
+          ) {
+            return [
+              parseInt(
+                value[1] + value[1],
+                16,
+              ),
+              parseInt(
+                value[2] + value[2],
+                16,
+              ),
+              parseInt(
+                value[3] + value[3],
+                16,
+              ),
+            ];
+          }
+
+          if (
+            /^#[0-9a-fA-F]{6}$/.test(
+              value,
+            )
+          ) {
+            return [
+              parseInt(
+                value.slice(1, 3),
+                16,
+              ),
+              parseInt(
+                value.slice(3, 5),
+                16,
+              ),
+              parseInt(
+                value.slice(5, 7),
+                16,
+              ),
+            ];
+          }
+
+          if (
+            /^rgba?\(/i.test(
+              value,
+            )
+          ) {
+            const channels =
+              value.match(
+                /-?\d*\.?\d+/g,
+              );
+
+            if (
+              channels !== null
+              && channels.length >= 3
+            ) {
+              return [
+                Number(channels[0]),
+                Number(channels[1]),
+                Number(channels[2]),
+              ];
+            }
+          }
+
+          throw new Error(
+            `Unsupported or empty CSS color: ${raw}`,
+          );
+        }
 
         function channel(
           value: number,
@@ -442,40 +600,15 @@ test("reduced motion and core foreground tokens meet deterministic accessibility
         }
 
         function luminance(
-          hex: string,
+          color: string,
         ) {
-          const normalized =
-            hex.trim().replace(
-              "#",
-              ""
-            );
-
-          const red =
-            parseInt(
-              normalized.slice(
-                0,
-                2,
-              ),
-              16,
-            );
-
-          const green =
-            parseInt(
-              normalized.slice(
-                2,
-                4,
-              ),
-              16,
-            );
-
-          const blue =
-            parseInt(
-              normalized.slice(
-                4,
-                6,
-              ),
-              16,
-            );
+          const [
+            red,
+            green,
+            blue,
+          ] = parseColor(
+            color,
+          );
 
           return (
             0.2126 * channel(red)
@@ -490,24 +623,24 @@ test("reduced motion and core foreground tokens meet deterministic accessibility
         ) {
           const first =
             luminance(
-              foreground
+              foreground,
             );
 
           const second =
             luminance(
-              background
+              background,
             );
 
           const light =
             Math.max(
               first,
-              second
+              second,
             );
 
           const dark =
             Math.min(
               first,
-              second
+              second,
             );
 
           return (
@@ -518,7 +651,7 @@ test("reduced motion and core foreground tokens meet deterministic accessibility
 
         const background =
           style.getPropertyValue(
-            "--background"
+            "--background",
           );
 
         const tokens = [
@@ -537,26 +670,39 @@ test("reduced motion and core foreground tokens meet deterministic accessibility
               token,
               contrast(
                 style.getPropertyValue(
-                  token
+                  token,
                 ),
                 background,
               ),
             ],
-          )
+          ),
         );
       },
     );
 
   for (
-    const ratio
-    of Object.values(
-      ratios
+    const [
+      token,
+      ratio,
+    ]
+    of Object.entries(
+      ratios,
     )
   ) {
     expect(
-      ratio
+      Number.isFinite(
+        ratio,
+      ),
+      `${token} contrast must be finite`,
+    ).toBe(
+      true,
+    );
+
+    expect(
+      ratio,
+      `${token} contrast must meet WCAG AA`,
     ).toBeGreaterThanOrEqual(
-      4.5
+      4.5,
     );
   }
 });

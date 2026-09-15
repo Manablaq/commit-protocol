@@ -3,7 +3,6 @@
 import {
   Activity,
   ArrowLeft,
-  Braces,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -21,12 +20,14 @@ import {
   readTransaction,
   type ApiJson,
 } from "@/lib/api";
+import { CURRENT_DEPLOYMENT_ANCHOR } from "@/lib/deployment-anchor";
 import { FinalityCard } from "@/components/workspace/finality-card";
 import { IndexOverview } from "@/components/workspace/index-overview";
 import { ProvenanceCard } from "@/components/workspace/provenance-card";
 import { SemanticGraph } from "@/components/workspace/semantic-graph";
 import { StateBoundary } from "@/components/workspace/state-boundary";
 import { TransactionInspector } from "@/components/workspace/transaction-inspector";
+import { CommitMark } from "@/components/brand/commit-mark";
 
 function errorMessage(value: unknown): string {
   if (value instanceof Error) {
@@ -72,14 +73,22 @@ export function WorkspaceShell() {
   const [health, setHealth] = useState<ApiJson | null>(null);
   const [healthError, setHealthError] = useState<string | null>(null);
 
-  const [chainId, setChainId] = useState("");
-  const [contractAddress, setContractAddress] = useState("");
-  const [stateBasis, setStateBasis] = useState("");
+  const [chainId, setChainId] = useState<string>(
+    CURRENT_DEPLOYMENT_ANCHOR.chainId,
+  );
+  const [contractAddress, setContractAddress] = useState<string>(
+    CURRENT_DEPLOYMENT_ANCHOR.contractAddress,
+  );
+  const [stateBasis, setStateBasis] = useState<string>(
+    CURRENT_DEPLOYMENT_ANCHOR.stateBasis,
+  );
   const [indexState, setIndexState] = useState<ApiJson | null>(null);
   const [indexLoading, setIndexLoading] = useState(false);
   const [indexError, setIndexError] = useState<string | null>(null);
 
-  const [transactionId, setTransactionId] = useState("");
+  const [transactionId, setTransactionId] = useState<string>(
+    CURRENT_DEPLOYMENT_ANCHOR.transactionId,
+  );
   const [transactionState, setTransactionState] = useState<ApiJson | null>(null);
   const [transactionLoading, setTransactionLoading] = useState(false);
   const [transactionError, setTransactionError] = useState<string | null>(null);
@@ -185,7 +194,7 @@ export function WorkspaceShell() {
           </Link>
           <Link className="brand-lockup" href="/">
             <span className="brand-mark">
-              <Braces size={16} aria-hidden="true" />
+              <CommitMark className="workspace-commit-mark" />
             </span>
             <span>COMMIT</span>
           </Link>
@@ -202,14 +211,37 @@ export function WorkspaceShell() {
 
       <section className="workspace-hero">
         <div>
-          <p className="eyebrow">Protocol intelligence / read only</p>
-          <h1>Inspect semantic truth without becoming its authority.</h1>
+          <p className="eyebrow">Verification center / live protocol</p>
+          <h1>Verify what the protocol decided.</h1>
         </div>
         <p>
-          Supply an exact network, contract, finality basis, or transaction
-          identity. COMMIT renders the certified backend projection as-is and
-          keeps provenance and finality boundaries visible.
+          This is COMMIT&apos;s advanced verification surface. Inspect exact
+          network, contract, transaction, provenance, and finality state
+          without turning the browser into a second protocol authority.
         </p>
+      </section>
+
+      <section className="deployment-anchor" aria-label="Current deployment anchor">
+        <div>
+          <span>Current source-matched deployment</span>
+          <strong>{CURRENT_DEPLOYMENT_ANCHOR.networkLabel}</strong>
+        </div>
+        <div>
+          <span>Chain</span>
+          <strong>{CURRENT_DEPLOYMENT_ANCHOR.chainId}</strong>
+        </div>
+        <div className="deployment-anchor-wide">
+          <span>Coordinator</span>
+          <strong>{CURRENT_DEPLOYMENT_ANCHOR.contractAddress}</strong>
+        </div>
+        <div>
+          <span>Deployment tx</span>
+          <strong>{CURRENT_DEPLOYMENT_ANCHOR.deploymentTransactionStatus}</strong>
+        </div>
+        <div>
+          <span>Execution</span>
+          <strong>{CURRENT_DEPLOYMENT_ANCHOR.deploymentExecutionResult}</strong>
+        </div>
       </section>
 
       <section className="query-deck">

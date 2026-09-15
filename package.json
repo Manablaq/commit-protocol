@@ -18,6 +18,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "genlayer-js": "github:genlayerlabs/genlayer-js#facd9e9dc9a289d0110fe3b5b1a14a2938fe6e01",
     "lucide-react": "1.45.0",
     "motion": "13.1.1",
     "next": "16.3.3",
@@ -40,5 +41,8 @@
     "tailwindcss": "4.3.3",
     "typescript": "6.0.3",
     "vitest": "5.0.0"
+  },
+  "allowScripts": {
+    "github:genlayerlabs/genlayer-js#facd9e9dc9a289d0110fe3b5b1a14a2938fe6e01": true
   }
 }

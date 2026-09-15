@@ -44,6 +44,8 @@ _INDEX_QUERY_FIELDS = (
     "state_basis",
 )
 
+_VERCEL_ROUTE_CAPTURE_KEY = "1"
+
 
 class SnapshotStore(
     Protocol
@@ -82,15 +84,60 @@ def _invalid_query_response():
     )
 
 
+def _public_query_items(
+    request: Request,
+) -> list[tuple[str, str]]:
+    items = list(
+        request.query_params.multi_items()
+    )
+
+    prefix = (
+        API_PREFIX
+        + "/"
+    )
+    path = request.url.path
+
+    if not path.startswith(
+        prefix
+    ):
+        return items
+
+    route_suffix = path[
+        len(prefix):
+    ]
+
+    normalized = []
+    route_capture_removed = False
+
+    for key, value in items:
+        if (
+            not route_capture_removed
+            and key
+            == _VERCEL_ROUTE_CAPTURE_KEY
+            and value
+            == route_suffix
+        ):
+            route_capture_removed = True
+            continue
+
+        normalized.append(
+            (
+                key,
+                value,
+            )
+        )
+
+    return normalized
+
+
 def _has_exact_query_shape(
     request: Request,
     *,
     expected: tuple[str, ...],
 ) -> bool:
-    items = list(
-        request.query_params.multi_items()
+    items = _public_query_items(
+        request
     )
-
     keys = [
         key
         for key, _value in items

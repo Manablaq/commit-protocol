@@ -12,3 +12,7 @@ dist/
 coverage/
 artifacts/*.json
 !artifacts/.gitkeep
+tsconfig.tsbuildinfo
+.next/
+test-results/
+playwright-report/

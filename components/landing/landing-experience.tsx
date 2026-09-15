@@ -3,189 +3,297 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  Braces,
   Fingerprint,
   GitBranch,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
 import { motion } from "motion/react";
+import { CommitMark } from "@/components/brand/commit-mark";
 
-const principles = [
+const protocolPath = [
+  {
+    number: "01",
+    eyebrow: "Create",
+    title: "Define the mission",
+    copy:
+      "Start from a precise objective, policy boundary, budget, beneficiary, and recovery window.",
+  },
+  {
+    number: "02",
+    eyebrow: "Bind",
+    title: "Anchor real evidence",
+    copy:
+      "Register authority-bound records and preserve provenance before any consequential decision.",
+  },
+  {
+    number: "03",
+    eyebrow: "Decide",
+    title: "Let consensus resolve meaning",
+    copy:
+      "Track GenLayer consensus without collapsing provisional acceptance into durable finality.",
+  },
+  {
+    number: "04",
+    eyebrow: "Prove",
+    title: "Verify the outcome",
+    copy:
+      "Keep finality, evidence lineage, and application consequence visible after the transaction lands.",
+  },
+] as const;
+
+const trustPoints = [
   {
     icon: Fingerprint,
-    eyebrow: "Evidence",
-    title: "Provenance before persuasion",
-    copy:
-      "Every consequential view keeps its source identity and digest visible instead of hiding the evidence boundary.",
+    title: "Evidence bound",
+    copy: "Authority, identity, freshness, and digest stay attached to consequential state.",
   },
   {
     icon: GitBranch,
-    eyebrow: "Consensus",
-    title: "Meaning before execution",
-    copy:
-      "COMMIT follows the semantic path from mission intent through evidence, decision, and consequence.",
+    title: "Consensus legible",
+    copy: "Mission intent, evidence, decision, and consequence remain one inspectable semantic path.",
   },
   {
     icon: ShieldCheck,
-    eyebrow: "Finality",
-    title: "Accepted is not durable",
-    copy:
-      "Provisional acceptance and finalized durable state remain visually and semantically distinct.",
+    title: "Finality explicit",
+    copy: "Accepted and finalized are intentionally separate states across the product.",
   },
 ] as const;
 
 export function LandingExperience() {
   return (
-    <main className="landing-shell">
-      <section className="landing-hero">
-        <div className="ambient ambient-one" aria-hidden="true" />
-        <div className="ambient ambient-two" aria-hidden="true" />
-        <div className="protocol-grid" aria-hidden="true" />
+    <main className="commit-landing">
+      <section className="commit-hero">
+        <div className="commit-grid" aria-hidden="true" />
+        <div className="commit-angle angle-one" aria-hidden="true" />
+        <div className="commit-angle angle-two" aria-hidden="true" />
+        <div className="commit-angle angle-three" aria-hidden="true" />
 
         <motion.nav
-          className="topline"
-          initial={{ opacity: 0, y: -12 }}
+          className="commit-nav"
+          initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.45 }}
           aria-label="Primary"
         >
-          <Link className="brand-lockup" href="/">
-            <span className="brand-mark">
-              <Braces size={16} aria-hidden="true" />
+          <Link className="commit-brand" href="/">
+            <CommitMark className="commit-brand-mark" />
+            <span className="commit-brand-word">
+              COMMIT
+              <small>Semantic Atomicity</small>
             </span>
-            <span>COMMIT</span>
           </Link>
 
-          <div className="topline-meta">
-            <span className="network-dot" aria-hidden="true" />
-            <span>Read-only protocol intelligence</span>
+          <div className="commit-nav-links">
+            <a href="#product">Product</a>
+            <a href="#protocol">How it works</a>
+            <Link href="/verify">Verify</Link>
           </div>
+
+          <Link className="commit-nav-cta" href="/app">
+            Launch COMMIT
+            <ArrowRight size={16} aria-hidden="true" />
+          </Link>
         </motion.nav>
 
-        <div className="hero-layout">
+        <div className="commit-hero-layout">
           <motion.div
-            className="hero-copy"
-            initial={{ opacity: 0, y: 28 }}
+            className="commit-hero-copy"
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.72, delay: 0.06 }}
+            transition={{ duration: 0.65, delay: 0.05 }}
           >
-            <div className="hero-kicker">
+            <div className="commit-kicker">
               <Sparkles size={15} aria-hidden="true" />
-              Semantic Atomicity
+              GenLayer / Semantic Atomicity
             </div>
 
-            <h1>
-              Consequences should follow
-              <span> exact protocol truth.</span>
+            <h1 className="commit-display">
+              MAKE THE
+              <span>COMMIT.</span>
+              PROVE THE
+              <em>OUTCOME.</em>
             </h1>
 
-            <p className="hero-lede">
-              COMMIT is a provenance-first interface for intelligent
-              transactions. It makes mission state, evidence lineage,
-              consensus status, and finality legible without reconstructing
-              protocol truth in the browser.
+            <p className="commit-hero-lede">
+              COMMIT turns protocol truth into an application people can
+              understand: define the mission, bind evidence, follow consensus,
+              and verify durable consequence without losing provenance.
             </p>
 
-            <div className="hero-actions">
-              <Link className="primary-action" href="/app">
-                Open protocol workspace
-                <ArrowRight size={17} aria-hidden="true" />
+            <div className="commit-hero-actions">
+              <Link className="commit-action commit-action-hot" href="/app">
+                Launch the application
+                <ArrowRight size={18} aria-hidden="true" />
               </Link>
-
-              <a className="secondary-action" href="#semantic-flow">
-                See the semantic path
+              <a className="commit-action commit-action-ghost" href="#protocol">
+                See the protocol path
               </a>
+            </div>
+
+            <div className="commit-proof-strip" aria-label="Protocol anchors">
+              <div>
+                <span>Network</span>
+                <strong>GenLayer · 61997</strong>
+              </div>
+              <div>
+                <span>State model</span>
+                <strong>Finality explicit</strong>
+              </div>
+              <div>
+                <span>Evidence</span>
+                <strong>Provenance preserved</strong>
+              </div>
             </div>
           </motion.div>
 
           <motion.div
-            className="hero-instrument"
-            initial={{ opacity: 0, scale: 0.97, y: 18 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.75, delay: 0.15 }}
-            aria-label="Semantic atomicity model"
+            className="commit-hero-art"
+            initial={{ opacity: 0, x: 34 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.72, delay: 0.12 }}
+            aria-label="COMMIT protocol lifecycle"
           >
-            <div className="instrument-header">
-              <span>Protocol truth surface</span>
-              <span className="instrument-live">
-                <span className="network-dot" aria-hidden="true" />
-                Authority: Step 7 GET API
-              </span>
-            </div>
+            <div className="commit-poster">
+              <div className="poster-noise" aria-hidden="true" />
+              <div className="poster-slash poster-slash-hot" aria-hidden="true" />
+              <div className="poster-slash poster-slash-cool" aria-hidden="true" />
 
-            <div className="instrument-core">
-              <div className="core-ring ring-one" />
-              <div className="core-ring ring-two" />
-              <div className="core-ring ring-three" />
-              <div className="core-node">
-                <Braces size={23} aria-hidden="true" />
-                <strong>COMMIT</strong>
-                <span>semantic boundary</span>
+              <div className="poster-topline">
+                <span>LIVE PROTOCOL</span>
+                <span>FINALITY / EVIDENCE / CONSEQUENCE</span>
               </div>
 
-              <span className="orbit-label orbit-mission">Mission</span>
-              <span className="orbit-label orbit-evidence">Evidence</span>
-              <span className="orbit-label orbit-consensus">Consensus</span>
-              <span className="orbit-label orbit-finality">Finality</span>
-            </div>
+              <div className="poster-mark-wrap">
+                <CommitMark className="poster-mark" />
+              </div>
 
-            <div className="instrument-footer">
-              <div>
-                <span>Browser authority</span>
-                <strong>Read only</strong>
+              <div className="poster-type" aria-hidden="true">
+                <span>C</span>
+                <span>O</span>
+                <span>M</span>
+                <span>M</span>
+                <span>I</span>
+                <span>T</span>
               </div>
-              <div>
-                <span>Finality model</span>
-                <strong>Explicit</strong>
+
+              <div className="poster-flow">
+                <div>
+                  <span>01</span>
+                  <strong>MISSION</strong>
+                  <small>Intent</small>
+                </div>
+                <div>
+                  <span>02</span>
+                  <strong>EVIDENCE</strong>
+                  <small>Authority</small>
+                </div>
+                <div>
+                  <span>03</span>
+                  <strong>CONSENSUS</strong>
+                  <small>Meaning</small>
+                </div>
+                <div>
+                  <span>04</span>
+                  <strong>FINALITY</strong>
+                  <small>Consequence</small>
+                </div>
               </div>
-              <div>
-                <span>Provenance</span>
-                <strong>Preserved</strong>
+
+              <div className="poster-footer">
+                <span>COMMIT / 0.7</span>
+                <span>PROTOCOL TRUTH, MADE LEGIBLE</span>
               </div>
             </div>
           </motion.div>
+        </div>
+
+        <div className="commit-scroll-cue" aria-hidden="true">
+          <span>SCROLL TO ENTER</span>
+          <i />
         </div>
       </section>
 
-      <section className="principles-section" id="semantic-flow">
-        <div className="section-heading">
-          <p className="eyebrow">One semantic transaction</p>
-          <h2>From intent to consequence, without collapsing the truth.</h2>
+      <section className="commit-product" id="product">
+        <div className="commit-section-heading">
+          <p>THE PRODUCT</p>
+          <h2 className="commit-display">
+            NOT AN EXPLORER.
+            <span>A COMPLETE PROTOCOL EXPERIENCE.</span>
+          </h2>
+          <p className="commit-section-copy">
+            The verification surface remains available for power users, but it is no longer the whole product. COMMIT now supports the real user journey: create, fund, prepare, bind evidence, seal, resolve, claim, and verify.
+          </p>
         </div>
 
-        <div className="principle-grid">
-          {principles.map((principle, index) => {
-            const Icon = principle.icon;
+        <div className="commit-trust-grid">
+          {trustPoints.map((point, index) => {
+            const Icon = point.icon;
 
             return (
               <motion.article
-                className="principle-card"
-                key={principle.title}
-                initial={{ opacity: 0, y: 22 }}
+                className="commit-trust-card"
+                key={point.title}
+                initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.25 }}
-                transition={{ duration: 0.45, delay: index * 0.06 }}
+                transition={{ duration: 0.42, delay: index * 0.06 }}
               >
-                <div className="principle-icon">
-                  <Icon size={18} aria-hidden="true" />
-                </div>
-                <p>{principle.eyebrow}</p>
-                <h3>{principle.title}</h3>
-                <span>{principle.copy}</span>
+                <div className="commit-card-index">0{index + 1}</div>
+                <Icon size={22} aria-hidden="true" />
+                <h3>{point.title}</h3>
+                <p>{point.copy}</p>
               </motion.article>
             );
           })}
         </div>
+      </section>
 
-        <div className="landing-cta">
-          <div>
-            <p className="eyebrow">Inspect the live read surface</p>
-            <h2>Bring your exact chain, contract, and transaction identity.</h2>
-          </div>
-          <Link className="primary-action" href="/app">
-            Enter workspace
-            <ArrowRight size={17} aria-hidden="true" />
+      <section className="commit-protocol" id="protocol">
+        <div className="commit-protocol-heading">
+          <p>THE PATH</p>
+          <h2 className="commit-display">
+            FROM INTENT
+            <span>TO CONSEQUENCE.</span>
+          </h2>
+        </div>
+
+        <div className="commit-path">
+          {protocolPath.map((step, index) => (
+            <motion.article
+              className="commit-path-step"
+              key={step.number}
+              initial={{ opacity: 0, x: index % 2 === 0 ? -24 : 24 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ duration: 0.45, delay: index * 0.05 }}
+            >
+              <span className="commit-path-no">{step.number}</span>
+              <div>
+                <p>{step.eyebrow}</p>
+                <h3>{step.title}</h3>
+                <span>{step.copy}</span>
+              </div>
+            </motion.article>
+          ))}
+        </div>
+      </section>
+
+      <section className="commit-final-cta">
+        <div className="commit-final-copy">
+          <p>VERIFICATION CENTER</p>
+          <h2 className="commit-display">
+            SEE WHAT
+            <span>THE PROTOCOL KNOWS.</span>
+          </h2>
+        </div>
+        <div className="commit-final-actions">
+          <p>
+            Inspect the current live deployment, provenance, transaction consequence, and finality, then move into the complete transaction application built on the same frozen coordinator.
+          </p>
+          <Link className="commit-action commit-action-hot" href="/verify">
+            Open verification center
+            <ArrowRight size={18} aria-hidden="true" />
           </Link>
         </div>
       </section>

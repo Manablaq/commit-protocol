@@ -116,6 +116,160 @@ class BackendServiceApiIntegrityTests(
             "unknown query parameter reached storage",
         )
 
+    def test_matching_vercel_route_capture_is_not_public_query_input(
+        self,
+    ):
+        api = _api()
+
+        store = FIXTURE.FakeStore(
+            FIXTURE._index_snapshot()
+        )
+
+        app = api.create_app(
+            store=store
+        )
+
+        query = urlencode(
+            [
+                (
+                    "chain_id",
+                    str(
+                        FIXTURE.CHAIN_ID
+                    ),
+                ),
+                (
+                    "contract_address",
+                    FIXTURE.CONTRACT_ADDRESS,
+                ),
+                (
+                    "state_basis",
+                    "FINALIZED",
+                ),
+                (
+                    "1",
+                    "index",
+                ),
+            ]
+        )
+
+        status, body = FIXTURE._request(
+            app,
+            path="/api/v1/index",
+            query=query,
+        )
+
+        self.assertEqual(
+            status,
+            200,
+        )
+        self.assertIs(
+            body[
+                "found"
+            ],
+            True,
+        )
+        self.assertEqual(
+            store.loads,
+            1,
+        )
+
+    def test_matching_vercel_transaction_capture_is_not_public_query_input(
+        self,
+    ):
+        api = _api()
+
+        store = FIXTURE.FakeStore(
+            FIXTURE._transaction_snapshot()
+        )
+
+        app = api.create_app(
+            store=store
+        )
+
+        suffix = (
+            "transactions/"
+            + FIXTURE.TX_ID
+        )
+
+        status, body = FIXTURE._request(
+            app,
+            path=(
+                "/api/v1/"
+                + suffix
+            ),
+            query=urlencode(
+                {
+                    "1": suffix,
+                }
+            ),
+        )
+
+        self.assertEqual(
+            status,
+            200,
+        )
+        self.assertIs(
+            body[
+                "found"
+            ],
+            True,
+        )
+        self.assertEqual(
+            store.loads,
+            1,
+        )
+
+    def test_mismatched_route_capture_is_rejected_before_storage_read(
+        self,
+    ):
+        api = _api()
+
+        store = FIXTURE.FakeStore(
+            FIXTURE._index_snapshot()
+        )
+
+        app = api.create_app(
+            store=store
+        )
+
+        query = urlencode(
+            [
+                (
+                    "chain_id",
+                    str(
+                        FIXTURE.CHAIN_ID
+                    ),
+                ),
+                (
+                    "contract_address",
+                    FIXTURE.CONTRACT_ADDRESS,
+                ),
+                (
+                    "state_basis",
+                    "FINALIZED",
+                ),
+                (
+                    "1",
+                    "wrong-route",
+                ),
+            ]
+        )
+
+        status, _body = FIXTURE._request(
+            app,
+            path="/api/v1/index",
+            query=query,
+        )
+
+        self.assertEqual(
+            status,
+            422,
+        )
+        self.assertEqual(
+            store.loads,
+            0,
+        )
+
     def test_duplicate_index_state_basis_is_rejected_before_storage_read(
         self,
     ):

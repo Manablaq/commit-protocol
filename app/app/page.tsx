@@ -1,5 +1,7 @@
-import { WorkspaceShell } from "@/components/workspace/workspace-shell";
+import {
+  ApplicationShell,
+} from "@/components/application/application-shell";
 
-export default function ProtocolWorkspacePage() {
-  return <WorkspaceShell />;
+export default function CommitApplicationPage() {
+  return <ApplicationShell />;
 }
