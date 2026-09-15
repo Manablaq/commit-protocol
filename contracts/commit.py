@@ -1,8 +1,9 @@
-# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
-from datetime import datetime,timezone
+# { "Depends": "py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng" }
 import json
+import genlayer as gl
 from genlayer import *
-from genlayer.py.keccak import Keccak256
+from genlayer.storage import TreeMap
+from genlayer.types.keccak import Keccak256
 E=gl.vm.UserError
 PROTOCOL="commit";REVISION="0.7.0-reviewable-manifest";P="983307fac383ac4a92be6c0c361ea8f3c9d9efa20ad5e6e8bc8dee932f2a6103";R="all-evidence-and-effects-v1";S="commit-evidence-v2";D="commit-decision-v3";Q="commit-mission-receipt-v2";N="commit-mission-manifest-v2";U=(1<<256)-1
 K=('DECISION_PENDING','invalid authority host','invalid authority path prefix','authority version','PREPARING','record version','mission version','REPAIR_REQUIRED','active_evidence_root','mission is not preparing','preparation deadline has passed','supplier is not authorized','mission is not sealed','mission already evaluated','recovery deadline has passed','dependency effect not found','SEALED','mission is underfunded','evidence failure not found','repair authority version mismatch','repair record identity mismatch','invalid mission id','owner required')
@@ -10,10 +11,10 @@ K=('DECISION_PENDING','invalid authority host','invalid authority path prefix','
 class _NativeRecipient:
  class View:pass
  class Write:pass
-class CommitProtocol(gl.Contract):
+class CommitProtocol(gl.contract.Contract):
  o:Address;n:u256;w:u256;d:TreeMap[str,str];hh:Address
  def __init__(self,helper:Address):self.o=gl.message.sender_address;self.n=0;self.w=0;self.hh=helper
- def q(self):return gl.get_contract_at(self.hh).view()
+ def q(self):return gl.contract.get_at(self.hh).view()
  def j(self,k):
   x=self.d.get(k,"")
   if not x:raise E("withdrawal not found")
@@ -30,7 +31,7 @@ class CommitProtocol(gl.Contract):
   if not x:raise E("authority not found")
   return json.loads(x)
  def A(self,h):return Address(bytes.fromhex(h[2:]))
- def t(self):return int(datetime.now(timezone.utc).timestamp())
+ def t(self):return int(gl.vm.get_timestamp().timestamp())
  def u(self,v,l,p=False):
   if type(v)is not int or v<(1 if p else 0)or v>U:raise E("invalid "+l)
   return v
@@ -243,7 +244,7 @@ class CommitProtocol(gl.Contract):
     q=self.e(m,r["evidence_id"]);n=(q[13][6]if q[13]else 0)+1;q[13]=[K[7],r["failure_code"],r["evidence_id"],r["record_id"],r["record_version"],r["mission_version"],n];self.M(mission_id,m);return
   if r is None or r.get("outcome")!="DECISION":raise E("invalid consensus outcome")
   if r["decision"]not in("COMMIT","ABORT"):raise E("invalid consensus decision")
-  m[15]=r["decision"];m[16]=r["reason_code"];m[17]+=1;m[13]=r[K[8]];z=D+self.f(mission_id)+self.f(str(m[21]))+self.f(r["decision"])+self.f(r["reason_code"])+self.f(m[5])+self.f(m[6])+self.f(r[K[8]]);m[12]=Keccak256(z.encode()).hexdigest();m[1]=K[0];self.M(mission_id,m);gl.get_contract_at(gl.message.contract_address).emit(on="finalized").apply_decision(mission_id,m[12])
+  m[15]=r["decision"];m[16]=r["reason_code"];m[17]+=1;m[13]=r[K[8]];z=D+self.f(mission_id)+self.f(str(m[21]))+self.f(r["decision"])+self.f(r["reason_code"])+self.f(m[5])+self.f(m[6])+self.f(r[K[8]]);m[12]=Keccak256(z.encode()).hexdigest();m[1]=K[0];self.M(mission_id,m);gl.contract.get_at(gl.message.contract_address).emit(on="finalized").apply_decision(mission_id,m[12])
  @gl.public.write
  def apply_decision(self,mission_id:str,decision_nonce:str)->None:
   if gl.message.sender_address!=gl.message.contract_address:raise E("self message required")

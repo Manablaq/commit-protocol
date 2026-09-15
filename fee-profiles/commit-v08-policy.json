@@ -8,12 +8,23 @@
   "candidate": "v0.8-reviewer-hard-gates",
   "contract": {
     "path": "contracts/commit.py",
-    "sha256": "e88d1d78ee8f2d373124bbfbc3f0c8d946385a3250fc028f5956fd74762f8c69"
+    "sha256": "7384c2927b4b1026d20823cc6b3b20235c04c03eafc6e477de06d71ab4447dcf"
   },
   "helper_contract": {
     "path": "contracts/commit_helper.py",
     "role": "STATELESS_DETERMINISTIC_VIEW_HELPER",
-    "sha256": "0120b74e0988f2444c3cc824bd40633c472348da9e1d3fd851c4d7380ffbe632"
+    "sha256": "dfb564fbd644fae756808fee2afc1f43c35d0dde095e33ad9f4802569e80007a"
+  },
+  "helper_deployment": {
+    "blockchain_submission_authorized": false,
+    "chain_id": 61997,
+    "constructor_args": [],
+    "leader_only": false,
+    "network": "Studio Next",
+    "sanitized_external_envelope_sha256": "bb0f7887acef5139db29bb3eda9791cd1eb77f282819f18945dc4cd85557ef34",
+    "simulation_execution_result": "SUCCESS",
+    "source_sha256": "dfb564fbd644fae756808fee2afc1f43c35d0dde095e33ad9f4802569e80007a",
+    "status": "SOURCE_BOUND_SIMULATION_COMPLETE_NOT_SUBMITTED"
   },
   "measurement": {
     "local_direct_mode_is_fee_evidence": false,
@@ -24,7 +35,7 @@
       "messageAllocations",
       "feeValue"
     ],
-    "status": "TARGET_NETWORK_REQUIRED"
+    "status": "TARGET_NETWORK_METHOD_MEASUREMENT_REQUIRED"
   },
   "message_paths": [
     {
@@ -64,8 +75,8 @@
     "chain_id",
     "contract_address",
     "contract_source_sha256",
-    "runtime_version",
-    "runtime_archive_sha256",
+    "python_runner",
+    "genvm_execution_layout",
     "method",
     "arguments_digest",
     "distribution",
@@ -78,8 +89,17 @@
     "measured_at"
   ],
   "runtime": {
-    "archive_sha256": "bd30580f911338d5533460eca8ed714dec371de5803c04e41dbb96430aea7b6e",
-    "version": "v0.6.0-rc5"
+    "genvm_execution_layout": "genvm-v0.3",
+    "historical_local_direct_runtime": {
+      "applicable_to_current_source": false,
+      "archive_sha256": "bd30580f911338d5533460eca8ed714dec371de5803c04e41dbb96430aea7b6e",
+      "version": "v0.6.0-rc5"
+    },
+    "hosted_runtime_archive_sha256": null,
+    "hosted_runtime_archive_sha256_status": "NOT_EXPOSED_BY_SOURCE_BOUND_SIMULATION",
+    "python_runner": "py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng",
+    "rc5_direct_runtime_reused_for_v03": false,
+    "target_network": "Studio Next"
   },
   "schema": "commit-fee-profile-policy-v1",
   "successful_execution_requirement": "FINISHED_WITH_RETURN"

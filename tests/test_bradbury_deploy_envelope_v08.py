@@ -4,15 +4,18 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / "contracts/commit.py"
-MAX_BRADBURY_SOURCE_BYTES = 49152
+
+EXPECTED_SOURCE_BYTES = 19625
+EXPECTED_RUNNER_HEADER = (
+    b'# { "Depends": '
+    b'"py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng" }'
+)
 
 
-def test_bradbury_deploy_source_stays_within_certified_envelope():
+def test_studio_next_deploy_source_matches_certified_candidate_shape():
     raw = CONTRACT.read_bytes()
 
-    assert len(raw) <= MAX_BRADBURY_SOURCE_BYTES
-    assert raw.startswith(
-        b'# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }'
-    )
+    assert len(raw) == EXPECTED_SOURCE_BYTES
+    assert raw.startswith(EXPECTED_RUNNER_HEADER)
 
     ast.parse(raw.decode("utf-8"))

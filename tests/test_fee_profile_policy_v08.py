@@ -8,11 +8,23 @@ POLICY_PATH = ROOT / "fee-profiles/commit-v08-policy.json"
 CONTRACT_PATH = ROOT / "contracts/commit.py"
 
 CONTRACT_SHA = (
-    "e88d1d78ee8f2d373124bbfbc3f0c8d946385a3250fc028f5956fd74762f8c69"
+    "7384c2927b4b1026d20823cc6b3b20235c04c03eafc6e477de06d71ab4447dcf"
 )
 
-RUNTIME_ARCHIVE_SHA = (
+HELPER_SHA = (
+    "dfb564fbd644fae756808fee2afc1f43c35d0dde095e33ad9f4802569e80007a"
+)
+
+PYTHON_RUNNER = (
+    "py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng"
+)
+
+HISTORICAL_RUNTIME_ARCHIVE_SHA = (
     "bd30580f911338d5533460eca8ed714dec371de5803c04e41dbb96430aea7b6e"
+)
+
+HELPER_DEPLOY_ENVELOPE_SHA = (
+    "bb0f7887acef5139db29bb3eda9791cd1eb77f282819f18945dc4cd85557ef34"
 )
 
 
@@ -66,13 +78,92 @@ def test_fee_policy_identity_is_exact():
     )
 
     assert (
-        policy["runtime"]["version"]
+        policy["helper_contract"]["sha256"]
+        == HELPER_SHA
+    )
+
+    runtime = policy["runtime"]
+
+    assert (
+        runtime["target_network"]
+        == "Studio Next"
+    )
+
+    assert (
+        runtime["python_runner"]
+        == PYTHON_RUNNER
+    )
+
+    assert (
+        runtime["genvm_execution_layout"]
+        == "genvm-v0.3"
+    )
+
+    assert (
+        runtime["hosted_runtime_archive_sha256"]
+        is None
+    )
+
+    assert (
+        runtime["hosted_runtime_archive_sha256_status"]
+        == "NOT_EXPOSED_BY_SOURCE_BOUND_SIMULATION"
+    )
+
+    assert (
+        runtime["rc5_direct_runtime_reused_for_v03"]
+        is False
+    )
+
+    historical = runtime[
+        "historical_local_direct_runtime"
+    ]
+
+    assert (
+        historical["version"]
         == "v0.6.0-rc5"
     )
 
     assert (
-        policy["runtime"]["archive_sha256"]
-        == RUNTIME_ARCHIVE_SHA
+        historical["archive_sha256"]
+        == HISTORICAL_RUNTIME_ARCHIVE_SHA
+    )
+
+    assert (
+        historical["applicable_to_current_source"]
+        is False
+    )
+
+    deployment = policy["helper_deployment"]
+
+    assert (
+        deployment["status"]
+        == "SOURCE_BOUND_SIMULATION_COMPLETE_NOT_SUBMITTED"
+    )
+
+    assert deployment["chain_id"] == 61997
+
+    assert (
+        deployment["source_sha256"]
+        == HELPER_SHA
+    )
+
+    assert deployment["constructor_args"] == []
+
+    assert deployment["leader_only"] is False
+
+    assert (
+        deployment["simulation_execution_result"]
+        == "SUCCESS"
+    )
+
+    assert (
+        deployment["sanitized_external_envelope_sha256"]
+        == HELPER_DEPLOY_ENVELOPE_SHA
+    )
+
+    assert (
+        deployment["blockchain_submission_authorized"]
+        is False
     )
 
 
@@ -83,7 +174,7 @@ def test_fee_policy_does_not_fabricate_network_measurements():
 
     assert (
         measurement["status"]
-        == "TARGET_NETWORK_REQUIRED"
+        == "TARGET_NETWORK_METHOD_MEASUREMENT_REQUIRED"
     )
 
     assert (
@@ -188,8 +279,8 @@ def test_fee_policy_requires_reproducible_live_evidence():
         "chain_id",
         "contract_address",
         "contract_source_sha256",
-        "runtime_version",
-        "runtime_archive_sha256",
+        "python_runner",
+        "genvm_execution_layout",
         "method",
         "arguments_digest",
         "distribution",

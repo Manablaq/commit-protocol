@@ -1,10 +1,11 @@
-# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
+# { "Depends": "py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng" }
 import json
+import genlayer as gl
 from genlayer import *
-from genlayer.py.keccak import Keccak256
+from genlayer.types.keccak import Keccak256
 E=gl.vm.UserError
 P="983307fac383ac4a92be6c0c361ea8f3c9d9efa20ad5e6e8bc8dee932f2a6103";R="all-evidence-and-effects-v1";S="commit-evidence-v2";V="0.7.0-reviewable-manifest"
-class CommitHelper(gl.Contract):
+class CommitHelper(gl.contract.Contract):
  def __init__(self):pass
  def f(self,v):return str(len(v))+":"+v
  def A(self,h):return Address(bytes.fromhex(h[2:]))
