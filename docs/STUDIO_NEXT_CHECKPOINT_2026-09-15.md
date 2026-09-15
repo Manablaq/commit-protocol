@@ -1,4 +1,17 @@
-# Studio Next deployment checkpoint — 2026-09-15
+# Historical Studio deployment checkpoint — 2026-09-15
+
+> **Superseded deployment status.** This file preserves the pre-deployment
+> diagnostic state reached on 2026-09-15. It is not the current submission
+> status. The blocker recorded below was later resolved. The current coordinator
+> deployment is finalized, returns `FINISHED_WITH_RETURN`, and its deployed
+> 19,670 source bytes have SHA-256
+> `be0ef1686314354ac1b87ccd50ab42f0c933c312a4980c0e5479f2d3037e4e58`,
+> exactly matching `contracts/commit.py` at release
+> `e9858985495111cf2f21db6dc847c7f75b79c0da`.
+>
+> Current proof:
+> [`CURRENT_DEPLOYMENT_PROOF_2026-09-16.md`](./CURRENT_DEPLOYMENT_PROOF_2026-09-16.md).
+
 
 This document records the exact COMMIT deployment/readiness state reached on
 2026-09-15. It separates historical live behavior proof from the current

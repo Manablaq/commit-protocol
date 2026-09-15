@@ -32,60 +32,73 @@ COMMIT needs consensus over facts that ordinary deterministic contracts cannot r
 
 ## Agent Tank proof
 
-### Current Studio Next deployment status
+### Current exact-source deployment
 
-Agent Tank requires the current-source deployment target to be **Studio Next**
-(chain `61997`, RPC `https://studio-next.genlayer.com/api`).
+The current coordinator release is deployed and independently re-verified on
+the canonical hosted GenLayer Studio development preview:
 
-The current coordinator/helper source is **not yet successfully deployed on
-Studio Next**. The latest safe checkpoint is:
+- Network: **GenLayer Studio development preview**
+- Canonical RPC: `https://studio-dev.genlayer.com/api`
+- Chain ID: `61997` / `0xf22d`
+- Contract: `0x7C1e450333D97CD4E02F48c3424BF10112697A60`
+- Deployment transaction:
+  `0x496654c019c07ffeed87fb8021e482d18f5da125c2388538d5ea88d81a6a7640`
+- Deployment status: `FINALIZED`
+- Execution result: `FINISHED_WITH_RETURN`
+- Coordinator source SHA-256:
+  `be0ef1686314354ac1b87ccd50ab42f0c933c312a4980c0e5479f2d3037e4e58`
+- Deployed code: **19,670 bytes**
+- Exact deployed-source match: **confirmed**
+- Release commit: `e9858985495111cf2f21db6dc847c7f75b79c0da`
 
-- Studio Next RPC reachable: **yes**
-- chain ID `61997`: **confirmed**
-- fee policy RPC: **working**
-- hosted Studio schema/constructor parsing: **working**
-- simple `storage.py` deployment simulation: **failing inside GenVM**
-- actual deployment transaction from the latest UI diagnostic: **none**
-- worker pending nonce after the diagnostic: **67**
+`https://studio-next.genlayer.com/api` returned the same chain ID, deployment
+transaction, final status, execution result, target address, and deployed source
+bytes during the final read-only comparison. It is treated as an alias
+comparison rather than a separate deployment target.
 
-No current-source deployment success is claimed. See
-[`docs/STUDIO_NEXT_CHECKPOINT_2026-09-15.md`](./docs/STUDIO_NEXT_CHECKPOINT_2026-09-15.md).
+See
+[`docs/CURRENT_DEPLOYMENT_PROOF_2026-09-16.md`](./docs/CURRENT_DEPLOYMENT_PROOF_2026-09-16.md).
 
-### Historical live Studio Dev proof
+### Historical live COMMIT / ABORT proof
 
-The source-matched Studio Dev proof deployment is:
+The earlier source-matched Studio Dev v0.7 deployment remains the recorded
+end-to-end behavior proof for both policy outcomes:
 
 - Contract: `0x10c708517b4465596E2dc40De92B30A610Cb7a10`
-- Network: GenLayer Studio Dev
-- Chain ID: `61997`
-- Revision: `0.7.0-reviewable-manifest`
-- Deployment execution: `FINALIZED`, `FINISHED_WITH_RETURN`
+- Deployment transaction:
+  `0x03071d2f8353c993a6a8aae38c1086e025df712f320090fd036ace2ef218ccab`
+- Deployment result: `FINALIZED`, `FINISHED_WITH_RETURN`
+- Source SHA-256:
+  `4dd61b7e7a5acbdc254f7a63419fe7b4a2674909d49fa07e0d0b051fd74eb36f`
 
-The live record includes both policy outcomes on the same deployed bytecode:
+- **Mission 008 — COMMIT:** two bound evidence records were accepted, the
+  finalized callback allocated the prepared entitlement, and the claim consumed
+  that entitlement exactly once.
+- **Mission 009 — ABORT:** one evidence record was ineligible, the finalized
+  callback allocated the refund path, and the refund entitlement was consumed
+  exactly once.
 
-- **Mission 008 — COMMIT:** two bound evidence records were accepted, the finalized callback allocated the prepared entitlement, and the claim consumed that entitlement exactly once.
-- **Mission 009 — ABORT:** one evidence record was ineligible, the finalized callback allocated the refund path, and the refund entitlement was consumed exactly once.
+These historical lifecycle executions are not represented as executions of the
+newer release commit.
 
-See [`docs/DEPLOYMENT_LOG_STUDIO_DEV.md`](./docs/DEPLOYMENT_LOG_STUDIO_DEV.md).
+See
+[`docs/DEPLOYMENT_LOG_STUDIO_DEV.md`](./docs/DEPLOYMENT_LOG_STUDIO_DEV.md).
 
-### Latest certified source checkpoint
+### Final application release
 
-The repository's newer certified source checkpoint is commit:
+- GitHub main:
+  `e9858985495111cf2f21db6dc847c7f75b79c0da`
+- Release tree:
+  `3627b57a0baaebda07b15da76cb8b594ee4a18f9`
+- Public application:
+  `https://commitprotocol-genlayer.vercel.app`
+- Vercel production deployment:
+  `dpl_6x9XzgAxPsRX8jXr7d6KonmEmL6S`
+- Final Python regression: **450 passed + 334 subtests**
+- Frontend Vitest: **27 passed**
+- Browser E2E: **12 passed**
+- Current deployment exact-source/finality gate: **passed**
 
-`c152ec75d935a4cb5cf37e2f31aaae89c1bdc525`
-
-It keeps the coordinator as the sole custody/state boundary and moves deterministic parsing/root helpers into the stateless `CommitHelper`.
-
-Certification completed on 2026-09-14:
-
-- public coordinator ABI: **41 methods, parity preserved**
-- semantic regression file: **70 passed**
-- Direct Runtime suite: **113 passed**
-- repository regression suite: **433 passed + 334 subtests**
-- GenVM lint/typecheck/validation: **passed** for coordinator and helper
-- exact deployment-envelope read-only checks: **passed**
-
-The latest repository source is **not claimed to be source-identical to the historical Studio Dev v0.7 deployment**. The Studio Dev deployment is the live behavior proof; `c152ec75...` is the later certified source checkpoint.
 
 ## Security properties
 
@@ -115,7 +128,8 @@ COMMIT is designed around the failure modes that matter when AI consensus can mo
 - [`docs/ACCOUNTING_MODEL.md`](./docs/ACCOUNTING_MODEL.md) — escrow and conservation
 - [`docs/THREAT_MODEL.md`](./docs/THREAT_MODEL.md) — adversarial analysis
 - [`docs/DEPLOYMENT_LOG_STUDIO_DEV.md`](./docs/DEPLOYMENT_LOG_STUDIO_DEV.md) — historical live proof
-- [`docs/STUDIO_NEXT_CHECKPOINT_2026-09-15.md`](./docs/STUDIO_NEXT_CHECKPOINT_2026-09-15.md) — exact current deployment checkpoint
+- [`docs/CURRENT_DEPLOYMENT_PROOF_2026-09-16.md`](./docs/CURRENT_DEPLOYMENT_PROOF_2026-09-16.md) — current exact-source deployment proof
+- [`docs/STUDIO_NEXT_CHECKPOINT_2026-09-15.md`](./docs/STUDIO_NEXT_CHECKPOINT_2026-09-15.md) — superseded historical pre-deployment checkpoint
 - [`tests/`](./tests) — deterministic, runtime, backend, frontend, and E2E verification
 
 ## Reproduce locally
