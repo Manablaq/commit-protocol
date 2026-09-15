@@ -8,7 +8,7 @@
   "candidate": "v0.8-reviewer-hard-gates",
   "contract": {
     "path": "contracts/commit.py",
-    "sha256": "7384c2927b4b1026d20823cc6b3b20235c04c03eafc6e477de06d71ab4447dcf"
+    "sha256": "be0ef1686314354ac1b87ccd50ab42f0c933c312a4980c0e5479f2d3037e4e58"
   },
   "helper_contract": {
     "path": "contracts/commit_helper.py",

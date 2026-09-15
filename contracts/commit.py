@@ -1,5 +1,6 @@
 # { "Depends": "py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng" }
 import json
+from datetime import datetime, timezone
 import genlayer as gl
 from genlayer import *
 from genlayer.storage import TreeMap
@@ -31,7 +32,7 @@ class CommitProtocol(gl.contract.Contract):
   if not x:raise E("authority not found")
   return json.loads(x)
  def A(self,h):return Address(bytes.fromhex(h[2:]))
- def t(self):return int(gl.vm.get_timestamp().timestamp())
+ def t(self):return int(datetime.now(timezone.utc).timestamp())
  def u(self,v,l,p=False):
   if type(v)is not int or v<(1 if p else 0)or v>U:raise E("invalid "+l)
   return v

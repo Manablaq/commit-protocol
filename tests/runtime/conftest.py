@@ -13,7 +13,7 @@ if str(ROOT) not in sys.path:
 
 
 @pytest.fixture
-def probe_vm():
+def probe_vm(request):
     if not os.environ.get("GENVM_PREBUILT_DIR"):
         pytest.fail("Set GENVM_PREBUILT_DIR to the verified extracted release tree")
 
@@ -26,6 +26,37 @@ def probe_vm():
     # compatibility helpers target a newer SDK layout ("genlayer.calldata" /
     # "genlayer.types"). RC5 uses the proven "genlayer.py.*" layout instead.
     sdk_loader.CACHE_DIR = ROOT / ".runtime-cache/gltest-direct"
+
+    # Current COMMIT contracts run on the v0.3 SDK layout. Only the two
+    # historical isolated probes remain on the legacy 1jb45 runner.
+    legacy_probe_files = {
+        "test_callback_probe.py",
+        "test_independent_evaluation.py",
+    }
+    current_test_file = Path(str(request.fspath)).name
+
+    # Prevent one SDK module tree from leaking into another test.
+    original_sys_path = list(sys.path)
+
+    def purge_genlayer_modules():
+        for name in list(sys.modules):
+            if name == "genlayer" or name.startswith("genlayer."):
+                sys.modules.pop(name, None)
+
+    purge_genlayer_modules()
+
+    if current_test_file not in legacy_probe_files:
+        vm = VMContext()
+        vm.sender = bytes.fromhex("11" * 20)
+        vm.origin = bytes.fromhex("11" * 20)
+
+        try:
+            with vm.activate():
+                yield vm
+        finally:
+            purge_genlayer_modules()
+            sys.path[:] = original_sys_path
+        return
 
     original_import_calldata = getattr(
         direct_loader, "import_calldata", None
@@ -312,6 +343,8 @@ def probe_vm():
         direct_loader.import_address = original_import_address
         direct_loader.import_lazy = original_import_lazy
         wasi_mock.import_calldata = original_wasi_import_calldata
+        purge_genlayer_modules()
+        sys.path[:] = original_sys_path
 
 # COMMIT v0.9 Bradbury-native Direct Runtime bridge.
 #
@@ -327,6 +360,7 @@ def _commit_v09_pair_deployment(monkeypatch, probe_vm):
 
     import gltest.direct as direct
     from gltest.direct import loader as direct_loader
+    from gltest.direct.sdk_compat import sync_message_context
 
     real_deploy = direct.deploy_contract
     sig = inspect.signature(real_deploy)
@@ -369,13 +403,28 @@ def _commit_v09_pair_deployment(monkeypatch, probe_vm):
         return raw
 
     def _reset_live_contract_registry():
-        gl_mod = sys.modules.get("genlayer.gl")
-        if gl_mod is None:
-            return "NOT_LOADED"
+        genlayer_mod = sys.modules.get("genlayer")
+        contract_mod = (
+            getattr(genlayer_mod, "contract", None)
+            if genlayer_mod is not None
+            else None
+        )
+        contract_base = (
+            getattr(contract_mod, "Contract", None)
+            if contract_mod is not None
+            else None
+        )
 
-        contract_base = getattr(gl_mod, "Contract", None)
         if contract_base is None:
-            pytest.fail("genlayer.gl.Contract is missing")
+            legacy_gl = sys.modules.get("genlayer.gl")
+            contract_base = (
+                getattr(legacy_gl, "Contract", None)
+                if legacy_gl is not None
+                else None
+            )
+
+        if contract_base is None:
+            return "NOT_LOADED"
 
         init_subclass = getattr(
             contract_base,
@@ -461,9 +510,385 @@ def _commit_v09_pair_deployment(monkeypatch, probe_vm):
             helper_address,
         )
 
+        # The pinned Direct loader sets vm._contract_address for each load,
+        # while genlayer.message is module-cached after the helper import.
+        # Synchronize the v0.3 message module explicitly to the coordinator
+        # address before any coordinator method executes.
+        coordinator_addr_bytes = _address_bytes(
+            vm._contract_address
+        )
+        sync_message_context(
+            contract_address=coordinator_addr_bytes,
+            sender_address=vm.sender,
+            origin_address=vm.origin,
+            value=vm.value,
+            chain_id=vm._chain_id,
+        )
+
+        coordinator_proxy_address = getattr(
+            coordinator,
+            "address",
+            None,
+        )
+        if (
+            coordinator_proxy_address is None
+            or _address_bytes(
+                coordinator_proxy_address
+            ) != coordinator_addr_bytes
+        ):
+            pytest.fail(
+                "Coordinator message context did not synchronize "
+                "to the Direct VM contract address"
+            )
+
         calldata = direct_loader.import_calldata()
 
+        finalized_messages = []
+        probe_vm._commit_finalized_messages = (
+            finalized_messages
+        )
+
+        def validate_next_finalized_message(
+            *,
+            leader_result=None,
+            use_override=False,
+        ):
+            if not finalized_messages:
+                raise RuntimeError(
+                    "no queued finalized internal message"
+                )
+
+            message = finalized_messages[0]
+            validator_index = message[
+                "validator_index"
+            ]
+
+            if validator_index < 0:
+                raise RuntimeError(
+                    "queued finalized message has no captured validator"
+                )
+
+            if use_override:
+                approved = probe_vm.run_validator(
+                    index=validator_index,
+                    leader_result=leader_result,
+                )
+            else:
+                approved = probe_vm.run_validator(
+                    index=validator_index,
+                )
+
+            message["validator_checked"] = True
+            message["validator_approved"] = (
+                approved is True
+            )
+
+            return approved
+
+        def finalize_next_internal_message():
+            if not finalized_messages:
+                raise RuntimeError(
+                    "no queued finalized internal message"
+                )
+
+            message = finalized_messages[0]
+
+            if not message.get(
+                "validator_checked",
+                False,
+            ):
+                raise RuntimeError(
+                    "finalized internal message has not "
+                    "passed validator verification"
+                )
+
+            if not message.get(
+                "validator_approved",
+                False,
+            ):
+                raise RuntimeError(
+                    "finalized internal message validator "
+                    "verification did not approve"
+                )
+
+            if (
+                message["address"]
+                != coordinator_addr_bytes
+            ):
+                raise RuntimeError(
+                    "queued finalized message target changed"
+                )
+
+            if (
+                message["sender"]
+                != coordinator_addr_bytes
+            ):
+                raise RuntimeError(
+                    "queued finalized message sender is not coordinator"
+                )
+
+            saved_sender = probe_vm.sender
+            saved_value = probe_vm.value
+            saved_contract = probe_vm._contract_address
+
+            try:
+                probe_vm._contract_address = (
+                    coordinator_addr_bytes
+                )
+                probe_vm.sender = message["sender"]
+                probe_vm.value = message["value"]
+
+                sync_message_context(
+                    contract_address=coordinator_addr_bytes,
+                    sender_address=message["sender"],
+                    origin_address=probe_vm.origin,
+                    value=message["value"],
+                    chain_id=probe_vm._chain_id,
+                )
+
+                method = getattr(
+                    coordinator,
+                    message["method"],
+                    None,
+                )
+
+                if (
+                    method is None
+                    or not callable(method)
+                ):
+                    raise RuntimeError(
+                        "queued finalized method is unavailable"
+                    )
+
+                result = method(
+                    *message["args"],
+                    **message["kwargs"],
+                )
+
+                # Consume only after successful callback execution.
+                finalized_messages.pop(0)
+
+                return result
+            finally:
+                probe_vm._contract_address = (
+                    saved_contract
+                )
+                probe_vm.sender = saved_sender
+                probe_vm.value = saved_value
+
+                sync_message_context(
+                    contract_address=saved_contract,
+                    sender_address=probe_vm.sender,
+                    origin_address=probe_vm.origin,
+                    value=probe_vm.value,
+                    chain_id=probe_vm._chain_id,
+                )
+
+        probe_vm._commit_validate_next_finalized_message = (
+            validate_next_finalized_message
+        )
+        probe_vm._commit_finalize_next_internal_message = (
+            finalize_next_internal_message
+        )
+
         def helper_call_hook(active_vm, request):
+            if (
+                isinstance(request, dict)
+                and "EmitInternalMessage" in request
+            ):
+                if getattr(
+                    active_vm,
+                    "_in_nondet",
+                    False,
+                ):
+                    raise RuntimeError(
+                        "EmitInternalMessage reached hook "
+                        "inside nondeterministic execution"
+                    )
+
+                data = request[
+                    "EmitInternalMessage"
+                ]
+
+                if not isinstance(data, dict):
+                    pytest.fail(
+                        "EmitInternalMessage payload is not a dict"
+                    )
+
+                if set(data) != {
+                    "address",
+                    "calldata",
+                    "on",
+                    "value",
+                }:
+                    pytest.fail(
+                        "EmitInternalMessage wire keys changed: "
+                        + repr(sorted(data.keys()))
+                    )
+
+                emitter = _address_bytes(
+                    active_vm._contract_address
+                )
+                target = _address_bytes(
+                    data.get("address")
+                )
+
+                if (
+                    emitter
+                    != coordinator_addr_bytes
+                ):
+                    pytest.fail(
+                        "EmitInternalMessage emitter is not coordinator"
+                    )
+
+                if (
+                    target
+                    != coordinator_addr_bytes
+                ):
+                    pytest.fail(
+                        "COMMIT decision callback is not self-targeted"
+                    )
+
+                if data.get("on") != "finalized":
+                    pytest.fail(
+                        "COMMIT decision callback is not finalized-gated"
+                    )
+
+                if data.get("value") != 0:
+                    pytest.fail(
+                        "COMMIT decision callback carries unexpected value"
+                    )
+
+                calldata_obj = data.get(
+                    "calldata"
+                )
+
+                if not isinstance(
+                    calldata_obj,
+                    dict,
+                ):
+                    pytest.fail(
+                        "EmitInternalMessage calldata is not a dict"
+                    )
+
+                if set(calldata_obj) != {
+                    "",
+                    "args",
+                }:
+                    pytest.fail(
+                        "EmitInternalMessage calldata keys changed: "
+                        + repr(sorted(calldata_obj.keys()))
+                    )
+
+                method_name = calldata_obj.get("")
+                call_args = calldata_obj.get(
+                    "args",
+                    [],
+                )
+                call_kwargs = calldata_obj.get(
+                    "kwargs",
+                    {},
+                )
+
+                if call_kwargs is None:
+                    call_kwargs = {}
+
+                if (
+                    method_name
+                    != "apply_decision"
+                ):
+                    pytest.fail(
+                        "unexpected finalized callback method: "
+                        + repr(method_name)
+                    )
+
+                if (
+                    not isinstance(
+                        call_args,
+                        list,
+                    )
+                    or len(call_args) != 2
+                ):
+                    pytest.fail(
+                        "apply_decision finalized callback args changed"
+                    )
+
+                if (
+                    not isinstance(
+                        call_kwargs,
+                        dict,
+                    )
+                    or call_kwargs
+                ):
+                    pytest.fail(
+                        "apply_decision finalized callback kwargs changed"
+                    )
+
+                mission_id = call_args[0]
+                decision_nonce = call_args[1]
+
+                if (
+                    not isinstance(
+                        mission_id,
+                        str,
+                    )
+                    or not mission_id
+                ):
+                    pytest.fail(
+                        "invalid mission id in finalized callback"
+                    )
+
+                if (
+                    not isinstance(
+                        decision_nonce,
+                        str,
+                    )
+                    or len(
+                        decision_nonce
+                    ) != 64
+                ):
+                    pytest.fail(
+                        "invalid decision nonce in finalized callback"
+                    )
+
+                validator_index = (
+                    len(
+                        active_vm._captured_validators
+                    )
+                    - 1
+                )
+
+                if validator_index < 0:
+                    pytest.fail(
+                        "finalized callback emitted before validator capture"
+                    )
+
+                finalized_messages.append(
+                    {
+                        "address": target,
+                        "sender": emitter,
+                        "method": method_name,
+                        "args": list(
+                            call_args
+                        ),
+                        "kwargs": dict(
+                            call_kwargs
+                        ),
+                        "value": 0,
+                        "on": "finalized",
+                        "validator_index": validator_index,
+                        "validator_checked": False,
+                        "validator_approved": False,
+                    }
+                )
+
+                # Direct mode does not natively deliver this async message.
+                # Queue it and acknowledge only the emission. Delivery is an
+                # explicit test action after validator approval and finality.
+                return {
+                    "ok": None
+                }
+
             if isinstance(request, dict) and "CallContract" in request:
                 data = request["CallContract"]
                 target = data.get("address")
@@ -481,40 +906,49 @@ def _commit_v09_pair_deployment(monkeypatch, probe_vm):
                         )
 
                     calldata_obj = data.get("calldata", {})
-                    if not isinstance(calldata_obj, dict):
-                        return bytes([1]) + b"invalid helper calldata object"
 
-                    method_name = calldata_obj.get("method")
+                    def user_error(message):
+                        return bytes([1]) + calldata.encode(str(message))
+
+                    if not isinstance(calldata_obj, dict):
+                        return user_error("invalid helper calldata object")
+
+                    # Native v0.3 CallContract uses the empty-string key for
+                    # the method name. Keep the legacy spelling as a bounded
+                    # fallback for the historical probe runner.
+                    method_name = (
+                        calldata_obj.get("")
+                        or calldata_obj.get("method")
+                    )
                     call_args = calldata_obj.get("args", [])
                     call_kwargs = calldata_obj.get("kwargs", {})
+
+                    if call_kwargs is None:
+                        call_kwargs = {}
 
                     if (
                         not isinstance(method_name, str)
                         or not method_name
                         or method_name.startswith("_")
                     ):
-                        return bytes([1]) + b"invalid helper method"
+                        return user_error("invalid helper method")
 
                     if not isinstance(call_args, list):
-                        return bytes([1]) + b"invalid helper args"
+                        return user_error("invalid helper args")
 
                     if not isinstance(call_kwargs, dict):
-                        return bytes([1]) + b"invalid helper kwargs"
+                        return user_error("invalid helper kwargs")
 
                     method = getattr(helper, method_name, None)
                     if method is None or not callable(method):
-                        return bytes([1]) + b"helper method not found"
+                        return user_error("helper method not found")
 
                     try:
                         result = method(*call_args, **call_kwargs)
                         encoded = calldata.encode(result)
                     except Exception as exc:
-                        return bytes([1]) + str(exc).encode(
-                            "utf-8",
-                            errors="replace",
-                        )
+                        return user_error(exc)
 
-                    # Match GenLayer's multi-contract bridge convention:
                     # ResultCode.RETURN (0) followed by calldata-encoded result.
                     return bytes([0]) + encoded
 

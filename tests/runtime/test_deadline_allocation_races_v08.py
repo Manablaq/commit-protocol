@@ -157,7 +157,7 @@ def test_recovery_winner_blocks_exact_stale_commit_nonce_without_double_allocati
 
     _assert_exact_abort_allocation(contract)
 
-    import genlayer.gl as gl
+    import genlayer as gl
 
     probe_vm.sender = gl.message.contract_address
 
@@ -203,7 +203,7 @@ def test_finalized_commit_winner_blocks_late_recovery_without_reallocation(
         MISSION_ID
     )
 
-    import genlayer.gl as gl
+    import genlayer as gl
 
     probe_vm.sender = gl.message.contract_address
 
@@ -266,7 +266,7 @@ def test_finalized_abort_winner_blocks_late_recovery_and_refunds_exactly_once(
     assert pending["decision"] == "ABORT"
     assert pending["allocation_applied"] is False
 
-    import genlayer.gl as gl
+    import genlayer as gl
 
     probe_vm.sender = gl.message.contract_address
 
@@ -337,7 +337,7 @@ def test_timeout_allocation_is_terminal_even_after_multiple_callback_attempts(
 
     _assert_exact_abort_allocation(contract)
 
-    import genlayer.gl as gl
+    import genlayer as gl
 
     probe_vm.sender = gl.message.contract_address
 

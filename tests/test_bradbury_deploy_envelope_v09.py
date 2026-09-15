@@ -8,7 +8,7 @@ COORD = ROOT / "contracts/commit.py"
 HELPER = ROOT / "contracts/commit_helper.py"
 POLICY = ROOT / "fee-profiles/commit-v08-policy.json"
 
-COORD_SHA = "7384c2927b4b1026d20823cc6b3b20235c04c03eafc6e477de06d71ab4447dcf"
+COORD_SHA = "be0ef1686314354ac1b87ccd50ab42f0c933c312a4980c0e5479f2d3037e4e58"
 HELPER_SHA = "dfb564fbd644fae756808fee2afc1f43c35d0dde095e33ad9f4802569e80007a"
 MEASURED_SYNTHETIC_BOUNDARY = 20185
 

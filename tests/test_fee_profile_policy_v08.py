@@ -8,7 +8,7 @@ POLICY_PATH = ROOT / "fee-profiles/commit-v08-policy.json"
 CONTRACT_PATH = ROOT / "contracts/commit.py"
 
 CONTRACT_SHA = (
-    "7384c2927b4b1026d20823cc6b3b20235c04c03eafc6e477de06d71ab4447dcf"
+    "be0ef1686314354ac1b87ccd50ab42f0c933c312a4980c0e5479f2d3037e4e58"
 )
 
 HELPER_SHA = (
