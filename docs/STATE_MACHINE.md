@@ -29,7 +29,7 @@ not standalone proof of finality.
 | SEALED | `evaluate_mission` / anyone after READY repair | Recovery deadline not reached; repaired active evidence independently re-read | Persist exact `evaluation_evidence_root`; enter `DECISION_PENDING` on a valid consequential result |
 | DECISION_PENDING | `apply_decision` / authenticated coordinator self-message | Exact decision nonce; allocation not already applied | `COMMITTED` or `ABORTED` allocation |
 | PREPARING / SEALED / DECISION_PENDING | `expire_mission` / anyone | Recovery deadline reached; no terminal allocation | `ABORTED` allocation and refund entitlement |
-| Allocated | `claim_mission` / beneficiary | Available beneficiary entitlement; fresh withdrawal ID | `DISPATCHED` withdrawal and finalized external GEN transfer requested |
+| Allocated | `claim_mission` / beneficiary | Available beneficiary entitlement; fresh withdrawal ID | `DISPATCHED` withdrawal and external GEN transfer requested; delivery is separately observable but not automatically recoverable |
 
 The current supported policy is deliberately explicit:
 `all-evidence-and-effects-v1`. Every evidence record must bind the exact
@@ -60,10 +60,14 @@ dependency while preserving principal-only preparation, funding, evidence
 registration, sealing, and cancellation.
 
 External claim dispatch is intentionally not blindly retried. The entitlement
-is consumed before dispatch to prevent double payment, and remains represented
-by the finalized external message because an authenticated delivery/non-
-delivery mechanism is not exposed by the current contract. The current
-revision does not provide reconciliation or retry.
+is consumed before dispatch to prevent double payment. The frontend can follow
+the exact triggered child transaction and reports
+delivery only after exact recipient/value binding plus `FINALIZED` and
+`FINISHED_WITH_RETURN`; it reports finalized `FINISHED_WITH_ERROR` as failure
+and all other cases as pending or unverified. This is an operator-side read,
+not contract state. The current revision does not provide a trustless
+reconciliation or retry write because a timeout-based restoration could race a
+delayed original transfer.
 
 No upgrade/admin escape hatch can rewrite a sealed mission or redirect custody.
 The owner can register or deactivate publisher authorities. Each authority ID

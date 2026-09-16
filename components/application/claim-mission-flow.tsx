@@ -25,6 +25,14 @@ import {
   type ClaimMissionQuote,
   type FinalizedClaimProof,
 } from "@/lib/genlayer-claim";
+import {
+  observeExternalDelivery,
+  persistClaimTransaction,
+  readPersistedClaimTransaction,
+  unverifiedExternalDelivery,
+  type ExternalDeliveryObservation,
+  type PersistedClaimTransaction,
+} from "@/lib/genlayer-delivery";
 
 type ClaimMissionFlowProps = {
   wallet: ConnectedCommitWallet;
@@ -69,11 +77,31 @@ export function ClaimMissionFlow({
   ] = useState<string | null>(
     null,
   );
+  const [
+    claimRecord,
+    setClaimRecord,
+  ] = useState<PersistedClaimTransaction | null>(() =>
+    readPersistedClaimTransaction(
+      initialMissionId,
+      wallet.address,
+    ),
+  );
+  const [
+    delivery,
+    setDelivery,
+  ] = useState<ExternalDeliveryObservation | null>(
+    null,
+  );
+  const [
+    deliveryBusy,
+    setDeliveryBusy,
+  ] = useState(false);
 
   function resetReview() {
     setQuote(null);
     setProgress(null);
     setProof(null);
+    setDelivery(null);
     setError(null);
   }
 
@@ -123,6 +151,16 @@ export function ClaimMissionFlow({
         phase: "submitted",
         txId,
       });
+      setClaimRecord({
+        transactionId: txId,
+        amount: quote.snapshot.missionClaimable,
+      });
+      persistClaimTransaction(
+        quote.snapshot.mission.missionId,
+        quote.snapshot.beneficiary,
+        txId,
+        quote.snapshot.missionClaimable,
+      );
 
       const result =
         await trackCommitTransaction(
@@ -131,6 +169,18 @@ export function ClaimMissionFlow({
         );
 
       if (result.successful) {
+        const observed =
+          await observeExternalDelivery(
+            wallet.client,
+            txId,
+            {
+              recipient: quote.snapshot.beneficiary,
+              amount: quote.snapshot.missionClaimable,
+            },
+          );
+
+        setDelivery(observed);
+
         const finalized =
           await verifyFinalizedClaim(
             wallet,
@@ -138,6 +188,13 @@ export function ClaimMissionFlow({
           );
 
         setProof(finalized);
+      } else {
+        setDelivery(
+          unverifiedExternalDelivery(
+            txId,
+            "The parent claim did not finalize successfully. No external delivery is claimed.",
+          ),
+        );
       }
     } catch (caught: unknown) {
       setError(
@@ -148,6 +205,53 @@ export function ClaimMissionFlow({
     } finally {
       setBusy(false);
     }
+  }
+
+  async function refreshDelivery() {
+    if (
+      claimRecord === null
+      || deliveryBusy
+    ) {
+      return;
+    }
+
+    setDeliveryBusy(true);
+
+    try {
+      setDelivery(
+        await observeExternalDelivery(
+          wallet.client,
+          claimRecord.transactionId,
+          {
+            recipient: wallet.address,
+            amount: claimRecord.amount,
+          },
+        ),
+      );
+    } catch (caught: unknown) {
+      setDelivery(
+        unverifiedExternalDelivery(
+          claimRecord.transactionId,
+          caught instanceof Error
+            ? caught.message
+            : "The delivery observation could not be completed. No delivery outcome is claimed.",
+        ),
+      );
+    } finally {
+      setDeliveryBusy(false);
+    }
+  }
+
+  function deliveryLabel(
+    phase: ExternalDeliveryObservation["phase"],
+  ): string {
+    return phase === "DELIVERED"
+      ? "DELIVERED"
+      : phase === "FAILED"
+        ? "FAILED — NO AUTOMATIC RETRY"
+        : phase === "PENDING"
+          ? "PENDING"
+          : "UNVERIFIED";
   }
 
   return (
@@ -170,8 +274,15 @@ export function ClaimMissionFlow({
           <input
             value={missionId}
             onChange={(event) => {
+              const nextMissionId = event.target.value;
               setMissionId(
-                event.target.value,
+                nextMissionId,
+              );
+              setClaimRecord(
+                readPersistedClaimTransaction(
+                  nextMissionId,
+                  wallet.address,
+                ),
               );
               resetReview();
             }}
@@ -401,6 +512,78 @@ export function ClaimMissionFlow({
               the frozen mission receipt declares
               external_withdrawal_recovery=false.
             </p>
+          </div>
+        ) : null}
+
+        {claimRecord !== null ? (
+          <div className="claim-delivery">
+            <div className="claim-delivery-heading">
+              <div>
+                <span>EXTERNAL MESSAGE OBSERVATION</span>
+                <strong>
+                  {delivery === null
+                    ? "Not checked"
+                    : deliveryLabel(delivery.phase)}
+                </strong>
+              </div>
+              <button
+                className="mission-secondary-button claim-delivery-refresh"
+                type="button"
+                disabled={deliveryBusy}
+                onClick={refreshDelivery}
+              >
+                {deliveryBusy ? (
+                  <LoaderCircle
+                    className="spin"
+                    size={15}
+                    aria-hidden="true"
+                  />
+                ) : null}
+                Observe child transaction
+              </button>
+            </div>
+            <p>
+              The parent claim transaction is recorded locally so this status
+              can be re-read after navigation. This is an operator observation
+              from GenLayer&apos;s triggered-transaction API, not an onchain
+              delivery receipt. A timeout or missing child ID is never treated
+              as failure, and this app never retries automatically.
+            </p>
+            <dl>
+              <div>
+                <dt>Parent claim</dt>
+                <dd>{claimRecord.transactionId}</dd>
+              </div>
+              <div>
+                <dt>Triggered child</dt>
+                <dd>
+                  {delivery?.child?.transactionId
+                    ?? "Not exposed"}
+                </dd>
+              </div>
+              <div>
+                <dt>Child lifecycle</dt>
+                <dd>
+                  {delivery?.child?.statusName
+                    ?? "Unknown"}
+                </dd>
+              </div>
+              <div>
+                <dt>Execution result</dt>
+                <dd>
+                  {delivery?.child?.executionResultName
+                    ?? "Unknown"}
+                </dd>
+              </div>
+            </dl>
+            {delivery !== null ? (
+              <small>{delivery.reason}</small>
+            ) : (
+              <small>
+                Select “Observe child transaction” to read the exact child
+                transaction. No delivery outcome is assumed before then.
+              </small>
+            )}
           </div>
         ) : null}
 

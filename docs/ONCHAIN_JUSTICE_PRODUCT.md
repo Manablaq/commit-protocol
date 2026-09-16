@@ -54,6 +54,23 @@ It also presents the native appeal lifecycle as a read-only surface when the
 user supplies a GenLayer transaction ID. It never submits an appeal from the
 verification page.
 
+### External delivery observation (`/app` → Claim)
+
+After a successful parent claim, the Claim surface can inspect the exact child
+transaction created by the native-value message. It binds the child to the
+expected beneficiary and exact entitlement before interpreting the lifecycle.
+`DELIVERED` requires `FINALIZED` plus `FINISHED_WITH_RETURN`; a finalized
+execution error is shown as `FAILED`; all missing, pending, ambiguous, or
+unreadable results are shown as `PENDING` or `UNVERIFIED`. The parent claim ID
+and exact amount are stored only in beneficiary-scoped browser storage so the
+user can re-read the observation after navigation.
+
+This is explicitly an operator observation, not a contract callback or
+trustless retry mechanism. The product never restores an entitlement or
+resubmits a native transfer based on a timeout or caller assertion. The full
+boundary is recorded in
+[`EXTERNAL_DELIVERY_OBSERVATION.md`](./EXTERNAL_DELIVERY_OBSERVATION.md).
+
 ## Native appeal implementation
 
 The implementation in `lib/genlayer-appeal.ts` uses the installed GenLayer JS
@@ -121,11 +138,12 @@ The product inherits the coordinator's reviewer-hardening guarantees:
 - consume-before-dispatch claim handling.
 
 The product does not claim to make arbitrary external GEN delivery atomic. The
-known platform boundary is documented in `docs/OPEN_QUESTIONS.md` and
-`docs/SEMANTIC_ATOMICITY.md`: downstream transfer delivery and trustless
-terminal-failure reconciliation require an idempotent recipient-layer vault or
-another platform-supported delivery primitive that is outside the certified
-Studio Next coordinator scope.
+known platform boundary is documented in `docs/OPEN_QUESTIONS.md`,
+`docs/SEMANTIC_ATOMICITY.md`, and
+`docs/EXTERNAL_DELIVERY_OBSERVATION.md`: downstream transfer delivery and
+trustless terminal-failure reconciliation require an idempotent recipient-layer
+vault or another platform-supported delivery primitive that is outside the
+certified Studio Next coordinator scope.
 
 ## Verification commands
 

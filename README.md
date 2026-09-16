@@ -25,6 +25,9 @@ COMMIT does **not** claim to roll back arbitrary external systems.
 5. GenLayer validators independently fetch the bounded evidence and agree on the exact consequential result.
 6. A finalized self-message applies `COMMIT` or `ABORT` exactly once.
 7. Claimable entitlements are consumed before native-value dispatch so the same right cannot be spent twice.
+8. The application can observe the exact triggered child transaction, but only
+   reports delivery after strict recipient, amount, finality, and execution
+   checks; it never infers failure or retries automatically.
 
 ## Why GenLayer
 
@@ -129,7 +132,7 @@ A source-changing hardening release is deployed and certified on Studio Next:
   `dfb564fbd644fae756808fee2afc1f43c35d0dde095e33ad9f4802569e80007a`
 - Direct Runtime: **117 passed**
 - Python non-runtime: **454 passed + 334 subtests**
-- frontend Vitest: **27 passed**
+- frontend Vitest: **43 passed**
 - browser E2E: **12 passed**
 
 The candidate rejects future-dated evidence, exposes the exact helper binding,
@@ -172,6 +175,7 @@ COMMIT is designed around the failure modes that matter when AI consensus can mo
 - [`docs/STATE_MACHINE.md`](./docs/STATE_MACHINE.md) — lifecycle and recovery
 - [`docs/EVIDENCE_MODEL.md`](./docs/EVIDENCE_MODEL.md) — evidence and consensus model
 - [`docs/ACCOUNTING_MODEL.md`](./docs/ACCOUNTING_MODEL.md) — escrow and conservation
+- [`docs/EXTERNAL_DELIVERY_OBSERVATION.md`](./docs/EXTERNAL_DELIVERY_OBSERVATION.md) — strict child-message observation boundary
 - [`docs/THREAT_MODEL.md`](./docs/THREAT_MODEL.md) — adversarial analysis
 - [`docs/DEPLOYMENT_LOG_STUDIO_DEV.md`](./docs/DEPLOYMENT_LOG_STUDIO_DEV.md) — historical live proof
 - [`docs/CURRENT_DEPLOYMENT_PROOF_2026-09-16.md`](./docs/CURRENT_DEPLOYMENT_PROOF_2026-09-16.md) — historical published-release deployment proof
@@ -208,6 +212,13 @@ The current source-bound Studio Next proof demonstrates finalized COMMIT and
 ABORT branches and one-time entitlement consumption. It does not claim
 authenticated proof of downstream external delivery or production-grade
 retry/reconciliation for failed external transfers.
+
+The frontend now provides a fail-closed operator observation of triggered child
+transactions. It reports `DELIVERED` only for an exact one-child match with
+`FINALIZED` plus `FINISHED_WITH_RETURN`, reports `FAILED` only for an exact
+match with `FINISHED_WITH_ERROR`, and otherwise reports `PENDING` or
+`UNVERIFIED`. This read-only observation does not change the contract boundary
+or authorize a retry.
 
 See [`docs/OPEN_QUESTIONS.md`](./docs/OPEN_QUESTIONS.md) for the concise submission boundary.
 

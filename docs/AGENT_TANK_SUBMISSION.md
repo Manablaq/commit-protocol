@@ -162,6 +162,8 @@ COMMIT claims:
 - deadline recovery for locked value;
 - idempotent decision application;
 - consume-before-dispatch settlement rights;
+- strict read-only observation of the exact triggered child message, including
+  recipient/value binding and finalized execution result;
 - bounded evidence, text, graph, and remote-body inputs.
 
 COMMIT does **not** claim:
@@ -171,6 +173,13 @@ COMMIT does **not** claim:
   release commit;
 - authenticated proof of downstream external GEN delivery after dispatch;
 - production custody readiness beyond the explicitly tested boundary.
+
+The live application does expose an operator observation path for a triggered
+claim child transaction. It reports delivery only when the exact beneficiary,
+amount, `FINALIZED` status, and `FINISHED_WITH_RETURN` result match. Missing,
+ambiguous, pending, or mismatched child data remains unverified, and the
+application does not retry automatically. This improves visibility without
+overstating the current Studio Next delivery guarantee.
 
 ## Reviewer path
 

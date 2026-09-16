@@ -4,7 +4,8 @@ Status: the reviewer-hardening candidate passes local static, Direct Runtime,
 backend, frontend, and browser verification. The exact coordinator is finalized
 and byte-matched on Studio Next, with fresh COMMIT and ABORT lifecycle proofs.
 Production frontend rebinding is complete. Downstream external-transfer
-reconciliation remains explicitly bounded work.
+reconciliation remains explicitly bounded by the current Studio Next message
+model; the frontend now exposes a strict read-only child-message observation.
 
 | Threat | Current control | Remaining limitation / proof |
 | --- | --- | --- |
@@ -19,7 +20,7 @@ reconciliation remains explicitly bounded work.
 | Leader manipulation | Validator path is bound to the consequential evidence result | Fresh current-source COMMIT and ABORT consensus proofs passed; recovery/stale-callback hosted proof remains separately certifiable |
 | Replay/double allocation | Decision nonce, exact roots, self-callback authentication, terminal allocation flag, recovery race guards | Fresh current-source COMMIT and ABORT callback/claim proofs passed; recovery/stale-callback hosted proof remains separately certifiable |
 | Trapped funds | Permissionless recovery after declared recovery deadline | Requires network liveness and a successful recovery transaction |
-| Indirect claim/reentrancy-style caller confusion | Public claim requires immediate sender == original transaction submitter; entitlement is consumed before dispatch | Downstream chain-layer delivery/reconciliation is outside COMMIT's proven atomic boundary |
+| Indirect claim/reentrancy-style caller confusion | Public claim requires immediate sender == original transaction submitter; entitlement is consumed before dispatch; frontend binds any observed child to the exact beneficiary and value | Downstream chain-layer delivery/reconciliation is outside COMMIT's proven atomic boundary |
 | Fee exhaustion | Fee policy enumerates all message-producing paths and invalidation conditions | Exact live quotes are required before each new message path; the certified deployment and tested lifecycle used measured current-network values |
 | Oversized remote input | 16 KiB response cap and bounded text/reason/graph fields | Target-network resource behavior must still be certified |
 
@@ -37,7 +38,8 @@ success, or automatic reconciliation as part of semantic atomicity.
 
 1. Keep downstream GEN delivery/retry/reconciliation explicitly outside the
    guarantee unless a native, authenticated delivery receipt and safe retry
-   protocol is added and separately proven.
+   protocol is added and separately proven. The frontend's strict child-message
+   observation improves visibility but does not change this boundary.
 2. Complete hosted recovery/stale-callback proof if a future submission requires
    that additional live evidence; local state-machine and runtime coverage is
    already present.
