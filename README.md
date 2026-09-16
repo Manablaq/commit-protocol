@@ -106,16 +106,16 @@ See
 
 - Public application: `https://commit-protocol.vercel.app`
 - Deployed application source commit:
-  `53fb52f2d8d7c5a3636810501b740d859d5a2c14`
+  `77442659b06f1ddaa7ec1215fae9048671ac0c76`
 - Deployed application source tree:
-  `91c5f458dd77f7d38f0c8107f00eb15a74c3ce37`
+  `a52c55fdded8ba096c5f7527aad894943d458809`
 - Vercel production deployment:
-  `dpl_BvXSZgubPSzs3Z9cyck6eY5dzvDt`
+  `dpl_ChVMybCDSWombsWhsikRJPLtagN5`
 - Served coordinator: `0xEE21cCFF8f3755487f774BFd5Da9Ff51D5688581`
 - Production smoke checks: `/`, `/app`, `/verify`, health, typed index lookup,
   typed transaction lookup, security headers, and browser verification action:
   **passed**
-- GitHub Actions `Verification` run `35142284628`: **passed**
+- GitHub Actions `Verification` run `35146518481`: **passed**
 
 The complete production release record is in
 [`docs/PRODUCTION_RELEASE_2026-09-16.md`](./docs/PRODUCTION_RELEASE_2026-09-16.md).
