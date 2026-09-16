@@ -38,8 +38,8 @@ The repository contains two separate commands so submission and finality cannot
 be conflated:
 
 ```text
-npm run deploy:studio-next
-npm run finalize:studio-next
+node scripts/deploy_studio_next.mjs
+node scripts/finalize_studio_next.mjs
 ```
 
 `deploy:studio-next` is read-only by default. It resolves the unlocked worker
