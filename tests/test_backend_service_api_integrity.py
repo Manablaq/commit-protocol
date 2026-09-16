@@ -219,6 +219,63 @@ class BackendServiceApiIntegrityTests(
             1,
         )
 
+    def test_matching_vercel_named_rewrite_capture_is_not_public_query_input(
+        self,
+    ):
+        api = _api()
+
+        store = FIXTURE.FakeStore(
+            FIXTURE._index_snapshot()
+        )
+
+        app = api.create_app(
+            store=store
+        )
+
+        query = urlencode(
+            [
+                (
+                    "chain_id",
+                    str(
+                        FIXTURE.CHAIN_ID
+                    ),
+                ),
+                (
+                    "contract_address",
+                    FIXTURE.CONTRACT_ADDRESS,
+                ),
+                (
+                    "state_basis",
+                    "FINALIZED",
+                ),
+                (
+                    "path",
+                    "index",
+                ),
+            ]
+        )
+
+        status, body = FIXTURE._request(
+            app,
+            path="/api/v1/index",
+            query=query,
+        )
+
+        self.assertEqual(
+            status,
+            200,
+        )
+        self.assertIs(
+            body[
+                "found"
+            ],
+            True,
+        )
+        self.assertEqual(
+            store.loads,
+            1,
+        )
+
     def test_reserved_vercel_capture_value_is_ignored_before_public_shape_validation(
         self,
     ):

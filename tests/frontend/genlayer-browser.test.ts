@@ -8,7 +8,7 @@ import {
   formatGenAmount,
   parseGenAmount,
   preflightCommitWallet,
-  STUDIO_DEV_CHAIN_ID,
+  STUDIO_NEXT_CHAIN_ID,
   validateFundingEligibility,
   validateEvidenceAttestationEligibility,
   validateEvidenceRegistrationEligibility,
@@ -26,7 +26,7 @@ import {
 
 describe("COMMIT GenLayer browser integration", () => {
   it("binds the deployed policy and Studio Next chain", () => {
-    expect(STUDIO_DEV_CHAIN_ID).toBe(61997);
+    expect(STUDIO_NEXT_CHAIN_ID).toBe(61997);
     expect(COMMIT_POLICY_DIGEST).toBe(
       "983307fac383ac4a92be6c0c361ea8f3c9d9efa20ad5e6e8bc8dee932f2a6103",
     );

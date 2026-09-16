@@ -40,7 +40,7 @@ import {
 } from "@/components/application/claim-mission-flow";
 import {
   preflightCommitWallet,
-  STUDIO_DEV_CHAIN_ID,
+  STUDIO_NEXT_CHAIN_ID,
   type ConnectedCommitWallet,
   type WalletPreflight,
 } from "@/lib/genlayer-browser";
@@ -255,7 +255,7 @@ export function ApplicationShell() {
           </p>
           <div className="commit-app-anchor">
             <span>
-              Chain {STUDIO_DEV_CHAIN_ID}
+              Chain {STUDIO_NEXT_CHAIN_ID}
             </span>
             <span>
               {shorten(

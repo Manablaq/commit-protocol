@@ -176,6 +176,9 @@ def test_application_shell_is_real_product_surface() -> None:
     client = _read(
         "lib/genlayer-browser.ts"
     )
+    wallet_connection = _read(
+        "lib/commit-wallet-connection.ts"
+    )
     page = _read(
         "app/app/page.tsx"
     )
@@ -222,7 +225,7 @@ def test_application_shell_is_real_product_surface() -> None:
     assert "ApplicationShell" in page
     assert "createAccount" not in client
     assert "privateKey" not in client
-    assert "eth_requestAccounts" in client
+    assert "eth_requestAccounts" in wallet_connection
 
 
 def test_funding_flow_enforces_contract_preflight_before_signing() -> None:

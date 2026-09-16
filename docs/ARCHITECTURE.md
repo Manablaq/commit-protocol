@@ -84,8 +84,10 @@ claiming on behalf of a beneficiary through the public claim method.
 
 The `/verify` backend reads transaction truth through supported hosted-Studio
 transaction/status surfaces and keeps finality distinct from execution success.
-Vercel rewrite metadata is filtered only when it exactly matches the internal
-route capture expected for the request.
+The Vercel rewrite passes its current named wildcard as `path` (legacy routes
+used `1`). The service removes only those documented transport keys before
+enforcing the exact public query allowlist; unknown non-reserved and duplicate
+semantic keys still fail closed.
 
 ## Candidate source identities
 

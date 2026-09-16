@@ -2,7 +2,7 @@ import {
   createClient,
 } from "genlayer-js";
 import {
-  STUDIO_DEV_CHAIN_HEX,
+  STUDIO_NEXT_CHAIN_HEX,
   STUDIO_NETWORK_LABEL,
   STUDIO_NEXT_CHAIN,
   STUDIO_NEXT_RPC_URL,
@@ -192,7 +192,7 @@ function assertWalletAddress(
   }
 }
 
-export async function ensureStudioDevWalletNetwork(
+export async function ensureStudioNextWalletNetwork(
   provider: BrowserProvider,
 ): Promise<void> {
   const current = await provider.request({
@@ -202,7 +202,7 @@ export async function ensureStudioDevWalletNetwork(
   if (
     typeof current === "string"
     && current.toLowerCase()
-      === STUDIO_DEV_CHAIN_HEX
+      === STUDIO_NEXT_CHAIN_HEX
   ) {
     return;
   }
@@ -213,7 +213,7 @@ export async function ensureStudioDevWalletNetwork(
       params: [
         {
           chainId:
-            STUDIO_DEV_CHAIN_HEX,
+            STUDIO_NEXT_CHAIN_HEX,
         },
       ],
     });
@@ -227,7 +227,7 @@ export async function ensureStudioDevWalletNetwork(
       params: [
         {
           chainId:
-            STUDIO_DEV_CHAIN_HEX,
+            STUDIO_NEXT_CHAIN_HEX,
           chainName:
             STUDIO_NETWORK_LABEL,
           rpcUrls: [
@@ -245,7 +245,7 @@ export async function ensureStudioDevWalletNetwork(
       params: [
         {
           chainId:
-            STUDIO_DEV_CHAIN_HEX,
+            STUDIO_NEXT_CHAIN_HEX,
         },
       ],
     });
@@ -259,7 +259,7 @@ export async function ensureStudioDevWalletNetwork(
   if (
     typeof selected !== "string"
     || selected.toLowerCase()
-      !== STUDIO_DEV_CHAIN_HEX
+      !== STUDIO_NEXT_CHAIN_HEX
   ) {
     throw new Error(
       `MetaMask did not switch to ${STUDIO_NETWORK_LABEL} (61997).`,
@@ -343,7 +343,7 @@ export async function connectCommitWallet(): Promise<ConnectedCommitWallet> {
     address,
   );
 
-  await ensureStudioDevWalletNetwork(
+  await ensureStudioNextWalletNetwork(
     provider,
   );
 

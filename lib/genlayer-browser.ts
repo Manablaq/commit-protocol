@@ -17,8 +17,8 @@ import {
 export const COMMIT_POLICY_DIGEST =
   "983307fac383ac4a92be6c0c361ea8f3c9d9efa20ad5e6e8bc8dee932f2a6103";
 
-export const STUDIO_DEV_CHAIN_ID = 61997;
-export const STUDIO_DEV_CHAIN_HEX = "0xf22d";
+export const STUDIO_NEXT_CHAIN_ID = 61997;
+export const STUDIO_NEXT_CHAIN_HEX = "0xf22d";
 export const STUDIO_NEXT_RPC_URL = "https://studio-next.genlayer.com/api";
 export const STUDIO_NETWORK_LABEL = "GenLayer Studio Next";
 export const GEN_DECIMALS = 18;
@@ -239,26 +239,6 @@ function assertAddress(
   }
 }
 
-function browserProvider(): BrowserProvider {
-  if (typeof window === "undefined") {
-    throw new Error("Wallet connection is available only in the browser.");
-  }
-
-  const candidate = (
-    window as typeof window & {
-      ethereum?: BrowserProvider;
-    }
-  ).ethereum;
-
-  if (candidate === undefined) {
-    throw new Error(
-      "No MetaMask-compatible browser wallet was detected. Install or enable a wallet that supports the GenLayer Snap.",
-    );
-  }
-
-  return candidate;
-}
-
 function receiptText(
   value: unknown,
   key: string,
@@ -417,58 +397,6 @@ export function validateMissionDraft(
   return errors;
 }
 
-export async function connectCommitWallet(): Promise<ConnectedCommitWallet> {
-  const provider = browserProvider();
-
-  const accounts = await provider.request({
-    method: "eth_requestAccounts",
-  });
-
-  if (
-    !Array.isArray(accounts)
-    || typeof accounts[0] !== "string"
-  ) {
-    throw new Error(
-      "The wallet did not return an account.",
-    );
-  }
-
-  const address = accounts[0];
-  assertAddress(
-    address,
-    "Wallet account",
-  );
-
-  const client = createClient({
-    chain: STUDIO_NEXT_CHAIN,
-    account: address,
-    provider: provider as never,
-  });
-
-  await client.connect(
-    "studioDevnet",
-  );
-
-  const chainId = await provider.request({
-    method: "eth_chainId",
-  });
-
-  if (
-    typeof chainId !== "string"
-    || chainId.toLowerCase() !== STUDIO_DEV_CHAIN_HEX
-  ) {
-    throw new Error(
-      `Wallet must be connected to ${STUDIO_NETWORK_LABEL} (${STUDIO_DEV_CHAIN_ID}).`,
-    );
-  }
-
-  return {
-    address,
-    provider,
-    client,
-  };
-}
-
 function valueRecord(
   value: unknown,
   label: string,
@@ -591,10 +519,10 @@ export async function preflightCommitWallet(
 
   if (
     typeof chainId !== "string"
-    || chainId.toLowerCase() !== STUDIO_DEV_CHAIN_HEX
+    || chainId.toLowerCase() !== STUDIO_NEXT_CHAIN_HEX
   ) {
     throw new Error(
-      `Wallet is not on ${STUDIO_NETWORK_LABEL} (${STUDIO_DEV_CHAIN_ID}).`,
+      `Wallet is not on ${STUDIO_NETWORK_LABEL} (${STUDIO_NEXT_CHAIN_ID}).`,
     );
   }
 
@@ -640,7 +568,7 @@ export async function preflightCommitWallet(
 
   return {
     account: wallet.address,
-    chainId: STUDIO_DEV_CHAIN_ID,
+    chainId: STUDIO_NEXT_CHAIN_ID,
     balanceWei,
     balanceGen: formatGenAmount(
       balanceWei,

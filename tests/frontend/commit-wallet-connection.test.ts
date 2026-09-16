@@ -4,7 +4,7 @@ import {
   it,
 } from "vitest";
 import {
-  ensureStudioDevWalletNetwork,
+  ensureStudioNextWalletNetwork,
   tryEnableOptionalGenLayerSnap,
   walletConnectionErrorMessage,
 } from "@/lib/commit-wallet-connection";
@@ -39,7 +39,7 @@ describe(
           },
         };
 
-        await ensureStudioDevWalletNetwork(
+        await ensureStudioNextWalletNetwork(
           provider,
         );
 
@@ -91,7 +91,7 @@ describe(
           },
         };
 
-        await ensureStudioDevWalletNetwork(
+        await ensureStudioNextWalletNetwork(
           provider,
         );
 
@@ -153,7 +153,7 @@ describe(
           },
         };
 
-        await ensureStudioDevWalletNetwork(
+        await ensureStudioNextWalletNetwork(
           provider,
         );
 

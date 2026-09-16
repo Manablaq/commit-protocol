@@ -7,6 +7,7 @@ const eslintConfig = defineConfig([
   ...nextTypeScript,
   globalIgnores([
     ".next/**",
+    ".vercel/**",
     ".venv/**",
     "out/**",
     "build/**",

@@ -44,7 +44,12 @@ _INDEX_QUERY_FIELDS = (
     "state_basis",
 )
 
-_VERCEL_ROUTE_CAPTURE_KEY = "1"
+_VERCEL_ROUTE_CAPTURE_KEYS = frozenset(
+    (
+        "1",
+        "path",
+    )
+)
 
 
 class SnapshotStore(
@@ -87,11 +92,12 @@ def _invalid_query_response():
 def _public_query_items(
     request: Request,
 ) -> list[tuple[str, str]]:
-    # Vercel's regex route contributes numbered capture-group metadata to the
-    # function query string. Capture key "1" is transport metadata, never a
-    # COMMIT public input. Remove every instance before enforcing the exact
-    # semantic query allowlist below. Unknown non-reserved keys and duplicate
-    # semantic keys still fail closed in _has_exact_query_shape.
+    # Vercel contributes the rewrite wildcard as query metadata to the
+    # function. The legacy regex route used key "1"; the current named
+    # rewrite uses key "path". Neither is a COMMIT public input. Remove every
+    # instance before enforcing the exact semantic query allowlist below.
+    # Unknown non-reserved keys and duplicate semantic keys still fail closed
+    # in _has_exact_query_shape.
     return [
         (
             key,
@@ -101,7 +107,7 @@ def _public_query_items(
             request.query_params.multi_items()
         )
         if key
-        != _VERCEL_ROUTE_CAPTURE_KEY
+        not in _VERCEL_ROUTE_CAPTURE_KEYS
     ]
 
 
