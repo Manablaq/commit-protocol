@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL } from "node:url";
 
 const REPO = path.resolve(process.env.COMMIT_REPO ?? process.cwd());
 const RPC = "https://studio-next.genlayer.com/api";
@@ -321,6 +321,8 @@ if (PHASE === "recover-setup") {
         reason_code: eligible ? "current_source_commit" : "current_source_abort",
       };
       mission.records[suffix] = {
+        evidenceId: `${mission.missionId}-evidence-${suffix}`,
+        recordId: `${mission.missionId}-${suffix}`,
         url: mission.urls[suffix],
         payload,
         recordHash: payloadHash(payload),
@@ -463,6 +465,8 @@ if (PHASE === "setup") {
         reason_code: eligible ? "current_source_commit" : "current_source_abort",
       };
       mission.records[suffix] = {
+        evidenceId: `${mission.missionId}-evidence-${suffix}`,
+        recordId: `${mission.missionId}-${suffix}`,
         url: mission.urls[suffix],
         payload,
         recordHash: payloadHash(payload),
@@ -503,13 +507,15 @@ if (PHASE === "attest-seal") {
       ["vg-issuer-b-0e2855d", authorities[1], "b"],
     ]) {
       const record = mission.records[suffix];
+      const evidenceId = record.evidenceId ?? `${mission.missionId}-evidence-${suffix}`;
+      const recordId = record.recordId ?? `${mission.missionId}-${suffix}`;
       const url = record.url;
       let registered = false;
       try {
         const existing = await readClient.readContract({
           address: CONTRACT,
           functionName: "get_evidence",
-          args: [mission.missionId, `${mission.missionId}-evidence-${suffix}`],
+          args: [mission.missionId, evidenceId],
           transactionHashVariant: "latest-final",
         });
         registered = existing.authority_id === authority.authorityId;
@@ -537,7 +543,7 @@ if (PHASE === "attest-seal") {
         [
           authority.authorityId,
           1n,
-          `${mission.missionId}-${suffix}`,
+          recordId,
           1n,
           mission.missionId,
           1n,
@@ -554,10 +560,10 @@ if (PHASE === "attest-seal") {
         "register_evidence",
         [
           mission.missionId,
-          `${mission.missionId}-evidence-${suffix}`,
+          evidenceId,
           authority.authorityId,
           1n,
-          `${mission.missionId}-${suffix}`,
+          recordId,
           1n,
         ],
       );

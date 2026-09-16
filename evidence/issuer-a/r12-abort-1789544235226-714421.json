@@ -1,6 +1,6 @@
 {
   "schema": "commit-evidence-v2",
-  "evidence_id": "r12-abort-1789544235226-714421-a",
+  "evidence_id": "r12-abort-1789544235226-714421-evidence-a",
   "authority_id": "r12-issuer-a",
   "url": "https://raw.githubusercontent.com/Manablaq/commit-protocol/main/evidence/issuer-a/r12-abort-1789544235226-714421.json",
   "subject": "r12-abort-1789544235226-714421",

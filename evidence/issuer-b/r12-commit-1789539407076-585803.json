@@ -1,6 +1,6 @@
 {
   "schema": "commit-evidence-v2",
-  "evidence_id": "r12-commit-1789539407076-585803-b",
+  "evidence_id": "r12-commit-1789539407076-585803-evidence-b",
   "authority_id": "r12-issuer-b",
   "url": "https://raw.githubusercontent.com/Manablaq/commit-protocol/main/evidence/issuer-b/r12-commit-1789539407076-585803.json",
   "subject": "r12-commit-1789539407076-585803",
