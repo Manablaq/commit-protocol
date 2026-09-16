@@ -109,7 +109,7 @@ jobs:
 
       - name: Prepare and verify the pinned GenVM runtime
         run: >-
-          runtime_dir=$(uv run python -c 'import hashlib; from gltest.direct import sdk_loader; p=sdk_loader.download_artifacts("v0.6.0-rc5"); digest=hashlib.sha256(p.read_bytes()).hexdigest(); assert digest == "bd30580f911338d5533460eca8ed714dec371de5803c04e41dbb96430aea7b6e", digest; print(sdk_loader._extract_release_tree(p, "v0.6.0-rc5"), end="")');
+          runtime_dir=$(uv run python -c 'import hashlib, sys; from gltest.direct import sdk_loader; sys.stdout=sys.stderr; p=sdk_loader.download_artifacts("v0.6.0-rc5"); digest=hashlib.sha256(p.read_bytes()).hexdigest(); assert digest == "bd30580f911338d5533460eca8ed714dec371de5803c04e41dbb96430aea7b6e", digest; tree=sdk_loader._extract_release_tree(p, "v0.6.0-rc5"); sys.stdout=sys.__stdout__; print(tree, end="")');
           echo "GENVM_PREBUILT_DIR=$runtime_dir" >> "$GITHUB_ENV"
 
       - name: Run Direct Runtime suite
