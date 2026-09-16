@@ -45,5 +45,9 @@ success, or automatic reconciliation as part of semantic atomicity.
    already present.
 
 The repository's GitHub Actions `Verification` workflow is active. Run
-`35134050898` completed successfully for the deployed source commit
-`8726ce7924fd78281a117b92ce4733396501ebac`.
+`35140950751` completed successfully for the current repository release
+commit `abc5b1883b10eec022875becc8660a724fb8f671`.
+
+The `main` branch now requires the Frontend checks, Python checks, and Direct
+Runtime checks, with force-push and deletion disabled and conversation
+resolution required.

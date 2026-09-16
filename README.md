@@ -115,8 +115,7 @@ See
 - Production smoke checks: `/`, `/app`, `/verify`, health, typed index lookup,
   typed transaction lookup, security headers, and browser verification action:
   **passed**
-- GitHub Actions `Verification` for this release is recorded after the next
-  push; prior deployed-source run `35134050898`: **passed**
+- GitHub Actions `Verification` run `35140950751`: **passed**
 
 The complete production release record is in
 [`docs/PRODUCTION_RELEASE_2026-09-16.md`](./docs/PRODUCTION_RELEASE_2026-09-16.md).
