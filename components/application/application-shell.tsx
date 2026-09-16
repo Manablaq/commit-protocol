@@ -239,7 +239,7 @@ export function ApplicationShell() {
       <section className="commit-app-hero">
         <div>
           <p className="commit-app-kicker">
-            LIVE APPLICATION / STUDIO-DEV
+            LIVE APPLICATION / STUDIO NEXT
           </p>
           <h1 className="commit-display">
             CREATE.
@@ -292,7 +292,7 @@ export function ApplicationShell() {
           </strong>
           <small>
             {walletPreflight === null
-              ? "MetaMask / Studio-dev 61997"
+              ? "Wallet / Studio Next 61997"
               : `${walletPreflight.balanceGen} GEN available`}
           </small>
         </article>
@@ -333,7 +333,7 @@ export function ApplicationShell() {
             </h2>
             <p className="wallet-gate-copy">
               COMMIT never asks for a private key. Connect an injected
-              MetaMask-compatible wallet, connect to GenLayer Studio-dev
+              MetaMask-compatible wallet, connect to GenLayer Studio Next
               (chain 61997), and review the exact fee quote before the wallet
               is asked to sign anything.
             </p>

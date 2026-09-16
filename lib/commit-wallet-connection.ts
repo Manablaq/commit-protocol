@@ -2,10 +2,10 @@ import {
   createClient,
 } from "genlayer-js";
 import {
-  studioDevnet,
-} from "genlayer-js/chains";
-import {
   STUDIO_DEV_CHAIN_HEX,
+  STUDIO_NETWORK_LABEL,
+  STUDIO_NEXT_CHAIN,
+  STUDIO_NEXT_RPC_URL,
   type BrowserProvider,
   type ConnectedCommitWallet,
 } from "@/lib/genlayer-browser";
@@ -126,7 +126,7 @@ export function walletConnectionErrorMessage(
 
   return (
     "Wallet connection failed. Open MetaMask, select "
-    + "GenLayer Studio-dev (61997), and try again."
+    + `${STUDIO_NETWORK_LABEL} (61997), and try again.`
   );
 }
 
@@ -229,15 +229,12 @@ export async function ensureStudioDevWalletNetwork(
           chainId:
             STUDIO_DEV_CHAIN_HEX,
           chainName:
-            studioDevnet.name,
+            STUDIO_NETWORK_LABEL,
           rpcUrls: [
-            ...studioDevnet
-              .rpcUrls
-              .default
-              .http,
+            STUDIO_NEXT_RPC_URL,
           ],
           nativeCurrency:
-            studioDevnet
+            STUDIO_NEXT_CHAIN
               .nativeCurrency,
         },
       ],
@@ -265,7 +262,7 @@ export async function ensureStudioDevWalletNetwork(
       !== STUDIO_DEV_CHAIN_HEX
   ) {
     throw new Error(
-      "MetaMask did not switch to GenLayer Studio-dev (61997).",
+      `MetaMask did not switch to ${STUDIO_NETWORK_LABEL} (61997).`,
     );
   }
 }
@@ -355,7 +352,7 @@ export async function connectCommitWallet(): Promise<ConnectedCommitWallet> {
   );
 
   const client = createClient({
-    chain: studioDevnet,
+    chain: STUDIO_NEXT_CHAIN,
     account: address,
     provider:
       provider as never,

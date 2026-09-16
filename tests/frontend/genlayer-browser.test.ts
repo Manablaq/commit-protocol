@@ -25,7 +25,7 @@ import {
 } from "@/lib/genlayer-browser";
 
 describe("COMMIT GenLayer browser integration", () => {
-  it("binds the deployed policy and Studio-dev chain", () => {
+  it("binds the deployed policy and Studio Next chain", () => {
     expect(STUDIO_DEV_CHAIN_ID).toBe(61997);
     expect(COMMIT_POLICY_DIGEST).toBe(
       "983307fac383ac4a92be6c0c361ea8f3c9d9efa20ad5e6e8bc8dee932f2a6103",
@@ -110,7 +110,7 @@ describe("COMMIT GenLayer browser integration", () => {
     );
   });
 
-  it("preflights the exact Studio-dev account and balance", async () => {
+  it("preflights the exact Studio Next account and balance", async () => {
     const address =
       "0x1111111111111111111111111111111111111111" as const;
 

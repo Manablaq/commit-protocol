@@ -19,7 +19,19 @@ export const COMMIT_POLICY_DIGEST =
 
 export const STUDIO_DEV_CHAIN_ID = 61997;
 export const STUDIO_DEV_CHAIN_HEX = "0xf22d";
+export const STUDIO_NEXT_RPC_URL = "https://studio-next.genlayer.com/api";
+export const STUDIO_NETWORK_LABEL = "GenLayer Studio Next";
 export const GEN_DECIMALS = 18;
+
+export const STUDIO_NEXT_CHAIN = {
+  ...studioDevnet,
+  name: STUDIO_NETWORK_LABEL,
+  rpcUrls: {
+    default: {
+      http: [STUDIO_NEXT_RPC_URL],
+    },
+  },
+};
 
 const GEN_BASE_UNITS = BigInt(
   "1000000000000000000",
@@ -428,7 +440,7 @@ export async function connectCommitWallet(): Promise<ConnectedCommitWallet> {
   );
 
   const client = createClient({
-    chain: studioDevnet,
+    chain: STUDIO_NEXT_CHAIN,
     account: address,
     provider: provider as never,
   });
@@ -446,7 +458,7 @@ export async function connectCommitWallet(): Promise<ConnectedCommitWallet> {
     || chainId.toLowerCase() !== STUDIO_DEV_CHAIN_HEX
   ) {
     throw new Error(
-      `Wallet must be connected to GenLayer Studio-dev (${STUDIO_DEV_CHAIN_ID}).`,
+      `Wallet must be connected to ${STUDIO_NETWORK_LABEL} (${STUDIO_DEV_CHAIN_ID}).`,
     );
   }
 
@@ -582,7 +594,7 @@ export async function preflightCommitWallet(
     || chainId.toLowerCase() !== STUDIO_DEV_CHAIN_HEX
   ) {
     throw new Error(
-      `Wallet is not on GenLayer Studio-dev (${STUDIO_DEV_CHAIN_ID}).`,
+      `Wallet is not on ${STUDIO_NETWORK_LABEL} (${STUDIO_DEV_CHAIN_ID}).`,
     );
   }
 
@@ -2619,7 +2631,7 @@ export async function trackCommitTransaction(
   ) => void,
 ) {
   const readClient = createClient({
-    chain: studioDevnet,
+    chain: STUDIO_NEXT_CHAIN,
   });
 
   onProgress({

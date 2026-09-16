@@ -303,9 +303,9 @@ def test_workspace_prefills_exact_current_deployment_anchor() -> None:
         anchor,
         (
             "61997",
-            "0x7C1e450333D97CD4E02F48c3424BF10112697A60",
-            "0x496654c019c07ffeed87fb8021e482d18f5da125c2388538d5ea88d81a6a7640",
-            "be0ef1686314354ac1b87ccd50ab42f0c933c312a4980c0e5479f2d3037e4e58",
+            "0xEE21cCFF8f3755487f774BFd5Da9Ff51D5688581",
+            "0xc0e377d7a76893c253d61fcce42a320c6f5f41e5afad013a59dcbd279a998a50",
+            "e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6",
             "FINALIZED",
             "FINISHED_WITH_RETURN",
         ),
@@ -576,11 +576,11 @@ def test_browser_wallet_certification_matches_studio_dev_compatibility_flow() ->
             "4902",
             "tryEnableOptionalGenLayerSnap",
             "walletConnectionErrorMessage",
-            "GenLayer Studio-dev (61997)",
+            "STUDIO_NETWORK_LABEL",
         ),
     )
 
-    assert "MetaMask / Studio-dev 61997" in app
+    assert "Wallet / Studio Next 61997" in app
     assert "MetaMask + GenLayer Snap" not in app
     assert "GenLayer Snap support" not in app
 

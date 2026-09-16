@@ -16,7 +16,7 @@ describe(
   "COMMIT browser wallet connection hardening",
   () => {
     it(
-      "keeps an already-selected Studio-dev network without add/switch calls",
+      "keeps an already-selected Studio Next network without add/switch calls",
       async () => {
         const calls: string[] = [];
 
@@ -50,7 +50,7 @@ describe(
     );
 
     it(
-      "switches an existing Studio-dev network before attempting to add it",
+      "switches an existing Studio Next network before attempting to add it",
       async () => {
         const calls: string[] = [];
         let chainId = "0x1";
@@ -104,7 +104,7 @@ describe(
     );
 
     it(
-      "adds Studio-dev only after MetaMask reports unknown chain 4902",
+      "adds Studio Next only after MetaMask reports unknown chain 4902",
       async () => {
         const calls: string[] = [];
         let chainId = "0x1";

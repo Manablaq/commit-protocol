@@ -8,7 +8,7 @@ transactions settled.
 ## Release identity
 
 - Repository: `https://github.com/Manablaq/commit-protocol`
-- Repository HEAD: `e402af3978a51012223b035652b85fc77001485b`
+- Repository HEAD: `9f3fc999326b15671b175d58ada02862f3dcd97c`
 - Coordinator source: `contracts/commit.py`
 - Coordinator source: 19,873 bytes
 - Coordinator SHA-256: `e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6`

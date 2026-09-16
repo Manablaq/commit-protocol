@@ -2,8 +2,9 @@
 
 Updated: 2026-09-16.
 
-This record is for the final reviewer-hardening candidate on
-`fix/final-reviewer-blockers-r1`.
+This record covers the local verification gates for the reviewer-hardening
+candidate. The certified source-bound release is now on `main` and has a
+separate finalized Studio Next deployment record.
 
 ## Candidate source identity
 
@@ -18,9 +19,10 @@ Base GitHub main before candidate publication:
 - helper SHA-256: `dfb564fbd644fae756808fee2afc1f43c35d0dde095e33ad9f4802569e80007a`
 - helper bytes: `9428`
 
-The candidate is intentionally source-different from the currently deployed
-`e9858985495111cf2f21db6dc847c7f75b79c0da` coordinator and therefore requires a new coordinator deployment
-before it can become the submission release.
+The candidate was intentionally source-different from the previously deployed
+`e9858985495111cf2f21db6dc847c7f75b79c0da` coordinator. The replacement
+deployment and its exact byte match are recorded in
+[`LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md`](./LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md).
 
 ## Hardened behavior added
 
@@ -72,9 +74,8 @@ future-publication rejection and indirect-origin claim rejection.
 
 ## Network status
 
-No chain transaction, wallet signature, remote Git push, or Vercel deployment
-is part of this local certification.
-
-The currently published exact-source deployment proof remains bound to the
-older deployed source `be0ef1686314354ac1b87ccd50ab42f0c933c312a4980c0e5479f2d3037e4e58` until the new coordinator is
-deployed and independently source-matched.
+This file records local gates only; it does not itself constitute a chain
+transaction, wallet signature, remote Git push, or Vercel deployment record.
+The current source-bound Studio Next deployment, exact source match, and fresh
+COMMIT/ABORT lifecycle evidence are recorded separately in
+[`LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md`](./LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md).

@@ -108,7 +108,7 @@ test("COMMIT browser wallet performs the pinned GenLayer Snap preflight", async 
   page.on("request", (request) => {
     if (
       request.url().startsWith(
-        "https://studio-dev.genlayer.com/api",
+        "https://studio-next.genlayer.com/api",
       )
     ) {
       liveRpcRequests.push(
@@ -198,7 +198,7 @@ test("COMMIT connected wallet exposes supplier and effect preparation without wr
   page.on("request", (request) => {
     if (
       request.url().startsWith(
-        "https://studio-dev.genlayer.com/api",
+        "https://studio-next.genlayer.com/api",
       )
     ) {
       liveRpcRequests.push(
@@ -275,7 +275,7 @@ test("COMMIT connected wallet exposes evidence attestation and registration cont
   page.on("request", (request) => {
     if (
       request.url().startsWith(
-        "https://studio-dev.genlayer.com/api",
+        "https://studio-next.genlayer.com/api",
       )
     ) {
       liveRpcRequests.push(
@@ -352,7 +352,7 @@ test("COMMIT connected wallet exposes mission sealing controls without writing",
   page.on("request", (request) => {
     if (
       request.url().startsWith(
-        "https://studio-dev.genlayer.com/api",
+        "https://studio-next.genlayer.com/api",
       )
     ) {
       liveRpcRequests.push(
@@ -429,7 +429,7 @@ test("COMMIT connected wallet exposes evaluation repair and recovery controls wi
   page.on("request", (request) => {
     if (
       request.url().startsWith(
-        "https://studio-dev.genlayer.com/api",
+        "https://studio-next.genlayer.com/api",
       )
     ) {
       liveRpcRequests.push(
@@ -506,7 +506,7 @@ test("COMMIT connected wallet exposes beneficiary claim and withdrawal receipt c
   page.on("request", (request) => {
     if (
       request.url().startsWith(
-        "https://studio-dev.genlayer.com/api",
+        "https://studio-next.genlayer.com/api",
       )
     ) {
       liveRpcRequests.push(
