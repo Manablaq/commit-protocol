@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const REPO = path.resolve(process.env.COMMIT_REPO ?? process.cwd());
 const RPC = "https://studio-next.genlayer.com/api";
 const CHAIN_ID = 61997;
-const CONTRACT = "0xeeb4D9F32568Ff5107E78a7C52c67A6B16348665";
+const CONTRACT = "0xE364331EB615D172D885f4AaAF9eEeE22b9788e3";
 const WORKER = "0x1f87Ae197af539253978d435aD45cCf28Fb95024";
 const ISSUER_A = "0x9120e644c19ed0f13bddcbd2a985f12ce0493b30";
 const ISSUER_B = "0xb416595eae6ff040d6c1c066b9f91db6fd56004b";
@@ -18,6 +18,8 @@ const STATE_FILE = path.resolve(
 const PHASE = process.env.COMMIT_LIVE_PHASE ?? "setup";
 const BUDGET = 1_000_000_000_000_000n;
 const FUNDING = 100_000_000_000_000n;
+const MESSAGE_METHODS = new Set(["evaluate_mission", "claim_mission"]);
+const SIMPLE_EXECUTION_BUDGET = 25_000_000_000_000_000n;
 
 const jsonSafe = (value) =>
   JSON.stringify(value, (_key, item) =>
@@ -91,10 +93,31 @@ const read = (functionName, args = []) =>
 async function submit(label, accountName, functionName, args, value = 0n) {
   const client = clientFor(accountName);
   const call = { address: CONTRACT, functionName, args };
-  const estimate = await client.estimateTransactionFeesForWrite({
-    ...call,
-    ...(value > 0n ? { value } : {}),
-  });
+  const estimate = MESSAGE_METHODS.has(functionName)
+    ? await client.estimateTransactionFeesForWrite({
+        ...call,
+        ...(value > 0n ? { value } : {}),
+      })
+    : await (async () => {
+        const policy = await client.getCurrentFeePolicy();
+        const executionBudgetPerRound =
+          policy.executionBudgetFloor > SIMPLE_EXECUTION_BUDGET
+            ? policy.executionBudgetFloor
+            : SIMPLE_EXECUTION_BUDGET;
+        return client.estimateTransactionFees({
+          leaderTimeunitsAllocation: 100n,
+          validatorTimeunitsAllocation: 200n,
+          appealRounds: 0n,
+          executionBudgetPerRound,
+          executionConsumed: 0n,
+          totalMessageFees: 0n,
+          rotations: [3n],
+          maxPriceGenPerTimeUnit: 2n,
+          storageFeeMaxGasPrice: 300000000n,
+          receiptFeeMaxGasPrice: 300000000n,
+          messageAllocations: [],
+        });
+      })();
   if (!estimate || estimate.feeValue <= 0n) fail(`${label} returned no fee estimate`);
   const fees = {
     distribution: estimate.distribution,
@@ -311,6 +334,17 @@ if (PHASE === "setup") {
     },
   ];
   for (const authority of authorities) {
+    let alreadyRegistered = false;
+    try {
+      const existing = await read("get_authority", [authority.authorityId]);
+      alreadyRegistered = String(existing.authority_id ?? "") === authority.authorityId;
+    } catch {
+      alreadyRegistered = false;
+    }
+    if (alreadyRegistered) {
+      setup.push({ label: `register ${authority.authorityId}`, status: "ALREADY_REGISTERED" });
+      continue;
+    }
     setup.push(await submit(
       `register ${authority.authorityId}`,
       "worker",
