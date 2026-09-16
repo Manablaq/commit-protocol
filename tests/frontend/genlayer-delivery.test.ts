@@ -211,6 +211,18 @@ describe(
         expect(
           readPersistedClaimTransaction(missionId, RECIPIENT)?.amount,
         ).toBe(AMOUNT);
+        expect(
+          readPersistedClaimTransaction(
+            "different-mission",
+            RECIPIENT,
+          ),
+        ).toBeNull();
+        expect(
+          readPersistedClaimTransaction(
+            missionId,
+            OTHER_RECIPIENT,
+          ),
+        ).toBeNull();
         window.localStorage.setItem(
           claimTransactionStorageKey(missionId, RECIPIENT),
           "not-a-hash",

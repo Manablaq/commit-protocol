@@ -6,16 +6,17 @@ canonical Vercel alias and the exact Studio Next coordinator it targets.
 ## Release identity
 
 - Repository: `https://github.com/Manablaq/commit-protocol`
-- Deployed application source commit: `d25e689b0d5c681755751da257700f0d3f7974d1`
-- Deployed application source tree: `5553aa58ab006c85000c5a2b106988da2b61f002`
+- Deployed application source commit: `53fb52f2d8d7c5a3636810501b740d859d5a2c14`
+- Deployed application source tree: `91c5f458dd77f7d38f0c8107f00eb15a74c3ce37`
 - Public application: `https://commit-protocol.vercel.app`
 - Vercel project: `mr-albert-s-projects/commitprotocol-genlayer`
-- Vercel production deployment: `dpl_Cwh63QydtcGyVD9MeZ7jrSo3A1QE`
+- Vercel production deployment: `dpl_BvXSZgubPSzs3Z9cyck6eY5dzvDt`
 - Deployment state: `READY` / `PRODUCTION`
 
 The source commit and tree above are the exact release built and published by
 the recorded Vercel deployment. The deployment includes the narrow-viewport
-overflow fix certified by the browser E2E gate.
+overflow fix and wallet-bound claim-observation fix certified by the browser
+E2E gate and regression suite.
 
 ## Served contract binding
 
@@ -51,7 +52,7 @@ Read-only checks against `https://commit-protocol.vercel.app` passed:
   client-side error
 - deployed JavaScript bundle contains the certified coordinator anchor and the
   strict `EXTERNAL MESSAGE OBSERVATION` claim surface
-- GitHub Actions `Verification` run `35140950751` for the repository release:
+- GitHub Actions `Verification` run `35142284628` for the application release:
   completed successfully across Python, Direct Runtime, and frontend jobs
 
 The verification API remains read-only. It does not reconstruct chain truth or
