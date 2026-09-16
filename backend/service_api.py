@@ -84,72 +84,25 @@ def _invalid_query_response():
     )
 
 
-def _expected_route_suffix(
-    request: Request,
-) -> str:
-    path_params = getattr(
-        request,
-        "path_params",
-        {},
-    )
-
-    if type(path_params) is not dict:
-        path_params = {}
-
-    tx_id = path_params.get(
-        _TX_PARAMETER
-    )
-
-    if tx_id is None:
-        return "index"
-
-    if type(tx_id) is not str:
-        return ""
-
-    return (
-        "transactions/"
-        + tx_id
-    )
-
-
 def _public_query_items(
     request: Request,
 ) -> list[tuple[str, str]]:
-    items = list(
-        request.query_params.multi_items()
-    )
-
-    expected_capture = (
-        _expected_route_suffix(
-            request
+    # Vercel's regex route contributes numbered capture-group metadata to the
+    # function query string. Capture key "1" is transport metadata, never a
+    # COMMIT public input. Remove every instance before enforcing the exact
+    # semantic query allowlist below. Unknown non-reserved keys and duplicate
+    # semantic keys still fail closed in _has_exact_query_shape.
+    return [
+        (
+            key,
+            value,
         )
-    )
-
-    normalized: list[
-        tuple[str, str]
-    ] = []
-
-    route_capture_removed = False
-
-    for key, value in items:
-        if (
-            not route_capture_removed
-            and key
-            == _VERCEL_ROUTE_CAPTURE_KEY
-            and value
-            == expected_capture
-        ):
-            route_capture_removed = True
-            continue
-
-        normalized.append(
-            (
-                key,
-                value,
-            )
+        for key, value in (
+            request.query_params.multi_items()
         )
-
-    return normalized
+        if key
+        != _VERCEL_ROUTE_CAPTURE_KEY
+    ]
 
 
 def _has_exact_query_shape(

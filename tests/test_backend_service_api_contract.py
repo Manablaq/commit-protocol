@@ -477,6 +477,143 @@ class BackendServiceApiContractTests(
             1,
         )
 
+    def test_vercel_capture_metadata_is_not_public_index_input(
+        self,
+    ):
+        api = self._api()
+
+        store = FakeStore(
+            _index_snapshot()
+        )
+
+        app = api.create_app(
+            store=store
+        )
+
+        query = urlencode(
+            [
+                (
+                    "1",
+                    "host-runtime-capture-value",
+                ),
+                (
+                    "chain_id",
+                    CHAIN_ID,
+                ),
+                (
+                    "contract_address",
+                    CONTRACT_ADDRESS,
+                ),
+                (
+                    "state_basis",
+                    "FINALIZED",
+                ),
+            ]
+        )
+
+        status, body = _request(
+            app,
+            path="/api/v1/index",
+            query=query,
+        )
+
+        self.assertEqual(
+            status,
+            200,
+        )
+        self.assertIs(
+            body["found"],
+            True,
+        )
+        self.assertEqual(
+            store.loads,
+            1,
+        )
+
+    def test_vercel_capture_metadata_is_not_public_transaction_input(
+        self,
+    ):
+        api = self._api()
+
+        store = FakeStore(
+            _transaction_snapshot()
+        )
+
+        app = api.create_app(
+            store=store
+        )
+
+        status, body = _request(
+            app,
+            path=(
+                "/api/v1/transactions/"
+                + TX_ID
+            ),
+            query=urlencode(
+                {
+                    "1": (
+                        "host-runtime-capture-value"
+                    ),
+                }
+            ),
+        )
+
+        self.assertEqual(
+            status,
+            200,
+        )
+        self.assertIs(
+            body["found"],
+            True,
+        )
+        self.assertEqual(
+            store.loads,
+            1,
+        )
+
+    def test_unknown_non_transport_query_key_still_fails_closed(
+        self,
+    ):
+        api = self._api()
+
+        store = FakeStore(
+            _index_snapshot()
+        )
+
+        app = api.create_app(
+            store=store
+        )
+
+        query = urlencode(
+            {
+                "chain_id": CHAIN_ID,
+                "contract_address": (
+                    CONTRACT_ADDRESS
+                ),
+                "state_basis": "FINALIZED",
+                "unexpected": "blocked",
+            }
+        )
+
+        status, body = _request(
+            app,
+            path="/api/v1/index",
+            query=query,
+        )
+
+        self.assertEqual(
+            status,
+            422,
+        )
+        self.assertEqual(
+            body["error"],
+            "INVALID_QUERY",
+        )
+        self.assertEqual(
+            store.loads,
+            0,
+        )
+
     def test_index_query_requires_explicit_finality_basis(
         self,
     ):

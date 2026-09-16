@@ -219,7 +219,7 @@ class BackendServiceApiIntegrityTests(
             1,
         )
 
-    def test_mismatched_route_capture_is_rejected_before_storage_read(
+    def test_reserved_vercel_capture_value_is_ignored_before_public_shape_validation(
         self,
     ):
         api = _api()
@@ -255,7 +255,7 @@ class BackendServiceApiIntegrityTests(
             ]
         )
 
-        status, _body = FIXTURE._request(
+        status, body = FIXTURE._request(
             app,
             path="/api/v1/index",
             query=query,
@@ -263,11 +263,15 @@ class BackendServiceApiIntegrityTests(
 
         self.assertEqual(
             status,
-            422,
+            200,
+        )
+        self.assertIs(
+            body["found"],
+            True,
         )
         self.assertEqual(
             store.loads,
-            0,
+            1,
         )
 
     def test_duplicate_index_state_basis_is_rejected_before_storage_read(

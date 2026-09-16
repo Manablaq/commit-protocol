@@ -15,7 +15,7 @@ def test_supported_transaction_rpc_only():
 
 class Q:
     def multi_items(self):
-        return [('1','index'),('chain_id','61997'),('contract_address','0x'+'77'*20),('state_basis','FINALIZED')]
+        return [('1','host-runtime-capture-shape-is-not-public-input'),('chain_id','61997'),('contract_address','0x'+'77'*20),('state_basis','FINALIZED')]
 class U: path='/api/v1/index'
 class R: query_params=Q(); url=U()
 
