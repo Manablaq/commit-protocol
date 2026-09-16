@@ -504,7 +504,33 @@ if (PHASE === "attest-seal") {
     ]) {
       const record = mission.records[suffix];
       const url = record.url;
-      const attestation = await submit(
+      let registered = false;
+      try {
+        const existing = await readClient.readContract({
+          address: CONTRACT,
+          functionName: "get_evidence",
+          args: [mission.missionId, `${mission.missionId}-evidence-${suffix}`],
+          transactionHashVariant: "latest-final",
+        });
+        registered = existing.authority_id === authority.authorityId;
+      } catch {
+        registered = false;
+      }
+      if (registered) {
+        mission[`attest${suffix.toUpperCase()}`] ??= {
+          status: "RECONCILED_ONCHAIN",
+          account: issuerName,
+          functionName: "attest_evidence",
+        };
+        mission[`register${suffix.toUpperCase()}`] ??= {
+          status: "RECONCILED_ONCHAIN",
+          account: "worker",
+          functionName: "register_evidence",
+        };
+        console.log(`RECONCILED evidence ${mission.missionId} ${suffix}`);
+        continue;
+      }
+      mission[`attest${suffix.toUpperCase()}`] = await submit(
         `attest ${mission.missionId} ${suffix}`,
         issuerName,
         "attest_evidence",
@@ -521,7 +547,7 @@ if (PHASE === "attest-seal") {
           BigInt(mission.expiresAt),
         ],
       );
-      mission[`attest${suffix.toUpperCase()}`] = attestation;
+      save(state);
       mission[`register${suffix.toUpperCase()}`] = await submit(
         `register evidence ${mission.missionId} ${suffix}`,
         "worker",
@@ -535,18 +561,34 @@ if (PHASE === "attest-seal") {
           1n,
         ],
       );
+      save(state);
     }
     const sealedEvidenceRoot = await read("derive_evidence_root", [mission.missionId]);
-    const sealed = await submit(
-      `seal ${mission.missionId}`,
-      "worker",
-      "seal_mission",
-      [mission.missionId, mission.effectRoot, sealedEvidenceRoot],
-    );
-    mission.seal = sealed;
+    const current = await readClient.readContract({
+      address: CONTRACT,
+      functionName: "get_mission",
+      args: [mission.missionId],
+      transactionHashVariant: "latest-final",
+    });
+    if (current.state === "SEALED") {
+      mission.seal ??= { status: "RECONCILED_ONCHAIN", functionName: "seal_mission" };
+      console.log(`RECONCILED seal ${mission.missionId}`);
+    } else {
+      mission.seal = await submit(
+        `seal ${mission.missionId}`,
+        "worker",
+        "seal_mission",
+        [mission.missionId, mission.effectRoot, sealedEvidenceRoot],
+      );
+    }
     mission.sealedEvidenceRoot = sealedEvidenceRoot;
-    const snapshot = await read("get_mission", [mission.missionId]);
+    let snapshot = await read("get_mission", [mission.missionId]);
+    for (let attempt = 0; attempt < 12 && snapshot.state !== "SEALED"; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 5_000));
+      snapshot = await read("get_mission", [mission.missionId]);
+    }
     if (snapshot.state !== "SEALED") fail(`${mission.missionId} did not enter SEALED`);
+    save(state);
   }
   save(state);
   console.log(jsonSafe({ phase: "attest-seal-complete", missions: state.missions.map((m) => ({ missionId: m.missionId, sealedEvidenceRoot: m.sealedEvidenceRoot ?? null, seal: m.seal?.hash ?? null, processed: Boolean(m.seal) })) }));
