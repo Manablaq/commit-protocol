@@ -2,7 +2,7 @@ import {
   createClient,
 } from "genlayer-js";
 import {
-  studioDevnet,
+  studionet,
 } from "genlayer-js/chains";
 import {
   ExecutionResult,
@@ -24,13 +24,15 @@ export const STUDIO_NETWORK_LABEL = "GenLayer Studio Next";
 export const GEN_DECIMALS = 18;
 
 export const STUDIO_NEXT_CHAIN = {
-  ...studioDevnet,
+  ...studionet,
+  id: STUDIO_NEXT_CHAIN_ID,
   name: STUDIO_NETWORK_LABEL,
   rpcUrls: {
     default: {
       http: [STUDIO_NEXT_RPC_URL],
     },
   },
+  blockExplorers: undefined,
 };
 
 const GEN_BASE_UNITS = BigInt(

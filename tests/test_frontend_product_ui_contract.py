@@ -208,7 +208,7 @@ def test_application_shell_is_real_product_surface() -> None:
     _assert_contains_all(
         client,
         (
-            "studioDevnet",
+            "studionet",
             "create_mission",
             "get_mission",
             "fund_mission",
@@ -545,7 +545,7 @@ def test_component_integration_test_contract_exists() -> None:
     )
 
 
-def test_browser_wallet_certification_matches_studio_dev_compatibility_flow() -> None:
+def test_browser_wallet_certification_matches_studio_next_flow() -> None:
     e2e = _read(
         "tests/e2e/product-ui.spec.ts"
     )
