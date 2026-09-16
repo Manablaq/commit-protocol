@@ -1,5 +1,11 @@
 # Agent Tank submission proof map
 
+> **Pre-submission hardening status:** the deployed proof below belongs to
+> release `e9858985495111cf2f21db6dc847c7f75b79c0da` / source `be0ef1686314354ac1b87ccd50ab42f0c933c312a4980c0e5479f2d3037e4e58`. The final local hardening
+> candidate is source `e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6` and has not yet been deployed. Agent Tank
+> submission must wait for a fresh exact-source deployment and current-source
+> lifecycle proof.
+
 This is the shortest reviewer path through the final COMMIT release.
 
 ## Project
@@ -84,9 +90,9 @@ executions of the newer release commit.
 Full historical record:
 [`DEPLOYMENT_LOG_STUDIO_DEV.md`](./DEPLOYMENT_LOG_STUDIO_DEV.md).
 
-## Final verification snapshot
+## Published-release verification snapshot
 
-The release has the following final certification record:
+The currently published release has the following certification record:
 
 - coordinator source SHA-256:
   `be0ef1686314354ac1b87ccd50ab42f0c933c312a4980c0e5479f2d3037e4e58`;

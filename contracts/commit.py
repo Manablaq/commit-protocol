@@ -117,6 +117,7 @@ class CommitProtocol(gl.contract.Contract):
   if not self.q().url_ok(url,a[1],a[2]):raise E("evidence URL is outside authority")
   self.x(record_hash,"record hash");self.u(published_at,"published",True);self.u(expires_at,"expiry",True)
   if published_at<m[20]:raise E("evidence published before mission")
+  if published_at>self.t():raise E("evidence published in future")
   if expires_at<m[19]:raise E("invalid evidence expiry")
   k="t:"+authority_id+":"+record_id+":"+str(record_version)
   if self.d.get(k,""):raise E("attestation already exists")
@@ -258,6 +259,7 @@ class CommitProtocol(gl.contract.Contract):
   else:raise E("invalid decision")
  @gl.public.write
  def claim_mission(self,mission_id:str)->None:
+  if gl.message.sender_address!=gl.message.origin_address:raise E("direct claimant required")
   m=self.m(mission_id)
   if m[1]not in("COMMITTED","ABORTED"):raise E("mission is not allocated")
   b=gl.message.sender_address;h=b.as_hex;a=int(m[26].get(h,0))
@@ -272,7 +274,8 @@ class CommitProtocol(gl.contract.Contract):
   if self.t()<m[19]:raise E("recovery deadline has not passed")
   self.b(mission_id,"recovery_deadline_expired")
  @gl.public.view
- def protocol_info(self)->dict:return self.q().info(int(self.n))
+ def protocol_info(self)->dict:
+  r=self.q().info(int(self.n));r["helper_address"]=self.hh.as_hex;return r
  @gl.public.view
  def get_claimable(self,beneficiary:Address)->int:return int(self.d.get("c:"+beneficiary.as_hex,"0"))
  @gl.public.view

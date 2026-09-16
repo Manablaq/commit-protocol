@@ -1,84 +1,80 @@
-# Verification record
+# Local verification record
 
-Updated: 2026-09-14.
+Updated: 2026-09-16.
 
-This record separates local/source certification from the historical live Studio Dev proof.
+This record is for the final reviewer-hardening candidate on
+`fix/final-reviewer-blockers-r1`.
 
-## Certified source checkpoint
+## Candidate source identity
 
-Commit:
+Base GitHub main before candidate publication:
 
-`c152ec75d935a4cb5cf37e2f31aaae89c1bdc525`
-
-Source identities:
+`092d1424ed809540a983a594e6941e562ca034df`
 
 - coordinator: `contracts/commit.py`
-- coordinator SHA-256: `e88d1d78ee8f2d373124bbfbc3f0c8d946385a3250fc028f5956fd74762f8c69`
+- coordinator SHA-256: `e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6`
+- coordinator bytes: `19873`
 - helper: `contracts/commit_helper.py`
-- helper SHA-256: `0120b74e0988f2444c3cc824bd40633c472348da9e1d3fd851c4d7380ffbe632`
+- helper SHA-256: `dfb564fbd644fae756808fee2afc1f43c35d0dde095e33ad9f4802569e80007a`
+- helper bytes: `9428`
 
-## Static validation
+The candidate is intentionally source-different from the currently deployed
+`e9858985495111cf2f21db6dc847c7f75b79c0da` coordinator and therefore requires a new coordinator deployment
+before it can become the submission release.
 
-Both contracts passed the pinned GenVM validation stack:
+## Hardened behavior added
 
-- typecheck: pass
-- lint: pass
-- contract validation: pass
-- coordinator public methods: 41
-- helper public methods: 8 view / 0 write
-- public ABI parity: pass
-- helper stateless/view-only guard: pass
+The candidate:
 
-## Runtime verification
+- rejects evidence whose `published_at` is later than the GenLayer transaction
+  clock;
+- exposes the constructor-bound helper address through `protocol_info`;
+- requires the public claim path to be initiated directly by the beneficiary
+  transaction origin;
+- uses hosted-Studio-compatible transaction reads in the verification backend;
+- filters Vercel route-capture metadata without weakening public query-shape
+  validation;
+- makes the health endpoint verify durable state readability;
+- aligns the browser SDK dependency with `genlayer-js==2.0.0-rc.1`;
+- adds baseline browser security headers.
 
-The certified checkpoint passed:
+## Static contract certification
 
-- targeted multi-contract helper/coordinator smoke: **1 passed**
-- semantic regression file: **70 passed**
-- full Direct Runtime suite: **113 passed**
-- repository regression suite: **433 passed + 334 subtests**
+Both coordinator and helper pass:
 
-The Direct Runtime uses the verified GenVM archive:
+- `genvm-lint check`
+- `genvm-lint typecheck`
 
-`bd30580f911338d5533460eca8ed714dec371de5803c04e41dbb96430aea7b6e`
+The helper remains stateless/view-only and byte-identical to the previously
+certified helper source.
 
-## Deployment-envelope verification
+## Python/runtime certification
 
-The exact coordinator/helper deployment payloads were encoded with `genlayer-js 1.1.8` and checked read-only against the GenLayer RPC environment used during certification.
+Final hardening results:
 
-Both helper and coordinator:
+- Direct Runtime: **117 passed**
+- non-runtime Python regression: **454 passed + 334 subtests**
+- official GenVM Manager `v0.6.0-rc5` archive SHA-256:
+  `bd30580f911338d5533460eca8ed714dec371de5803c04e41dbb96430aea7b6e`
 
-- decoded constructor calldata successfully;
-- had matching estimates across both checked RPC surfaces;
-- executed under the observed per-transaction gas ceiling in read-only calls.
+The Direct Runtime includes explicit positive regression coverage for both the
+future-publication rejection and indirect-origin claim rejection.
 
-No blockchain transaction was submitted as part of that qualification.
+## Frontend certification
 
-## Live behavior proof
+- TypeScript: pass
+- ESLint: pass
+- Vitest: **27 passed**
+- production Next.js build: pass
+- Playwright browser E2E: **12 passed**
+- local production `/app` and `/verify`: HTTP 200
+- local production baseline security headers: pass
 
-The historical source-matched v0.7 Studio Dev deployment independently proves both semantic branches:
+## Network status
 
-- mission 008: finalized `COMMIT`, allocation, one-time claim consumption;
-- mission 009: finalized `ABORT`, refund allocation, one-time refund consumption.
+No chain transaction, wallet signature, remote Git push, or Vercel deployment
+is part of this local certification.
 
-See [`DEPLOYMENT_LOG_STUDIO_DEV.md`](./DEPLOYMENT_LOG_STUDIO_DEV.md).
-
-## Reproduction
-
-Python:
-
-```sh
-uv sync --frozen
-uv run python -m pytest -q
-```
-
-Frontend:
-
-```sh
-npm ci
-npm run typecheck
-npm run test
-npm run build
-```
-
-The source/test code in the Agent Tank cleanup branch is intentionally byte-identical to the certified checkpoint. Repository cleanup changes presentation/documentation only.
+The currently published exact-source deployment proof remains bound to the
+older deployed source `be0ef1686314354ac1b87ccd50ab42f0c933c312a4980c0e5479f2d3037e4e58` until the new coordinator is
+deployed and independently source-matched.

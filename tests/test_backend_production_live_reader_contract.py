@@ -562,13 +562,13 @@ class ProductionLiveReaderContractTests(
 
             if (
                 method
-                == "gen_getTransactionReceipt"
+                == "eth_getTransactionByHash"
             ):
                 return {
                     "jsonrpc": "2.0",
                     "id": 2,
                     "result": {
-                        "id": TX_ID,
+                        "hash": TX_ID,
                         "status": 7,
                         "statusName": (
                             "Finalized"
@@ -704,7 +704,7 @@ class ProductionLiveReaderContractTests(
             receipt_call[
                 "method"
             ],
-            "gen_getTransactionReceipt",
+            "eth_getTransactionByHash",
         )
 
         self.assertEqual(
@@ -712,11 +712,7 @@ class ProductionLiveReaderContractTests(
                 "params"
             ],
             [
-                {
-                    "txId": (
-                        TX_ID
-                    ),
-                },
+                TX_ID,
             ],
         )
 

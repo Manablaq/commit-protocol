@@ -260,6 +260,7 @@ def test_protocol_discloses_custody_and_evaluation(probe_vm):
         "policy_rule": "all-evidence-and-effects-v1",
         "policy_digest": DIGEST,
         "remote_body_limit": 16384,
+        "helper_address": probe_vm._commit_helper_address.as_hex,
     }
 
 
@@ -1280,6 +1281,7 @@ def test_claim_dispatch_consumes_one_entitlement_and_records_withdrawal(probe_vm
     contract.apply_decision("mission-001", mission["decision_nonce"])
     beneficiary = create_address("beneficiary")
     probe_vm.sender = beneficiary
+    probe_vm.origin = beneficiary
     contract.claim_mission("mission-001")
     assert contract.get_claimable(beneficiary) == 0
     assert contract.get_withdrawal("0") == {
@@ -1295,6 +1297,28 @@ def test_claim_dispatch_consumes_one_entitlement_and_records_withdrawal(probe_vm
         contract.get_withdrawal_by_index(1)
     with pytest.raises(Exception, match="no claimable balance"):
         contract.claim_mission("mission-001")
+
+
+def test_claim_rejects_indirect_origin_for_beneficiary(probe_vm):
+    contract = load_contract(probe_vm)
+    seal_evaluable_mission(contract, probe_vm, True, True)
+    contract.evaluate_mission("mission-001")
+    mission = contract.get_mission("mission-001")
+    import genlayer as gl
+    from gltest.direct import create_address
+
+    probe_vm.sender = gl.message.contract_address
+    contract.apply_decision("mission-001", mission["decision_nonce"])
+
+    beneficiary = create_address("beneficiary")
+    probe_vm.sender = beneficiary
+    probe_vm.origin = create_address("relaying-origin")
+
+    with pytest.raises(Exception, match="direct claimant required"):
+        contract.claim_mission("mission-001")
+
+    assert contract.get_claimable(beneficiary) == 7
+    assert contract.get_withdrawal_count() == 0
 
 
 def test_mission_receipt_binds_the_decision_proof_envelope(probe_vm):

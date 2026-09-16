@@ -5,10 +5,10 @@
     "mission_principal_pays_protocol_fees": false,
     "protocol_fee_measurement_is_separate": true
   },
-  "candidate": "v0.8-reviewer-hard-gates",
+  "candidate": "final-reviewer-hardening-predeployment",
   "contract": {
     "path": "contracts/commit.py",
-    "sha256": "be0ef1686314354ac1b87ccd50ab42f0c933c312a4980c0e5479f2d3037e4e58"
+    "sha256": "e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6"
   },
   "helper_contract": {
     "path": "contracts/commit_helper.py",
@@ -20,7 +20,7 @@
     "chain_id": 61997,
     "constructor_args": [],
     "leader_only": false,
-    "network": "Studio Next",
+    "network": "Studio Dev preview",
     "sanitized_external_envelope_sha256": "bb0f7887acef5139db29bb3eda9791cd1eb77f282819f18945dc4cd85557ef34",
     "simulation_execution_result": "SUCCESS",
     "source_sha256": "dfb564fbd644fae756808fee2afc1f43c35d0dde095e33ad9f4802569e80007a",
@@ -99,7 +99,7 @@
     "hosted_runtime_archive_sha256_status": "NOT_EXPOSED_BY_SOURCE_BOUND_SIMULATION",
     "python_runner": "py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng",
     "rc5_direct_runtime_reused_for_v03": false,
-    "target_network": "Studio Next"
+    "target_network": "Studio Dev preview"
   },
   "schema": "commit-fee-profile-policy-v1",
   "successful_execution_requirement": "FINISHED_WITH_RETURN"

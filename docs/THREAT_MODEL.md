@@ -1,40 +1,48 @@
-# Threat Model and Verification Status
+# Threat model and verification status
 
-Status: hardened source and direct-runtime tests pass locally. Source-matched
-v0.7 missions 008 and 009 prove the Studio Dev COMMIT/ABORT evaluations,
-finality-gated allocations, and finalized one-way dispatch paths; external
-delivery/recovery and some provenance controls remain unverified and are not
-presented as production guarantees.
+Status: final reviewer-hardening candidate passes local static, Direct Runtime,
+backend, frontend, and browser verification. Fresh hosted preview and GenLayer
+deployment certification are still pending.
 
 | Threat | Current control | Remaining limitation / proof |
 | --- | --- | --- |
-| Unauthorized supplier | Mission-scoped allowlist; only principal or authorized supplier can prepare | Supplier identity is an authenticated address, not proof of an off-chain company identity |
-| Effect substitution | Immutable effect fields; canonical root includes dependency, supplier, beneficiary, value, expiry, and digest | Digest commits to an external payload; the payload is not stored on chain |
-| Cyclic dependency | Single-parent graph; dependency must already exist; bounded seal-time walk checks every chain | This revision supports a bounded single-parent graph, not arbitrary DAG/nested missions |
-| Evidence substitution | Authenticated issuer-address attestation; immutable authority/version and record/version; mission/version, URL, digest, publication time, expiry, and v2 snapshot binding | Final redirect destination and external organizational identity behind the registered issuer account are not independently verified |
-| Ambiguous evidence parsing | 16 KiB body cap; strict top-level schema; duplicate-key and non-standard-number rejection; canonical payload hashing | The source still must provide an authoritative, stable record before the expiry boundary |
-| Authority failure | Owner can deactivate an authority for new attestations; authority IDs bind immutable issuer/version; sealing requires distinct authenticated issuer addresses; sealed evaluation remains permissionless | Distinct account addresses still do not prove independent real-world organizations; network liveness is still required |
-| Repairable evidence acquisition/integrity failure | Evaluation persists `REPAIR_REQUIRED` rather than converting unavailable or malformed source material into a semantic ABORT; principal may attach only an authenticated strictly newer successor for the same authority/version, issuer, stable record, and mission/version before recovery deadline; sealed root stays immutable and the successor changes only the active evaluation root | A repaired source still depends on the registered issuer trust model and network availability; validator disagreement is deliberately not treated as source failure |
-| Prompt injection | Evidence is parsed as fixed data; only the configured web reads are used | No LLM reasoning is currently used; arbitrary natural-language policy is not supported |
-| Leader manipulation | Validator re-reads evidence and compares the bound decision envelope | Live validator consensus proof is still required |
-| Replay / double allocation | `commit-decision-v3` nonce binds the exact decision, effect root, immutable sealed evidence root, and active evaluation root; authenticated self-sender check; terminal allocation flag; explicit timeout ABORT; harmless late callback | Missions 008/009 prove the historical finalized callback and one-time claim/refund consumption; the current repair-aware candidate still requires fresh live deadline-race verification |
-| Trapped mission funds | Permissionless recovery after the recovery deadline | Recovery still requires network liveness, a funded caller, and a successful transaction |
-| Failed external payment | Entitlement is consumed before dispatch to prevent double payment; missions 008/009 finalized exact external messages and left zero claimable balances | No authenticated delivery/non-delivery proof or retry exists; dispatched value can remain unresolved |
-| Fee exhaustion | Mission budget and funding are bounded independently from effect amounts | Target-network fee profile and separate fee reserve are not implemented |
-| Oversized remote input | 16 KiB body cap and 128-character reason cap | Full target-network resource/fee measurements are still required |
+| Unauthorized supplier | Mission-scoped allowlist | Address authentication is not off-chain company identity |
+| Effect substitution | Immutable effect fields and exact root binding | External payload itself is committed by digest rather than fully stored |
+| Evidence substitution | Authority/version + issuer + record/version + mission/version + URL + digest + time binding | Registered issuer identity remains the trust root |
+| Future/stale evidence | Publication must be within mission lifetime and no later than transaction time; expiry must cover recovery | Host wall-clock time is intentionally not used |
+| Redirect/provenance ambiguity | Exact issuer-authenticated record digest and mission/version remain mandatory even if HTTP transport redirects | Final redirect URL itself is not exposed as a separate on-chain field |
+| False corroboration | Seal requires distinct authenticated issuer addresses | Distinct addresses do not prove independent organizations |
+| Acquisition/integrity failure | Persist `REPAIR_REQUIRED`; only authenticated newer same-record successor may repair before recovery | Network/issuer availability is still required |
+| Prompt injection | Current reference policy parses a fixed structured schema and uses no LLM inference | Arbitrary natural-language policy is intentionally out of scope |
+| Leader manipulation | Validator path is bound to the consequential evidence result | Fresh live current-source consensus proof is still required |
+| Replay/double allocation | Decision nonce, exact roots, self-callback authentication, terminal allocation flag, recovery race guards | Fresh current-source live lifecycle proof is still required |
+| Trapped funds | Permissionless recovery after declared recovery deadline | Requires network liveness and a successful recovery transaction |
+| Indirect claim/reentrancy-style caller confusion | Public claim requires immediate sender == original transaction submitter; entitlement is consumed before dispatch | Downstream chain-layer delivery/reconciliation is outside COMMIT's proven atomic boundary |
+| Fee exhaustion | Fee policy enumerates all message-producing paths and invalidation conditions | Exact candidate/network numeric estimates must be measured before deployment |
+| Oversized remote input | 16 KiB response cap and bounded text/reason/graph fields | Target-network resource behavior must still be certified |
 
-## Explicit non-claims
+## Settlement boundary
 
-COMMIT does not roll back arbitrary websites, APIs, blockchains, or physical
-actions. Its atomic boundary is allocation of internal settlement entitlements
-after a successful finalized decision. External transfers are asynchronous and
-remain a separate payment-progress state.
+COMMIT's security guarantee is the allocation and one-time consumption of
+protocol-held settlement rights after a finalized exact decision. Native GEN
+dispatch is an external finalization message to the chain layer.
 
-## Release blockers
+For Agent Tank, COMMIT will prove the EOA claim/refund paths it actually uses.
+It does not represent generic EVM-contract delivery, downstream application
+success, or automatic reconciliation as part of semantic atomicity.
 
-1. Keep fee profiles and child-message allocations current for every new write path and network upgrade.
-2. Close redirect provenance with a verified final-URL capability or implement
-   and test issuer-key signatures.
-3. Add an authenticated external-transfer reconciliation mechanism before
-   treating native-GEN custody as production-ready.
-4. Execute live deadline-recovery and stale-callback race tests.
+## Remaining pre-submission gates
+
+1. Measure exact target-network fees/message allocations for the hardened
+   coordinator.
+2. Prove the existing helper address, deployed helper bytes, and constructor
+   binding read-only; redeploy helper only if that proof fails.
+3. Deploy the exact `e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6` coordinator candidate and prove finality,
+   execution success, and byte-for-byte source identity.
+4. Execute fresh current-source COMMIT, ABORT, recovery/stale-callback, and EOA
+   claim/refund certification.
+5. Deploy the application candidate to an isolated preview and prove the real
+   `/verify` index/transaction paths, security headers, wallet behavior, and
+   browser E2E before production promotion.
+6. Publish a durable reviewer-inspectable evidence packet and then update the
+   final Agent Tank proof map.

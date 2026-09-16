@@ -396,7 +396,7 @@ export function WorkspaceShell() {
           <StateBoundary
             loading={indexLoading}
             error={indexError}
-            found={foundState(indexState)}
+            found={indexState === null ? true : foundState(indexState)}
             emptyLabel="No indexed protocol state matched the supplied identity."
           >
             {indexState === null ? (
@@ -434,7 +434,7 @@ export function WorkspaceShell() {
           <StateBoundary
             loading={transactionLoading}
             error={transactionError}
-            found={foundState(transactionState)}
+            found={transactionState === null ? true : foundState(transactionState)}
             emptyLabel="No indexed transaction matched the supplied identity."
           >
             {transactionState === null ? (

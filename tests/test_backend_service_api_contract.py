@@ -439,7 +439,7 @@ class BackendServiceApiContractTests(
                 },
             )
 
-    def test_health_is_liveness_only_and_does_not_read_storage(
+    def test_health_requires_valid_durable_state_and_preserves_public_shape(
         self,
     ):
         api = self._api()
@@ -474,7 +474,7 @@ class BackendServiceApiContractTests(
 
         self.assertEqual(
             store.loads,
-            0,
+            1,
         )
 
     def test_index_query_requires_explicit_finality_basis(

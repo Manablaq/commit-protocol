@@ -1,6 +1,7 @@
 # Current architecture
 
-COMMIT separates economic state from deterministic evidence utilities while keeping one explicit custody boundary.
+COMMIT separates economic state from deterministic evidence utilities while
+keeping one explicit custody boundary.
 
 ## Components
 
@@ -17,83 +18,81 @@ COMMIT separates economic state from deterministic evidence utilities while keep
 - allocate COMMIT/ABORT entitlements;
 - consume claims and dispatch native value.
 
-Its public surface remains 41 methods.
+The hardening candidate also rejects future-dated evidence, exposes its exact
+constructor-bound helper address through `protocol_info`, and requires a claim
+transaction's immediate sender and original submitter to be the same address.
 
 ### `CommitHelper`
 
-`contracts/commit_helper.py` is a stateless, synchronous, view-only helper.
+`contracts/commit_helper.py` is a stateless, synchronous, view-only helper. It
+has no storage declarations, public write methods, nondeterministic operations,
+message emission, or value transfer.
 
-It has:
-
-- no storage declarations;
-- no public write methods;
-- no nondeterministic operations;
-- no `gl.message` dependency;
-- no nested cross-contract calls;
-- no message emission;
-- no value transfer.
-
-It performs deterministic URL validation, canonical root/hash derivation, bounded evidence parsing, evidence/snapshot binding checks, decision derivation from validator-agreed raw responses, and read-model formatting.
+The helper performs deterministic URL validation, canonical root/hash
+derivation, bounded evidence parsing, evidence/snapshot binding checks,
+decision derivation from validator-agreed raw responses, and read-model
+formatting.
 
 ## Evaluation flow
 
 For each registered evidence record, in mission order:
 
 1. the coordinator performs the web read inside GenLayer nondeterminism;
-2. leader and validators agree on the exact raw response representation;
+2. validators bind the consequential evaluation to the agreed response;
 3. execution returns to deterministic coordinator code;
-4. the helper validates and interprets that agreed response;
-5. a repairable failure is persisted immediately and later evidence is not fetched;
-6. only a fully valid evidence set can produce a consequential `COMMIT` or `ABORT` decision.
+4. the helper validates and interprets the agreed response;
+5. a repairable acquisition/integrity failure is persisted immediately;
+6. only a fully valid evidence set can produce `COMMIT` or `ABORT`.
 
-The helper never participates inside the nondeterministic block.
+Evidence attestation is accepted only when:
+
+- the registered authority and issuer match;
+- mission and record versions match;
+- the URL is inside the authority's bound HTTPS host/path;
+- the exact record hash is bound;
+- `published_at` is not before mission creation;
+- `published_at` is not later than the current GenLayer transaction time; and
+- expiry remains valid through the mission recovery boundary.
 
 ## Consequence binding
 
-A consequential decision is bound to:
-
-- mission ID and mission version;
-- objective and policy digest;
-- intent digest;
-- sealed effect root;
-- sealed evidence root;
-- active evaluation evidence root;
-- exact decision and reason;
-- decision nonce.
-
-Decision application is finality-gated and idempotent.
+A consequential decision binds mission/version, objective, policy, intent
+digest, frozen effect root, sealed evidence root, active evaluation evidence
+root, exact decision/reason, and the decision nonce. Decision application is
+finality-gated and idempotent.
 
 ## Evidence trust model
 
-Evidence registration binds:
+Evidence requires an authenticated issuer-address attestation. Distinct issuer
+addresses provide structural corroboration, but COMMIT does not claim that two
+addresses by themselves prove two independent real-world organizations.
 
-- authority ID and immutable authority version;
-- authenticated issuer address;
-- approved HTTPS host and path prefix;
-- stable record ID and record version;
-- mission ID and mission version;
-- publication and expiry timestamps;
-- expected payload hash and snapshot fields.
+A redirect cannot change the attested record identity or payload digest: the
+issuer-bound exact content hash and mission/version binding remain mandatory.
 
-Sealing requires independent authenticated issuers rather than duplicate labels for the same authority.
+## Settlement boundary
 
-## Repair model
+COMMIT guarantees allocation and one-time consumption of protocol-held
+settlement rights. Native-value dispatch is an external finalization message
+to the GenLayer chain layer. COMMIT does not claim authenticated downstream
+delivery/reconciliation beyond the tested external-message boundary.
 
-Acquisition/integrity failures are persisted as `REPAIR_REQUIRED` rather than silently converted into a semantic negative outcome. Before recovery expiry, an authenticated strictly newer successor for the same bound record identity can replace only the active evaluation evidence while the original sealed root remains immutable.
+The direct-claim guard prevents an internal-message chain or relayer from
+claiming on behalf of a beneficiary through the public claim method.
 
-## Settlement safety
+## Verification backend
 
-- allocation occurs only through a finalized self-message;
-- COMMIT/ABORT application is single-use;
-- recovery deadlines prevent indefinite locking;
-- claimable rights are consumed before native-value dispatch;
-- external delivery is not treated as synchronously reversible.
+The `/verify` backend reads transaction truth through supported hosted-Studio
+transaction/status surfaces and keeps finality distinct from execution success.
+Vercel rewrite metadata is filtered only when it exactly matches the internal
+route capture expected for the request.
 
-## Source identities
+## Candidate source identities
 
-Certified checkpoint `c152ec75d935a4cb5cf37e2f31aaae89c1bdc525`:
+- coordinator SHA-256: `e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6`
+- coordinator bytes: `19873`
+- helper SHA-256: `dfb564fbd644fae756808fee2afc1f43c35d0dde095e33ad9f4802569e80007a`
+- helper bytes: `9428`
 
-- coordinator SHA-256: `e88d1d78ee8f2d373124bbfbc3f0c8d946385a3250fc028f5956fd74762f8c69`
-- coordinator bytes: `19598`
-- helper SHA-256: `0120b74e0988f2444c3cc824bd40633c472348da9e1d3fd851c4d7380ffbe632`
-- helper bytes: `9394`
+These are local hardening-candidate identities. They are not represented as
+deployed until a fresh exact-source deployment proof is recorded.

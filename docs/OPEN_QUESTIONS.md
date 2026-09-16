@@ -1,23 +1,53 @@
 # Submission boundaries
 
-COMMIT is deliberately explicit about what the Agent Tank proof does and does not establish.
+COMMIT is explicit about what is already proven and what remains to be
+certified before Agent Tank submission.
 
-## Proven
+## Proven locally for the hardening candidate
 
-- source-matched live Studio Dev deployment for revision `0.7.0-reviewable-manifest`;
-- finalized COMMIT and ABORT paths on that deployment;
-- exact mission/effect/evidence root reconstruction;
-- finality-gated allocation;
-- one-time claim/refund entitlement consumption;
-- locally certified current source with exact evidence authority, freshness, corroboration, repair, recovery, and consequence binding;
-- deterministic and Direct Runtime coverage for callback races and replay guards.
+- coordinator source SHA-256 `e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6`;
+- helper source SHA-256 `dfb564fbd644fae756808fee2afc1f43c35d0dde095e33ad9f4802569e80007a`;
+- future-dated evidence rejection;
+- authenticated authority/issuer + immutable record/version binding;
+- distinct-issuer corroboration;
+- repairable evidence acquisition/integrity failures;
+- exact decision/effect/evidence-root binding;
+- finality-gated and idempotent decision application;
+- deadline recovery and late-callback guards;
+- direct-origin claim guard;
+- **117** Direct Runtime tests;
+- **454** non-runtime Python tests + **334** subtests;
+- **27** frontend unit tests;
+- **12** browser E2E tests;
+- production frontend build and local security-header checks.
+
+## Existing live evidence
+
+The currently published `e9858985495111cf2f21db6dc847c7f75b79c0da` release has an exact-source finalized
+coordinator deployment at `0x7C1e450333D97CD4E02F48c3424BF10112697A60`. Historical v0.7 missions
+008/009 remain the existing live COMMIT/ABORT behavior proof.
+
+Neither is represented as a deployment or lifecycle execution of the new
+`e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6` hardening candidate.
+
+## Still required before submission
+
+- exact helper deployed-code/constructor-binding proof;
+- target-network candidate fee/message-allocation measurement;
+- fresh exact-source coordinator deployment;
+- current-source live COMMIT and ABORT lifecycle proof;
+- current-source recovery/stale-callback proof;
+- EOA claim/refund proof;
+- isolated Vercel preview certification of the repaired `/verify` data path;
+- durable reviewer-inspectable evidence artifacts;
+- final production promotion and documentation update.
 
 ## Not claimed
 
-- synchronous rollback of arbitrary external systems;
-- source identity between the current repository checkpoint and the historical Studio Dev v0.7 address;
-- authenticated proof that every external native-value child was delivered to its downstream recipient;
-- production-grade retry/reconciliation for a failed downstream transfer;
-- production custody readiness outside the tested Agent Tank scope.
+COMMIT does not claim arbitrary natural-language AI interpretation in the
+current reference policy, rollback of external systems, proof that distinct
+addresses are independent organizations, or generic downstream EVM delivery
+reconciliation.
 
-These boundaries are intentional. COMMIT's core guarantee is about when protocol-held settlement rights may be allocated and consumed, not about making the rest of the internet transactional.
+Its atomic guarantee is intentionally narrower: protocol-held settlement rights
+are allocated only by the declared finalized COMMIT/ABORT state machine.

@@ -8,7 +8,7 @@ POLICY_PATH = ROOT / "fee-profiles/commit-v08-policy.json"
 CONTRACT_PATH = ROOT / "contracts/commit.py"
 
 CONTRACT_SHA = (
-    "be0ef1686314354ac1b87ccd50ab42f0c933c312a4980c0e5479f2d3037e4e58"
+    "e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6"
 )
 
 HELPER_SHA = (
@@ -65,7 +65,7 @@ def test_fee_policy_identity_is_exact():
 
     assert policy["schema"] == "commit-fee-profile-policy-v1"
     assert policy["protocol"] == "commit"
-    assert policy["candidate"] == "v0.8-reviewer-hard-gates"
+    assert policy["candidate"] == "final-reviewer-hardening-predeployment"
 
     assert (
         policy["contract"]["path"]
@@ -86,7 +86,7 @@ def test_fee_policy_identity_is_exact():
 
     assert (
         runtime["target_network"]
-        == "Studio Next"
+        == "Studio Dev preview"
     )
 
     assert (

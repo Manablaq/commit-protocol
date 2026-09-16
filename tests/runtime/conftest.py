@@ -487,6 +487,11 @@ def _commit_v09_pair_deployment(monkeypatch, probe_vm):
         Address = direct_loader.import_address()
         helper_address = Address(helper_addr_bytes)
 
+        # Reviewer-hardening tests need to prove that protocol_info exposes
+        # the exact helper address that was actually injected into the
+        # coordinator constructor by this paired deployment fixture.
+        probe_vm._commit_helper_address = helper_address
+
         proxy_address = getattr(helper, "address", None)
         if (
             proxy_address is not None

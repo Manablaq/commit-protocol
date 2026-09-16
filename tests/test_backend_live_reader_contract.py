@@ -770,7 +770,7 @@ class LiveReaderContractTests(
         requests = []
 
         receipt = {
-            "id": TX_ID,
+            "hash": TX_ID,
             "status": 7,
             "statusName": (
                 "Finalized"
@@ -831,14 +831,10 @@ class LiveReaderContractTests(
             [
                 {
                     "method": (
-                        "gen_getTransactionReceipt"
+                        "eth_getTransactionByHash"
                     ),
                     "params": [
-                        {
-                            "txId": (
-                                TX_ID
-                            ),
-                        },
+                        TX_ID,
                     ],
                 },
             ],
@@ -869,7 +865,7 @@ class LiveReaderContractTests(
             make_request=(
                 lambda **kwargs: {
                     "result": {
-                        "id": (
+                        "hash": (
                             "0x"
                             + "cd" * 32
                         ),
@@ -919,7 +915,7 @@ class LiveReaderContractTests(
             None,
             {},
             {
-                "id": TX_ID,
+                "hash": TX_ID,
                 "status": True,
                 "statusName": (
                     "Finalized"
@@ -929,7 +925,7 @@ class LiveReaderContractTests(
                 ),
             },
             {
-                "id": TX_ID,
+                "hash": TX_ID,
                 "status": 7,
                 "statusName": "",
                 "txExecutionResultName": (
@@ -937,7 +933,7 @@ class LiveReaderContractTests(
                 ),
             },
             {
-                "id": TX_ID,
+                "hash": TX_ID,
                 "status": 7,
                 "statusName": (
                     "Finalized"
@@ -993,7 +989,7 @@ class LiveReaderContractTests(
         api = self._api()
 
         receipt = {
-            "id": TX_ID,
+            "hash": TX_ID,
             "status": 5,
             "statusName": (
                 "Accepted"
@@ -1112,7 +1108,7 @@ class LiveReaderContractTests(
 
         required = (
             "gen_call",
-            "gen_getTransactionReceipt",
+            "eth_getTransactionByHash",
             "blockNumber",
             "status",
             "statusName",

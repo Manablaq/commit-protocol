@@ -84,6 +84,34 @@ def _invalid_query_response():
     )
 
 
+def _expected_route_suffix(
+    request: Request,
+) -> str:
+    path_params = getattr(
+        request,
+        "path_params",
+        {},
+    )
+
+    if type(path_params) is not dict:
+        path_params = {}
+
+    tx_id = path_params.get(
+        _TX_PARAMETER
+    )
+
+    if tx_id is None:
+        return "index"
+
+    if type(tx_id) is not str:
+        return ""
+
+    return (
+        "transactions/"
+        + tx_id
+    )
+
+
 def _public_query_items(
     request: Request,
 ) -> list[tuple[str, str]]:
@@ -91,22 +119,16 @@ def _public_query_items(
         request.query_params.multi_items()
     )
 
-    prefix = (
-        API_PREFIX
-        + "/"
+    expected_capture = (
+        _expected_route_suffix(
+            request
+        )
     )
-    path = request.url.path
 
-    if not path.startswith(
-        prefix
-    ):
-        return items
+    normalized: list[
+        tuple[str, str]
+    ] = []
 
-    route_suffix = path[
-        len(prefix):
-    ]
-
-    normalized = []
     route_capture_removed = False
 
     for key, value in items:
@@ -115,7 +137,7 @@ def _public_query_items(
             and key
             == _VERCEL_ROUTE_CAPTURE_KEY
             and value
-            == route_suffix
+            == expected_capture
         ):
             route_capture_removed = True
             continue
@@ -242,10 +264,11 @@ def create_app(
         + "/health"
     )
     def health():
+        _state, failure = _load_validated_state(store)
+        if failure is not None:
+            return failure
         return {
-            "schema": (
-                SERVICE_SCHEMA
-            ),
+            "schema": SERVICE_SCHEMA,
             "status": "ok",
         }
 

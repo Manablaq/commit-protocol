@@ -32,9 +32,9 @@ COMMIT needs consensus over facts that ordinary deterministic contracts cannot r
 
 ## Agent Tank proof
 
-### Current exact-source deployment
+### Published exact-source deployment
 
-The current coordinator release is deployed and independently re-verified on
+The currently published coordinator release is deployed and independently re-verified on
 the canonical hosted GenLayer Studio development preview:
 
 - Network: **GenLayer Studio development preview**
@@ -84,11 +84,11 @@ newer release commit.
 See
 [`docs/DEPLOYMENT_LOG_STUDIO_DEV.md`](./docs/DEPLOYMENT_LOG_STUDIO_DEV.md).
 
-### Final application release
+### Published application release
 
-- GitHub main:
+- Deployed application commit:
   `e9858985495111cf2f21db6dc847c7f75b79c0da`
-- Release tree:
+- Deployed application tree:
   `3627b57a0baaebda07b15da76cb8b594ee4a18f9`
 - Public application:
   `https://commitprotocol-genlayer.vercel.app`
@@ -100,6 +100,29 @@ See
 - Current deployment exact-source/finality gate: **passed**
 
 
+### Final reviewer-hardening candidate
+
+A source-changing hardening candidate is currently certified locally and is not
+yet represented as the deployed submission release:
+
+- coordinator SHA-256:
+  `e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6`
+- coordinator bytes: `19873`
+- helper SHA-256:
+  `dfb564fbd644fae756808fee2afc1f43c35d0dde095e33ad9f4802569e80007a`
+- Direct Runtime: **117 passed**
+- Python non-runtime: **454 passed + 334 subtests**
+- frontend Vitest: **27 passed**
+- browser E2E: **12 passed**
+
+The candidate rejects future-dated evidence, exposes the exact helper binding,
+requires direct-origin claims, repairs the hosted verification read path, and
+aligns the frontend SDK with the current Consensus v0.6 release family.
+
+A new coordinator deployment and fresh live lifecycle proof are required before
+this candidate replaces the published deployment above.
+
+
 ## Security properties
 
 COMMIT is designed around the failure modes that matter when AI consensus can move economic state:
@@ -107,7 +130,7 @@ COMMIT is designed around the failure modes that matter when AI consensus can mo
 - authenticated evidence authority and issuer binding;
 - immutable mission/evidence identity and version binding;
 - freshness and expiry constraints;
-- independent corroboration requirements;
+- distinct authenticated-issuer corroboration requirements;
 - exact consensus-to-consequence binding;
 - repairable evidence acquisition/integrity failures;
 - recovery deadlines for locked value;

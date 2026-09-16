@@ -1,5 +1,12 @@
 # Current deployment proof — 2026-09-16
 
+> **Scope notice:** this proof is bound to deployed application release
+> `e9858985495111cf2f21db6dc847c7f75b79c0da` and coordinator source `be0ef1686314354ac1b87ccd50ab42f0c933c312a4980c0e5479f2d3037e4e58`. A later local
+> reviewer-hardening candidate has coordinator source `e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6` and is not
+> yet deployed. Do not treat this document as deployment proof for that
+> candidate; it will be superseded only after fresh deployment certification.
+
+
 This document records the reviewer-facing deployment identity for the current
 COMMIT release. It supersedes the unresolved deployment status recorded in
 [`STUDIO_NEXT_CHECKPOINT_2026-09-15.md`](./STUDIO_NEXT_CHECKPOINT_2026-09-15.md)

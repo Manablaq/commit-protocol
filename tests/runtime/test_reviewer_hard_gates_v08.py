@@ -109,6 +109,10 @@ def register_authenticated_authorities(contract, probe_vm):
 
 
 def create_mission(contract, probe_vm):
+    # Canonical publication time for this fixture is unix 2_000_000_000.
+    # Pin the transaction clock to that exact instant so a normal attestation
+    # is current, while PUBLISHED + 1 remains provably future-dated.
+    probe_vm.warp("2033-05-18T03:33:20Z")
     probe_vm.sender = PRINCIPAL
 
     contract.create_mission(
@@ -271,6 +275,20 @@ def test_attestation_record_version_is_positive_and_immutable(probe_vm):
     # it with different bytes must not rewrite history.
     with pytest.raises(Exception, match="attestation already exists"):
         attest_a(contract, probe_vm, record_hash="56" * 32)
+
+
+def test_attestation_rejects_future_publication(probe_vm):
+    contract = load_contract(probe_vm)
+
+    register_authenticated_authorities(contract, probe_vm)
+    create_mission(contract, probe_vm)
+
+    with pytest.raises(Exception, match="future"):
+        attest_a(
+            contract,
+            probe_vm,
+            published_at=PUBLISHED + 1,
+        )
 
 
 def test_attestation_rejects_pre_mission_stale_publication(probe_vm):

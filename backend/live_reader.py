@@ -266,101 +266,43 @@ class GenLayerPinnedReader:
         *,
         genlayer_tx_id,
     ):
-        transaction_id = (
-            _require_transaction_id(
-                genlayer_tx_id
-            )
-        )
-
+        transaction_id = _require_transaction_id(genlayer_tx_id)
         try:
-            response = (
-                self._make_request(
-                    method=(
-                        "gen_getTransactionReceipt"
-                    ),
-                    params=[
-                        {
-                            "txId": (
-                                transaction_id
-                            ),
-                        },
-                    ],
-                )
+            response = self._make_request(
+                method="eth_getTransactionByHash",
+                params=[transaction_id],
             )
         except Exception:
-            raise LiveReaderError(
-                "transaction receipt RPC failed"
-            ) from None
-
-        receipt = (
-            _require_rpc_response(
-                response
-            )
-        )
-
-        if type(receipt) is not dict:
-            raise LiveReaderError(
-                "transaction receipt is invalid"
-            )
-
-        receipt_id = receipt.get(
-            "id"
-        )
-
-        status_code = receipt.get(
-            "status"
-        )
-
-        status_name = receipt.get(
-            "statusName"
-        )
-
-        execution_result = receipt.get(
-            "txExecutionResultName"
-        )
-
-        if (
-            type(receipt_id) is not str
-            or receipt_id
-            != transaction_id
-        ):
-            raise LiveReaderError(
-                "transaction receipt identifier mismatch"
-            )
-
-        if type(status_code) is not int:
-            raise LiveReaderError(
-                "transaction receipt status is invalid"
-            )
-
-        if (
-            type(status_name) is not str
-            or status_name == ""
-        ):
-            raise LiveReaderError(
-                "transaction receipt status is invalid"
-            )
-
-        if (
-            type(execution_result)
-            is not str
-            or execution_result == ""
-        ):
-            raise LiveReaderError(
-                "transaction execution result is invalid"
-            )
-
+            raise LiveReaderError("transaction read RPC failed") from None
+        transaction = _require_rpc_response(response)
+        if type(transaction) is not dict:
+            raise LiveReaderError("transaction read is invalid")
+        observed_id = transaction.get("hash") or transaction.get("id")
+        if type(observed_id) is not str or observed_id.lower()!=transaction_id.lower():
+            raise LiveReaderError("transaction identifier mismatch")
+        names={0:"Uninitialized",1:"Pending",2:"Proposing",3:"Committing",4:"Revealing",5:"Accepted",6:"Undetermined",7:"Finalized",8:"Canceled",9:"AppealRevealing",10:"AppealCommitting",11:"ValidatorsTimeout",12:"LeaderTimeout",13:"LeaderRevealing"}
+        codes={v.replace("_","").replace(" ","").lower():k for k,v in names.items()}
+        raw=transaction.get("status"); raw_name=transaction.get("statusName")
+        if type(raw) is int:
+            status_code=raw; status_name=names.get(raw)
+            if status_name is None: raise LiveReaderError("transaction status is invalid")
+            if raw_name is not None and raw_name!=status_name: raise LiveReaderError("transaction status is invalid")
+        elif type(raw) is str:
+            normalized=raw.replace("_","").replace(" ","").lower()
+            status_code=codes.get(normalized)
+            if status_code is None: raise LiveReaderError("transaction status is invalid")
+            status_name=names[status_code]
+            if raw_name is not None:
+                if type(raw_name) is not str or raw_name.replace("_","").replace(" ","").lower()!=normalized:
+                    raise LiveReaderError("transaction status is invalid")
+        else:
+            raise LiveReaderError("transaction status is invalid")
+        execution_result=(transaction.get("txExecutionResultName") or transaction.get("execution_result"))
+        if type(execution_result) is not str or not execution_result:
+            raise LiveReaderError("transaction execution result is invalid")
         return {
-            "genlayer_tx_id": (
-                transaction_id
-            ),
-            "status_code": (
-                status_code
-            ),
-            "status_name": (
-                status_name
-            ),
-            "execution_result": (
-                execution_result
-            ),
+            "genlayer_tx_id": transaction_id,
+            "status_code": status_code,
+            "status_name": status_name,
+            "execution_result": execution_result,
         }

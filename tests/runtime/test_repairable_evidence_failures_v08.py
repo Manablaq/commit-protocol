@@ -177,6 +177,12 @@ def prepare_sealed_mission(
     register_authorities(contract, probe_vm)
     create_mission(contract, probe_vm)
 
+    # The hardened contract rejects evidence whose publication timestamp is
+    # later than the transaction clock.  The canonical fixture publishes one
+    # second after mission creation, so advance the Direct Runtime clock by
+    # exactly that one second before either authority attests.
+    probe_vm.warp("2033-05-18T03:33:21Z")
+
     payload_a = (
         payload(True)
         if payload_a_override is None
