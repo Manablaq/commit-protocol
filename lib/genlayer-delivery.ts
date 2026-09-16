@@ -52,6 +52,8 @@ export type ExternalDeliveryExpectation = {
 };
 
 export type PersistedClaimTransaction = {
+  missionId: string;
+  beneficiary: `0x${string}`;
   transactionId: TransactionHash;
   amount: bigint;
 };
@@ -356,7 +358,12 @@ export function readPersistedClaimTransaction(
     const record = candidate as Record<string, unknown>;
 
     if (
-      typeof record.transactionId !== "string"
+      typeof record.missionId !== "string"
+      || typeof record.beneficiary !== "string"
+      || !/^0x[0-9a-fA-F]{40}$/.test(record.beneficiary)
+      || record.missionId !== missionId
+      || record.beneficiary.toLowerCase() !== beneficiary.toLowerCase()
+      || typeof record.transactionId !== "string"
       || !isTransactionHash(record.transactionId)
       || typeof record.amount !== "string"
       || !/^[1-9][0-9]*$/.test(record.amount)
@@ -365,6 +372,8 @@ export function readPersistedClaimTransaction(
     }
 
     return {
+      missionId: record.missionId,
+      beneficiary: record.beneficiary as `0x${string}`,
       transactionId: record.transactionId,
       amount: BigInt(record.amount),
     };
@@ -387,6 +396,8 @@ export function persistClaimTransaction(
     window.localStorage.setItem(
       claimTransactionStorageKey(missionId, beneficiary),
       JSON.stringify({
+        missionId,
+        beneficiary: beneficiary.toLowerCase(),
         transactionId,
         amount: amount.toString(),
       }),

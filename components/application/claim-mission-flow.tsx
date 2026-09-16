@@ -9,9 +9,7 @@ import {
   ShieldCheck,
   WalletCards,
 } from "lucide-react";
-import {
-  useState,
-} from "react";
+import { useState } from "react";
 import {
   formatGenAmount,
   trackCommitTransaction,
@@ -97,6 +95,13 @@ export function ClaimMissionFlow({
     setDeliveryBusy,
   ] = useState(false);
 
+  const activeClaimRecord =
+    claimRecord !== null
+    && claimRecord.missionId === missionId
+    && claimRecord.beneficiary.toLowerCase() === wallet.address.toLowerCase()
+      ? claimRecord
+      : null;
+
   function resetReview() {
     setQuote(null);
     setProgress(null);
@@ -152,6 +157,8 @@ export function ClaimMissionFlow({
         txId,
       });
       setClaimRecord({
+        missionId: quote.snapshot.mission.missionId,
+        beneficiary: quote.snapshot.beneficiary,
         transactionId: txId,
         amount: quote.snapshot.missionClaimable,
       });
@@ -209,7 +216,7 @@ export function ClaimMissionFlow({
 
   async function refreshDelivery() {
     if (
-      claimRecord === null
+      activeClaimRecord === null
       || deliveryBusy
     ) {
       return;
@@ -221,17 +228,17 @@ export function ClaimMissionFlow({
       setDelivery(
         await observeExternalDelivery(
           wallet.client,
-          claimRecord.transactionId,
+          activeClaimRecord.transactionId,
           {
             recipient: wallet.address,
-            amount: claimRecord.amount,
+            amount: activeClaimRecord.amount,
           },
         ),
       );
     } catch (caught: unknown) {
       setDelivery(
         unverifiedExternalDelivery(
-          claimRecord.transactionId,
+          activeClaimRecord.transactionId,
           caught instanceof Error
             ? caught.message
             : "The delivery observation could not be completed. No delivery outcome is claimed.",
@@ -515,7 +522,7 @@ export function ClaimMissionFlow({
           </div>
         ) : null}
 
-        {claimRecord !== null ? (
+        {activeClaimRecord !== null ? (
           <div className="claim-delivery">
             <div className="claim-delivery-heading">
               <div>
@@ -552,7 +559,7 @@ export function ClaimMissionFlow({
             <dl>
               <div>
                 <dt>Parent claim</dt>
-                <dd>{claimRecord.transactionId}</dd>
+                <dd>{activeClaimRecord.transactionId}</dd>
               </div>
               <div>
                 <dt>Triggered child</dt>
