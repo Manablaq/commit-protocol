@@ -45,16 +45,38 @@ async function routeHealth(
 async function expectNoHorizontalOverflow(
   page: Page,
 ) {
-  const fits =
-    await page.evaluate(
-      () => (
-        document.documentElement.scrollWidth
-        <= window.innerWidth + 1
-      ),
-    );
+  const metrics = await page.evaluate(() => {
+    const offenders = Array.from(document.querySelectorAll("*"))
+      .map((element) => {
+        const rect = element.getBoundingClientRect();
+
+        return {
+          tag: element.tagName,
+          className: typeof element.className === "string"
+            ? element.className
+            : "",
+          left: Math.round(rect.left),
+          right: Math.round(rect.right),
+          width: Math.round(rect.width),
+        };
+      })
+      .filter((element) => (
+        element.right > window.innerWidth + 1
+        || element.left < -1
+      ))
+      .slice(0, 8);
+
+    return {
+      fits: document.documentElement.scrollWidth <= window.innerWidth + 1,
+      innerWidth: window.innerWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      offenders,
+    };
+  });
 
   expect(
-    fits,
+    metrics.fits,
+    JSON.stringify(metrics),
   ).toBe(
     true,
   );
