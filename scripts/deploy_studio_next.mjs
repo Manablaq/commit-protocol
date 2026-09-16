@@ -125,12 +125,13 @@ const activeAccount = config.activeAccount;
 if (typeof activeAccount !== "string" || !activeAccount) {
   fail("active GenLayer account is missing");
 }
+const signerAccount = "worker";
 
 const keystorePath = path.join(
   os.homedir(),
   ".genlayer",
   "keystores",
-  `${activeAccount}.json`,
+  `${signerAccount}.json`,
 );
 const keystore = JSON.parse(fs.readFileSync(keystorePath, "utf8"));
 const rawKeystoreAddress = String(keystore.address ?? "");
@@ -138,12 +139,12 @@ const keystoreAddress = rawKeystoreAddress.startsWith("0x")
   ? rawKeystoreAddress
   : `0x${rawKeystoreAddress}`;
 if (keystoreAddress.toLowerCase() !== EXPECTED.worker.toLowerCase()) {
-  fail(`active keystore is not the authorized worker: ${keystoreAddress}`);
+  fail(`worker keystore is not the authorized worker: ${keystoreAddress}`);
 }
 
-let privateKey = await keytar.getPassword("genlayer-cli", `account:${activeAccount}`);
+let privateKey = await keytar.getPassword("genlayer-cli", `account:${signerAccount}`);
 if (typeof privateKey !== "string" || !privateKey) {
-  fail("authorized GenLayer account is not unlocked in the OS keychain");
+  fail("authorized worker account is not unlocked in the OS keychain");
 }
 const account = createAccount(privateKey);
 privateKey = null;
@@ -237,6 +238,7 @@ const summary = {
   preflightOnly: PREFLIGHT_ONLY,
   repository: REPO,
   activeAccount,
+  signerAccount,
   signer: account.address.toLowerCase(),
   sdkVersion: sdkPackage.version,
   submissionRpc: EXPECTED.submissionRpc,
