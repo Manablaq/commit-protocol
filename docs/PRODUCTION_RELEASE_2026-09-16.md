@@ -51,9 +51,8 @@ Read-only checks against `https://commit-protocol.vercel.app` passed:
   client-side error
 - deployed JavaScript bundle contains the certified coordinator anchor and the
   strict `EXTERNAL MESSAGE OBSERVATION` claim surface
-- GitHub Actions `Verification` run `35134050898` for the previous deployed
-  source: completed successfully across Python, Direct Runtime, and frontend
-  jobs; CI for this release is recorded after the next push
+- GitHub Actions `Verification` run `35140950751` for the repository release:
+  completed successfully across Python, Direct Runtime, and frontend jobs
 
 The verification API remains read-only. It does not reconstruct chain truth or
 claim that an external GEN transfer was delivered after native-value dispatch.

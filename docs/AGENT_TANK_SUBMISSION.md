@@ -31,6 +31,7 @@ uses the SDK's authoritative eligibility, charge, and appeal operations.
   `dpl_Cwh63QydtcGyVD9MeZ7jrSo3A1QE`
 - Served coordinator:
   `0xEE21cCFF8f3755487f774BFd5Da9Ff51D5688581`
+- GitHub Actions `Verification` run: `35140950751` — all jobs passed
 
 Production smoke checks and the exact served-bundle binding are recorded in
 [`PRODUCTION_RELEASE_2026-09-16.md`](./PRODUCTION_RELEASE_2026-09-16.md).
