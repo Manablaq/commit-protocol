@@ -61,7 +61,8 @@ Local F18 evidence packet index SHA-256:
 
 ## Public application release
 
-- Public URL: https://commitprotocol-genlayer.vercel.app
+- Historical public URL: https://commitprotocol-genlayer.vercel.app
+- Current canonical public URL: https://commit-protocol.vercel.app
 - GitHub main: `e9858985495111cf2f21db6dc847c7f75b79c0da`
 - Vercel production deployment ID: `dpl_6x9XzgAxPsRX8jXr7d6KonmEmL6S`
 - Production release tree: `3627b57a0baaebda07b15da76cb8b594ee4a18f9`

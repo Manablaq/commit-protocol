@@ -35,6 +35,7 @@ import {
 } from "@/lib/genlayer-appeal";
 import { AppealPanel } from "@/components/justice/appeal-panel";
 import { EvidenceRecordCard } from "@/components/justice/evidence-record-card";
+import { readBrowserStorage } from "@/lib/browser-storage";
 
 type CaseRoomProps = {
   wallet: ConnectedCommitWallet;
@@ -156,7 +157,7 @@ export function CaseRoom({
       return "";
     }
 
-    return window.localStorage.getItem(
+    return readBrowserStorage(
       `commit:evaluation:${initialMissionId}`,
     ) ?? "";
   });
@@ -247,10 +248,10 @@ export function CaseRoom({
       );
 
       setSubmittedAppeal(txId);
-      setAppealBusy(false);
-      void refreshCase();
+      await refreshCase();
     } catch (caught: unknown) {
       setAppealError(errorMessage(caught));
+    } finally {
       setAppealBusy(false);
     }
   }
@@ -274,11 +275,9 @@ export function CaseRoom({
               const nextMissionId = event.target.value;
               setMissionId(nextMissionId);
               setEvaluationTxId(
-                typeof window === "undefined"
-                  ? ""
-                  : window.localStorage.getItem(
-                      `commit:evaluation:${nextMissionId}`,
-                    ) ?? "",
+                readBrowserStorage(
+                  `commit:evaluation:${nextMissionId}`,
+                ) ?? "",
               );
               setCaseData(null);
               setError(null);

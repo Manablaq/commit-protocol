@@ -556,6 +556,12 @@ test("COMMIT connected wallet exposes beneficiary claim and withdrawal receipt c
     ),
   ).toBeVisible();
 
+  await expect(
+    page.getByLabel(
+      /Parent claim transaction \(optional recovery\)/i,
+    ),
+  ).toBeVisible();
+
   const calls =
     await page.evaluate(() => (
       (

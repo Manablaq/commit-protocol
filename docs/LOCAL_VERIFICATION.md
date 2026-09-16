@@ -66,7 +66,7 @@ future-publication rejection and indirect-origin claim rejection.
 
 - TypeScript: pass
 - ESLint: pass
-- Vitest: **27 passed**
+- Vitest: **46 passed**
 - production Next.js build: pass
 - Playwright browser E2E: **12 passed**
 - local production `/app` and `/verify`: HTTP 200

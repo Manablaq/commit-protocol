@@ -24,6 +24,7 @@ import {
   type MissionDraft,
   type TransactionProgress,
 } from "@/lib/genlayer-browser";
+import { writeBrowserStorage } from "@/lib/browser-storage";
 
 type CreateMissionFlowProps = {
   wallet: ConnectedCommitWallet;
@@ -256,7 +257,7 @@ export function CreateMissionFlow({
           quote,
         );
 
-      localStorage.setItem(
+      writeBrowserStorage(
         "commit:last-transaction",
         txId,
       );
@@ -273,7 +274,7 @@ export function CreateMissionFlow({
         );
 
       if (finalResult.successful) {
-        localStorage.setItem(
+        writeBrowserStorage(
           "commit:last-mission",
           missionId,
         );

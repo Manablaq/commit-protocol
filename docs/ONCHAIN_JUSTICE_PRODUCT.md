@@ -57,13 +57,16 @@ verification page.
 ### External delivery observation (`/app` → Claim)
 
 After a successful parent claim, the Claim surface can inspect the exact child
-transaction created by the native-value message. It binds the child to the
-expected beneficiary and exact entitlement before interpreting the lifecycle.
+transaction created by the native-value message. It first binds the parent to
+the certified coordinator, the connected beneficiary, the exact
+`claim_mission` call, the selected mission, and exactly one outbound message.
+It then binds any child to that verified message's recipient and amount.
 `DELIVERED` requires `FINALIZED` plus `FINISHED_WITH_RETURN`; a finalized
-execution error is shown as `FAILED`; all missing, pending, ambiguous, or
-unreadable results are shown as `PENDING` or `UNVERIFIED`. The parent claim ID
-and exact amount are stored only in beneficiary-scoped browser storage so the
-user can re-read the observation after navigation.
+execution error is shown as `FINALIZED_ERROR — DELIVERY UNRESOLVED`; all
+missing, pending, ambiguous, or unreadable results are shown as `PENDING` or
+`UNVERIFIED`. The parent claim ID and local amount are only a convenience
+cache, and a manually pasted parent ID is re-verified from the network before
+it can be observed.
 
 This is explicitly an operator observation, not a contract callback or
 trustless retry mechanism. The product never restores an entitlement or

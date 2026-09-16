@@ -98,6 +98,28 @@ After both claims finalized, the coordinator returned:
 - Worker aggregate claimable: `0`
 - Both missions remained in their expected terminal states.
 
+## External message observation readback
+
+The finalized COMMIT claim `0xd5ee347299c793b0fc2c6fdaeda392aa44597452ded74563ca55babd083a543a`
+and ABORT claim `0x7df93e138c158d8cea6179c88727f39b2be5bb968d98999f3d36b44a7c29858c`
+were independently read from Studio Next on 2026-09-16. For both parents, the
+network record showed:
+
+- target coordinator: `0xEE21cCFF8f3755487f774BFd5Da9Ff51D5688581`;
+- `from_address`, `sender`, and `origin_address`: the worker beneficiary
+  `0x1f87Ae197af539253978d435aD45cCf28Fb95024`;
+- decoded method: `claim_mission` with the corresponding mission ID;
+- parent result: `FINALIZED` / `FINISHED_WITH_RETURN`;
+- exactly one native outbound message to the worker for
+  `100000000000000` wei (`0.0001 GEN`); and
+- `getTriggeredTransactionIds` returned an empty child-ID list for each read.
+
+This proves the exact finalized parent claim and outbound message that Studio
+Next exposed. It does not prove downstream delivery: no child transaction ID
+was exposed by the current read path. The frontend therefore shows
+`UNVERIFIED` for this observation and never offers timeout-based retry or
+restoration.
+
 ## What this proves
 
 This record proves, for the exact deployed coordinator source, the complete

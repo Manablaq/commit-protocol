@@ -267,7 +267,7 @@ def test_funding_flow_enforces_contract_preflight_before_signing() -> None:
 
     assert "useEffect" not in flow
     assert 'useState(\n    initialMissionId,\n  );' in flow
-    assert 'key={lastMissionId || "manual-funding"}' in app
+    assert 'key={`${lastMissionId || "manual-funding"}:${wallet.address}`}' in app
 
 
 def test_workspace_shell_is_wired_to_certified_read_client() -> None:

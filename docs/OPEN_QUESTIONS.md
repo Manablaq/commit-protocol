@@ -17,7 +17,7 @@ Agent Tank submission.
 - direct-origin claim guard;
 - **117** Direct Runtime tests;
 - **454** non-runtime Python tests + **334** subtests;
-- **27** frontend unit tests;
+- **46** frontend unit tests;
 - **12** browser E2E tests;
 - production frontend build and local security-header checks.
 
