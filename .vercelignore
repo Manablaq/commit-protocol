@@ -1,0 +1,11 @@
+node_modules
+.next
+.vercel
+.runtime-cache
+__pycache__
+.pytest_cache
+.mypy_cache
+coverage
+playwright-report
+test-results
+*.log
