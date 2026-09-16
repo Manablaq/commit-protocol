@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const REPO = path.resolve(process.env.COMMIT_REPO ?? process.cwd());
 const RPC = "https://studio-next.genlayer.com/api";
 const CHAIN_ID = 61997;
-const CONTRACT = "0xE364331EB615D172D885f4AaAF9eEeE22b9788e3";
+const CONTRACT = process.env.COMMIT_LIVE_CONTRACT ?? "0xEE21cCFF8f3755487f774BFd5Da9Ff51D5688581";
 const WORKER = "0x1f87Ae197af539253978d435aD45cCf28Fb95024";
 const ISSUER_A = "0x9120e644c19ed0f13bddcbd2a985f12ce0493b30";
 const ISSUER_B = "0xb416595eae6ff040d6c1c066b9f91db6fd56004b";
