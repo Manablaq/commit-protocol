@@ -2,7 +2,16 @@ import { defineConfig } from "@playwright/test";
 
 const baseURL =
   process.env.PLAYWRIGHT_BASE_URL
-  ?? "http://127.0.0.1:3000";
+  ?? "http://127.0.0.1:3100";
+
+const webServer = process.env.PLAYWRIGHT_BASE_URL
+  ? undefined
+  : {
+      command: "npm run dev -- --hostname 127.0.0.1 --port 3100",
+      url: baseURL,
+      reuseExistingServer: false,
+      timeout: 120_000,
+    };
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -11,6 +20,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: "list",
+  webServer,
   use: {
     baseURL,
     trace: "on-first-retry",

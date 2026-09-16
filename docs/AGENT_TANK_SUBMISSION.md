@@ -1,10 +1,8 @@
 # Agent Tank submission proof map
 
-> **Pre-submission hardening status:** the deployed proof below belongs to
-> release `e9858985495111cf2f21db6dc847c7f75b79c0da` / source `be0ef1686314354ac1b87ccd50ab42f0c933c312a4980c0e5479f2d3037e4e58`. The final local hardening
-> candidate is source `e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6` and has not yet been deployed. Agent Tank
-> submission must wait for a fresh exact-source deployment and current-source
-> lifecycle proof.
+> **Pre-submission hardening status:** the historical proof below belongs to
+> release `e9858985495111cf2f21db6dc847c7f75b79c0da` / source `be0ef1686314354ac1b87ccd50ab42f0c933c312a4980c0e5479f2d3037e4e58`. The reviewer-hardening
+> candidate source is `e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6` and is deployed on Studio Next, but its first deployment used a zero-rotation envelope and is not certified. Agent Tank submission must wait for a corrected replacement deployment and current-source lifecycle proof.
 
 This is the shortest reviewer path through the final COMMIT release.
 
@@ -28,10 +26,10 @@ COMMIT/ABORT settlement rights.
 - Vercel production deployment:
   `dpl_6x9XzgAxPsRX8jXr7d6KonmEmL6S`
 
-## Current exact-source GenLayer deployment
+## Historical published GenLayer deployment
 
-- Network: **GenLayer Studio development preview**
-- Canonical RPC: `https://studio-dev.genlayer.com/api`
+- Network: **GenLayer Studio development preview (historical release)**
+- Recorded RPC: `https://studio-dev.genlayer.com/api`
 - Chain ID: `61997` / `0xf22d`
 - Coordinator:
   `0x7C1e450333D97CD4E02F48c3424BF10112697A60`
@@ -44,11 +42,24 @@ COMMIT/ABORT settlement rights.
 - Deployed source bytes: `19670`
 - Exact source match: **confirmed**
 
-The final read-only deployment gate re-read the transaction, stored final
-status, and deployed contract code through supported hosted-Studio RPC methods.
-The Studio-next hostname returned the same chain, transaction, status,
-execution result, target, and source bytes and is treated as an alias comparison
-rather than a separate deployment requirement.
+This is historical proof for the previously published release. It must not be
+used as proof that the reviewer-hardening candidate is deployed.
+
+## Current submission target
+
+The replacement current-source deployment must target **Studio Next**:
+
+- RPC: `https://studio-next.genlayer.com/api`
+- Chain ID: `61997` / `0xf22d`
+- Explorer: `https://explorer-studio-dev.genlayer.com/`
+- Required outer rotation budget: `3`
+- Required fee-distribution rotations: `[3]`
+
+The SDK chain name `studioDevnet` and its `studio-dev` endpoint are compatibility
+details. They do not change the submission target. A replacement deployment is
+not accepted as certified until the submitted transaction and finalized receipt
+prove the target chain, successful execution, exact source bytes, and the
+three-rotation envelope.
 
 Full proof:
 [`CURRENT_DEPLOYMENT_PROOF_2026-09-16.md`](./CURRENT_DEPLOYMENT_PROOF_2026-09-16.md).

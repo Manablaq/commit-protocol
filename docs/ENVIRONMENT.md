@@ -1,26 +1,42 @@
 # Submission environment
 
-This file distinguishes the currently published application/deployment from the
-final reviewer-hardening candidate that is still being certified locally.
+This file distinguishes the previously published release from the final
+reviewer-hardening candidate and records the network identity required for the
+submission.
 
-## Canonical hosted GenLayer environment
+## Canonical hackathon submission environment
 
-COMMIT uses the hosted **GenLayer Studio development preview** as its canonical
-submission environment:
+The accepted current-source deployment target is **GenLayer Studio Next**:
 
-- RPC: `https://studio-dev.genlayer.com/api`
+- Submission RPC: `https://studio-next.genlayer.com/api`
 - Chain ID: `61997` / `0xf22d`
 - Explorer: `https://explorer-studio-dev.genlayer.com/`
 
-`https://studio-next.genlayer.com/api` has been observed to expose the same
-chain, transaction state, and deployed code for the recorded deployment. COMMIT
-treats it only as an alias comparison; it is not represented as a separate SDK
-network or a second deployment requirement.
+The `genlayer-js` chain definition is named `studioDevnet` and uses
+`https://studio-dev.genlayer.com/api` as its SDK endpoint. Read-only checks show
+that endpoint and the Studio Next submission endpoint currently expose the same
+chain ID. The SDK endpoint is therefore a compatibility alias, not the
+submission target. A deployment is certified only when it is submitted through
+the Studio Next endpoint and its transaction records chain ID `61997` plus the
+required non-zero rotation budget.
+
+## Deployment-envelope invariant
+
+The deployment request must bind both values explicitly:
+
+- outer `consensusMaxRotations`: `3`;
+- fee distribution `rotations`: `[3]`.
+
+The fee distribution is not allowed to retain the SDK default `[0]`. The fee
+deposit must be re-measured against the live Studio Next policy after the
+distribution is set. The deployment preflight must fail closed unless the
+serialized request and finalized transaction prove those values.
 
 ## Currently published deployment
 
 The public application still points at the previously certified coordinator
-until the hardening candidate is deployed and re-certified:
+until the hardening candidate is replaced and re-certified. That historical
+release was recorded through the SDK-compatible Studio Dev endpoint:
 
 - deployed application release: `e9858985495111cf2f21db6dc847c7f75b79c0da`
 - deployed release tree: `3627b57a0baaebda07b15da76cb8b594ee4a18f9`
@@ -30,7 +46,7 @@ until the hardening candidate is deployed and re-certified:
 - stored result: `FINALIZED` + `FINISHED_WITH_RETURN`
 
 That proof remains historical/current-production evidence. It is **not** a
-claim that the new hardening candidate below is already deployed.
+claim that the new hardening candidate below is submission-certified.
 
 ## Final hardening candidate
 
@@ -64,9 +80,10 @@ historical legacy runner required by the Direct Runtime suite.
 
 ## Current transition state
 
-The hardening candidate has passed local deterministic/runtime/frontend gates,
-but it has **not yet** been pushed, preview-deployed, or submitted on-chain.
-A new coordinator deployment is required because the coordinator source bytes
-changed. Final Agent Tank documentation must be updated again with that new
-deployment address, transaction, finality result, exact source proof, live
-COMMIT/ABORT outcomes, and preview/production certification.
+The hardening candidate has passed local deterministic/runtime/frontend gates
+and has an exact-source Studio Next deployment, but that deployment is **not
+certified** because the submitted envelope recorded zero rotations. A fresh
+replacement coordinator deployment is required with the corrected `[3]` fee
+distribution and outer rotation budget. Final Agent Tank documentation must be
+updated again with the replacement address, transaction, finality result, exact
+source proof, live COMMIT/ABORT outcomes, and preview/production certification.

@@ -27,8 +27,11 @@ The currently published `e9858985495111cf2f21db6dc847c7f75b79c0da` release has a
 coordinator deployment at `0x7C1e450333D97CD4E02F48c3424BF10112697A60`. Historical v0.7 missions
 008/009 remain the existing live COMMIT/ABORT behavior proof.
 
-Neither is represented as a deployment or lifecycle execution of the new
-`e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6` hardening candidate.
+The new `e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6`
+hardening candidate has since been deployed and byte-verified on Studio Next at
+`0x597641c88a3644f2C8c5c0baD9F1072710a82E85`, but that deployment used a
+zero-rotation envelope and is not a certified submission deployment. No
+current-source lifecycle execution is represented yet.
 
 ## Still required before submission
 

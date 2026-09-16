@@ -1,10 +1,7 @@
 # Current deployment proof — 2026-09-16
 
 > **Scope notice:** this proof is bound to deployed application release
-> `e9858985495111cf2f21db6dc847c7f75b79c0da` and coordinator source `be0ef1686314354ac1b87ccd50ab42f0c933c312a4980c0e5479f2d3037e4e58`. A later local
-> reviewer-hardening candidate has coordinator source `e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6` and is not
-> yet deployed. Do not treat this document as deployment proof for that
-> candidate; it will be superseded only after fresh deployment certification.
+> `e9858985495111cf2f21db6dc847c7f75b79c0da` and coordinator source `be0ef1686314354ac1b87ccd50ab42f0c933c312a4980c0e5479f2d3037e4e58`. A later reviewer-hardening candidate with coordinator source `e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6` has been deployed separately on Studio Next, but its first deployment used a zero-rotation envelope and is not submission-certified. Do not treat this document as deployment proof for that candidate; it remains the historical published-release proof until fresh replacement certification.
 
 
 This document records the reviewer-facing deployment identity for the current
@@ -21,17 +18,18 @@ without deleting that historical diagnostic record.
 - Coordinator source bytes: `19670`
 - Helper source SHA-256: `dfb564fbd644fae756808fee2afc1f43c35d0dde095e33ad9f4802569e80007a`
 
-## Canonical hosted Studio network
+## Historical published-release network record
 
-- Network label: **GenLayer Studio development preview**
-- Canonical RPC: `https://studio-dev.genlayer.com/api`
+- Network label: **GenLayer Studio development preview (historical release)**
+- Recorded RPC: `https://studio-dev.genlayer.com/api`
 - Chain ID: `61997` / `0xf22d`
 - `https://studio-next.genlayer.com/api` resolves to the same chain and returned
   the same transaction and deployed code for the checks below. It is treated
-  here as an alias comparison, not as a separate SDK network or a second
-  deployment requirement.
+  here as historical alias-comparison evidence, not as proof of the current
+  reviewer-hardening submission deployment. The current submission target is
+  documented in [`STUDIO_NEXT_DEPLOYMENT_ENVELOPE.md`](./STUDIO_NEXT_DEPLOYMENT_ENVELOPE.md).
 
-## Current coordinator deployment
+## Historical published coordinator deployment
 
 - Contract: `0x7C1e450333D97CD4E02F48c3424BF10112697A60`
 - Deployment transaction: `0x496654c019c07ffeed87fb8021e482d18f5da125c2388538d5ea88d81a6a7640`
@@ -83,12 +81,15 @@ Local F17 publication evidence packet index SHA-256:
 ## Scope of proof
 
 This document proves the identity, finality, execution result, and exact source
-bytes of the **current coordinator deployment**.
+bytes of the **historical published coordinator deployment**.
 
 It does not rewrite history. The earlier Studio diagnostic in
 `STUDIO_NEXT_CHECKPOINT_2026-09-15.md` genuinely failed before a transaction
-was submitted. That checkpoint is retained as historical evidence and is now
-superseded by the successful deployment above.
+was submitted. That checkpoint is retained as historical evidence. The later
+reviewer-hardening candidate deployment is recorded separately in
+[`STUDIO_NEXT_DEPLOYMENT_ENVELOPE.md`](./STUDIO_NEXT_DEPLOYMENT_ENVELOPE.md)
+because its zero-rotation envelope prevents it from being certified as the
+replacement submission.
 
 The older v0.7 Studio Dev deployment in
 [`DEPLOYMENT_LOG_STUDIO_DEV.md`](./DEPLOYMENT_LOG_STUDIO_DEV.md) remains the

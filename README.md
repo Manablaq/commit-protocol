@@ -32,13 +32,14 @@ COMMIT needs consensus over facts that ordinary deterministic contracts cannot r
 
 ## Agent Tank proof
 
-### Published exact-source deployment
+### Historical published exact-source deployment
 
-The currently published coordinator release is deployed and independently re-verified on
-the canonical hosted GenLayer Studio development preview:
+The currently published coordinator release is the previous release, recorded
+through the SDK-compatible Studio Dev endpoint. It is not the current-source
+submission deployment:
 
-- Network: **GenLayer Studio development preview**
-- Canonical RPC: `https://studio-dev.genlayer.com/api`
+- Network: **GenLayer Studio development preview (historical release)**
+- Recorded RPC: `https://studio-dev.genlayer.com/api`
 - Chain ID: `61997` / `0xf22d`
 - Contract: `0x7C1e450333D97CD4E02F48c3424BF10112697A60`
 - Deployment transaction:
@@ -51,10 +52,11 @@ the canonical hosted GenLayer Studio development preview:
 - Exact deployed-source match: **confirmed**
 - Release commit: `e9858985495111cf2f21db6dc847c7f75b79c0da`
 
-`https://studio-next.genlayer.com/api` returned the same chain ID, deployment
-transaction, final status, execution result, target address, and deployed source
-bytes during the final read-only comparison. It is treated as an alias
-comparison rather than a separate deployment target.
+The current-source Agent Tank submission target is **Studio Next** at
+`https://studio-next.genlayer.com/api` on chain `61997`. The SDK's
+`studioDevnet` endpoint is retained only as a compatibility alias; the
+replacement deployment must be submitted and certified against the Studio Next
+endpoint with an explicit three-rotation envelope.
 
 See
 [`docs/CURRENT_DEPLOYMENT_PROOF_2026-09-16.md`](./docs/CURRENT_DEPLOYMENT_PROOF_2026-09-16.md).
@@ -119,8 +121,13 @@ The candidate rejects future-dated evidence, exposes the exact helper binding,
 requires direct-origin claims, repairs the hosted verification read path, and
 aligns the frontend SDK with the current Consensus v0.6 release family.
 
-A new coordinator deployment and fresh live lifecycle proof are required before
-this candidate replaces the published deployment above.
+The candidate source was deployed and byte-verified on Studio Next at
+`0x597641c88a3644f2C8c5c0baD9F1072710a82E85` in transaction
+`0x8aeb48b50ba8a9f125cddf52acbf28a2dba66020d6522c58784b84079906e139`.
+That deployment is not submission-certified because its recorded consensus and
+fee-distribution rotation values were both zero. A replacement deployment and
+fresh live lifecycle proof are required before this candidate replaces the
+published deployment above.
 
 
 ## Security properties
@@ -151,7 +158,8 @@ COMMIT is designed around the failure modes that matter when AI consensus can mo
 - [`docs/ACCOUNTING_MODEL.md`](./docs/ACCOUNTING_MODEL.md) — escrow and conservation
 - [`docs/THREAT_MODEL.md`](./docs/THREAT_MODEL.md) — adversarial analysis
 - [`docs/DEPLOYMENT_LOG_STUDIO_DEV.md`](./docs/DEPLOYMENT_LOG_STUDIO_DEV.md) — historical live proof
-- [`docs/CURRENT_DEPLOYMENT_PROOF_2026-09-16.md`](./docs/CURRENT_DEPLOYMENT_PROOF_2026-09-16.md) — current exact-source deployment proof
+- [`docs/CURRENT_DEPLOYMENT_PROOF_2026-09-16.md`](./docs/CURRENT_DEPLOYMENT_PROOF_2026-09-16.md) — historical published-release deployment proof
+- [`docs/STUDIO_NEXT_DEPLOYMENT_ENVELOPE.md`](./docs/STUDIO_NEXT_DEPLOYMENT_ENVELOPE.md) — target identity and rotation invariant
 - [`docs/STUDIO_NEXT_CHECKPOINT_2026-09-15.md`](./docs/STUDIO_NEXT_CHECKPOINT_2026-09-15.md) — superseded historical pre-deployment checkpoint
 - [`tests/`](./tests) — deterministic, runtime, backend, frontend, and E2E verification
 
