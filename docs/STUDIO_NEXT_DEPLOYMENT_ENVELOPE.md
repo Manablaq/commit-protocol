@@ -1,8 +1,9 @@
 # Studio Next deployment envelope
 
-This record captures the R11B deployment-forensics result for the COMMIT
-reviewer-hardening candidate. It is a deployment control document, not proof
-that a replacement deployment has already been submitted.
+This record captures the R11B deployment-forensics result and the corrected
+replacement certification for the COMMIT reviewer-hardening candidate. The
+current finalized deployment and lifecycle evidence are recorded in
+[`LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md`](./LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md).
 
 ## Target identity
 
@@ -67,6 +68,28 @@ rotations [3] -> 614572800010352 wei
 These values are measurements from that policy snapshot, not reusable constants.
 The next preflight must query the live policy again and recompute the deposit.
 
+## Replacement certification
+
+The corrected replacement satisfied the required gates:
+
+- deployment transaction:
+  `0xc0e377d7a76893c253d61fcce42a320c6f5f41e5afad013a59dcbd279a998a50`;
+- coordinator:
+  `0xEE21cCFF8f3755487f774BFd5Da9Ff51D5688581`;
+- finalized execution: `FINALIZED` + `FINISHED_WITH_RETURN`;
+- consensus result: `MAJORITY_AGREE`;
+- outer rotations: `3`;
+- fee-distribution rotations: `[3]`;
+- deployed source: 19,873 bytes with SHA-256
+  `e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6`;
+- exact deployed-source match: confirmed;
+- helper binding: `0x53405950e587Ca4F6232b4596f0992ea5aaD8Ae4`;
+- protocol readback: successful;
+- fresh COMMIT, ABORT, callback, and claim lifecycle: finalized and verified.
+
+Full transaction-by-transaction evidence is in the linked live lifecycle
+record above.
+
 ## Certification gates for the replacement
 
 Before considering the replacement usable, record and verify all of the
@@ -82,4 +105,5 @@ following from the actual transaction:
 8. fresh current-source COMMIT, ABORT, recovery, and direct-claim lifecycle
    evidence.
 
-Until those gates pass, the older deployment remains historical evidence only.
+The gates above have passed. The older zero-rotation deployment remains
+historical failure evidence only.

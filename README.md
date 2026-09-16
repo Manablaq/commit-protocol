@@ -54,12 +54,12 @@ submission deployment:
 
 The current-source Agent Tank submission target is **Studio Next** at
 `https://studio-next.genlayer.com/api` on chain `61997`. The SDK's
-`studioDevnet` endpoint is retained only as a compatibility alias; the
-replacement deployment must be submitted and certified against the Studio Next
-endpoint with an explicit three-rotation envelope.
+`studioDevnet` endpoint is retained only as a compatibility alias. The current
+source-bound deployment and lifecycle proof use the explicit three-rotation
+Studio Next envelope.
 
 See
-[`docs/CURRENT_DEPLOYMENT_PROOF_2026-09-16.md`](./docs/CURRENT_DEPLOYMENT_PROOF_2026-09-16.md).
+[`docs/LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md`](./docs/LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md).
 
 ### Historical live COMMIT / ABORT proof
 
@@ -102,10 +102,9 @@ See
 - Current deployment exact-source/finality gate: **passed**
 
 
-### Final reviewer-hardening candidate
+### Current reviewer-hardening release
 
-A source-changing hardening candidate is currently certified locally and is not
-yet represented as the deployed submission release:
+A source-changing hardening release is deployed and certified on Studio Next:
 
 - coordinator SHA-256:
   `e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6`
@@ -121,13 +120,13 @@ The candidate rejects future-dated evidence, exposes the exact helper binding,
 requires direct-origin claims, repairs the hosted verification read path, and
 aligns the frontend SDK with the current Consensus v0.6 release family.
 
-The candidate source was deployed and byte-verified on Studio Next at
-`0x597641c88a3644f2C8c5c0baD9F1072710a82E85` in transaction
-`0x8aeb48b50ba8a9f125cddf52acbf28a2dba66020d6522c58784b84079906e139`.
-That deployment is not submission-certified because its recorded consensus and
-fee-distribution rotation values were both zero. A replacement deployment and
-fresh live lifecycle proof are required before this candidate replaces the
-published deployment above.
+The certified replacement coordinator is
+`0xEE21cCFF8f3755487f774BFd5Da9Ff51D5688581`, deployed in transaction
+`0xc0e377d7a76893c253d61fcce42a320c6f5f41e5afad013a59dcbd279a998a50` with
+`FINALIZED`, `FINISHED_WITH_RETURN`, `MAJORITY_AGREE`, and rotations `[3]`.
+The earlier zero-rotation deployment at
+`0x597641c88a3644f2C8c5c0baD9F1072710a82E85` remains historical failure
+evidence only.
 
 
 ## Security properties
@@ -159,6 +158,7 @@ COMMIT is designed around the failure modes that matter when AI consensus can mo
 - [`docs/THREAT_MODEL.md`](./docs/THREAT_MODEL.md) — adversarial analysis
 - [`docs/DEPLOYMENT_LOG_STUDIO_DEV.md`](./docs/DEPLOYMENT_LOG_STUDIO_DEV.md) — historical live proof
 - [`docs/CURRENT_DEPLOYMENT_PROOF_2026-09-16.md`](./docs/CURRENT_DEPLOYMENT_PROOF_2026-09-16.md) — historical published-release deployment proof
+- [`docs/LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md`](./docs/LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md) — current source-bound deployment and lifecycle proof
 - [`docs/STUDIO_NEXT_DEPLOYMENT_ENVELOPE.md`](./docs/STUDIO_NEXT_DEPLOYMENT_ENVELOPE.md) — target identity and rotation invariant
 - [`docs/STUDIO_NEXT_CHECKPOINT_2026-09-15.md`](./docs/STUDIO_NEXT_CHECKPOINT_2026-09-15.md) — superseded historical pre-deployment checkpoint
 - [`tests/`](./tests) — deterministic, runtime, backend, frontend, and E2E verification

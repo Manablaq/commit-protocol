@@ -29,3 +29,12 @@ def test_live_proof_reuses_one_evidence_id_and_record_id_per_issuer() -> None:
     assert "const recordId = record.recordId" in source
     assert "args: [mission.missionId, evidenceId]" in source
     assert "          recordId," in source
+
+
+def test_live_evaluation_uses_exact_call_fee_simulation_and_requires_callback_funding() -> None:
+    source = (ROOT / "scripts" / "live_studio_next_proof.mjs").read_text(
+        encoding="utf-8",
+    )
+    assert "client.estimateTransactionFeesForWrite(call)" in source
+    assert 'deriveInternalMessageCallKey("apply_decision")' in source
+    assert "exact evaluation simulation returned no funded finalized apply_decision allocation" in source

@@ -1,8 +1,9 @@
 # Agent Tank submission proof map
 
-> **Pre-submission hardening status:** the historical proof below belongs to
-> release `e9858985495111cf2f21db6dc847c7f75b79c0da` / source `be0ef1686314354ac1b87ccd50ab42f0c933c312a4980c0e5479f2d3037e4e58`. The reviewer-hardening
-> candidate source is `e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6` and is deployed on Studio Next, but its first deployment used a zero-rotation envelope and is not certified. Agent Tank submission must wait for a corrected replacement deployment and current-source lifecycle proof.
+> **Current certification:** the reviewer-hardening coordinator source is
+> deployed and lifecycle-verified on Studio Next. The exact deployment,
+> source-match, COMMIT/ABORT, callback, and claim evidence is in
+> [`LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md`](./LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md).
 
 This is the shortest reviewer path through the final COMMIT release.
 
@@ -26,6 +27,25 @@ COMMIT/ABORT settlement rights.
 - Vercel production deployment:
   `dpl_6x9XzgAxPsRX8jXr7d6KonmEmL6S`
 
+## Current source-bound Studio Next deployment
+
+- Network: **GenLayer Studio Next**
+- RPC: `https://studio-next.genlayer.com/api`
+- Chain ID: `61997`
+- Coordinator:
+  `0xEE21cCFF8f3755487f774BFd5Da9Ff51D5688581`
+- Helper: `0x53405950e587Ca4F6232b4596f0992ea5aaD8Ae4`
+- Deployment transaction:
+  `0xc0e377d7a76893c253d61fcce42a320c6f5f41e5afad013a59dcbd279a998a50`
+- Deployment result: `FINALIZED`, `FINISHED_WITH_RETURN`, `MAJORITY_AGREE`
+- Source SHA-256:
+  `e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6`
+- Deployed source bytes: `19873`
+- Outer and fee-distribution rotations: `3` and `[3]`
+
+Current lifecycle proof:
+[`LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md`](./LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md).
+
 ## Historical published GenLayer deployment
 
 - Network: **GenLayer Studio development preview (historical release)**
@@ -42,12 +62,12 @@ COMMIT/ABORT settlement rights.
 - Deployed source bytes: `19670`
 - Exact source match: **confirmed**
 
-This is historical proof for the previously published release. It must not be
-used as proof that the reviewer-hardening candidate is deployed.
+This is historical proof for the previously published release. The current
+source-bound deployment is recorded above.
 
 ## Current submission target
 
-The replacement current-source deployment must target **Studio Next**:
+The current-source deployment targets **Studio Next**:
 
 - RPC: `https://studio-next.genlayer.com/api`
 - Chain ID: `61997` / `0xf22d`
@@ -56,13 +76,11 @@ The replacement current-source deployment must target **Studio Next**:
 - Required fee-distribution rotations: `[3]`
 
 The SDK chain name `studioDevnet` and its `studio-dev` endpoint are compatibility
-details. They do not change the submission target. A replacement deployment is
-not accepted as certified until the submitted transaction and finalized receipt
-prove the target chain, successful execution, exact source bytes, and the
-three-rotation envelope.
+details. They do not change the submission target. The finalized deployment and
+three-rotation envelope are certified in the current lifecycle proof.
 
 Full proof:
-[`CURRENT_DEPLOYMENT_PROOF_2026-09-16.md`](./CURRENT_DEPLOYMENT_PROOF_2026-09-16.md).
+[`LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md`](./LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md).
 
 ## Historical live outcome proofs
 
@@ -148,9 +166,10 @@ COMMIT does **not** claim:
 
 1. Read this file.
 2. Verify the exact current deployment in
-   [`CURRENT_DEPLOYMENT_PROOF_2026-09-16.md`](./CURRENT_DEPLOYMENT_PROOF_2026-09-16.md).
-3. Inspect the historical COMMIT/ABORT lifecycle evidence in
-   [`DEPLOYMENT_LOG_STUDIO_DEV.md`](./DEPLOYMENT_LOG_STUDIO_DEV.md).
+   [`LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md`](./LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md).
+3. Inspect the historical published-release record in
+   [`CURRENT_DEPLOYMENT_PROOF_2026-09-16.md`](./CURRENT_DEPLOYMENT_PROOF_2026-09-16.md)
+   and the earlier branch evidence in [`DEPLOYMENT_LOG_STUDIO_DEV.md`](./DEPLOYMENT_LOG_STUDIO_DEV.md).
 4. Review the security boundary in
    [`THREAT_MODEL.md`](./THREAT_MODEL.md) and
    [`SEMANTIC_ATOMICITY.md`](./SEMANTIC_ATOMICITY.md).

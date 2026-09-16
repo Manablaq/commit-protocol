@@ -1,15 +1,11 @@
-# Current deployment proof — 2026-09-16
+# Historical published-release deployment proof — 2026-09-16
 
-> **Scope notice:** this proof is bound to deployed application release
-> `e9858985495111cf2f21db6dc847c7f75b79c0da` and coordinator source `be0ef1686314354ac1b87ccd50ab42f0c933c312a4980c0e5479f2d3037e4e58`. A later reviewer-hardening candidate with coordinator source `e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6` has been deployed separately on Studio Next, but its first deployment used a zero-rotation envelope and is not submission-certified. Do not treat this document as deployment proof for that candidate; it remains the historical published-release proof until fresh replacement certification.
+The current source-bound Studio Next deployment and lifecycle proof is recorded
+in [`LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md`](./LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md).
+This file is retained as historical proof for the previously published
+application release; it is not the current coordinator deployment.
 
-
-This document records the reviewer-facing deployment identity for the current
-COMMIT release. It supersedes the unresolved deployment status recorded in
-[`STUDIO_NEXT_CHECKPOINT_2026-09-15.md`](./STUDIO_NEXT_CHECKPOINT_2026-09-15.md)
-without deleting that historical diagnostic record.
-
-## Release identity
+## Historical release identity
 
 - Repository release commit: `e9858985495111cf2f21db6dc847c7f75b79c0da`
 - Release tree: `3627b57a0baaebda07b15da76cb8b594ee4a18f9`

@@ -56,7 +56,7 @@ evidence directory. It waits for finality, checks successful execution, reads
 the exact deployed bytes, verifies `protocol_info()`, and rejects any receipt
 whose recorded outer or fee-distribution rotation value is not `3`.
 
-## Currently published deployment
+## Previously published deployment
 
 The public application still points at the previously certified coordinator
 until the hardening candidate is replaced and re-certified. That historical
@@ -69,12 +69,12 @@ release was recorded through the SDK-compatible Studio Dev endpoint:
 - deployed coordinator SHA-256: `be0ef1686314354ac1b87ccd50ab42f0c933c312a4980c0e5479f2d3037e4e58`
 - stored result: `FINALIZED` + `FINISHED_WITH_RETURN`
 
-That proof remains historical/current-production evidence. It is **not** a
-claim that the new hardening candidate below is submission-certified.
+That proof remains historical evidence for the previously published
+application release. It is not the current source-bound coordinator.
 
-## Final hardening candidate
+## Current source-bound deployment
 
-Local branch: `fix/final-reviewer-blockers-r1`
+Repository HEAD: `e402af3978a51012223b035652b85fc77001485b`
 
 Base GitHub main before publication:
 
@@ -87,10 +87,9 @@ Candidate source identities:
 - helper SHA-256: `dfb564fbd644fae756808fee2afc1f43c35d0dde095e33ad9f4802569e80007a`
 - helper bytes: `9428`
 
-The helper source has not changed in this hardening cycle. Before the final
-coordinator deployment, the existing helper binding and exact deployed helper
-bytes must be proved read-only; the helper is redeployed only if that proof
-fails.
+The helper source has not changed in this hardening cycle. The finalized
+coordinator deployment is bound to helper
+`0x53405950e587Ca4F6232b4596f0992ea5aaD8Ae4`.
 
 ## Verified local runtime
 
@@ -102,12 +101,10 @@ universal release archive:
 The verified archive contains both the current `py-genlayer` runner and the
 historical legacy runner required by the Direct Runtime suite.
 
-## Current transition state
+## Current certification state
 
-The hardening candidate has passed local deterministic/runtime/frontend gates
-and has an exact-source Studio Next deployment, but that deployment is **not
-certified** because the submitted envelope recorded zero rotations. A fresh
-replacement coordinator deployment is required with the corrected `[3]` fee
-distribution and outer rotation budget. Final Agent Tank documentation must be
-updated again with the replacement address, transaction, finality result, exact
-source proof, live COMMIT/ABORT outcomes, and preview/production certification.
+The hardening candidate has passed the local deterministic/runtime/frontend
+gates and the corrected Studio Next deployment is certified by the finalized
+three-rotation envelope, exact source match, protocol readback, and fresh
+COMMIT/ABORT lifecycle evidence. See
+[`LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md`](./LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md).

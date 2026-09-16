@@ -45,9 +45,7 @@ const typesPath = repoRequire.resolve("genlayer-js/types");
 const {
   createAccount,
   createClient,
-  MessageType,
   deriveInternalMessageCallKey,
-  encodeInternalMessageFeeParams,
 } = await import(pathToFileURL(sdkPath).href);
 const { studioDevnet } = await import(pathToFileURL(chainsPath).href);
 const { TransactionStatus } = await import(pathToFileURL(typesPath).href);
@@ -94,47 +92,27 @@ const readClient = createClient({ chain });
 const read = (functionName, args = []) =>
   readClient.readContract({ address: CONTRACT, functionName, args });
 
-const INTERNAL_MESSAGE_BUDGET = 700_000_000_000_000n;
-const ROOT_MESSAGE_PARENT = (1n << 256n) - 1n;
-
-async function estimateEvaluationFees(client) {
-  const policy = await client.getCurrentFeePolicy();
-  const executionBudgetPerRound =
-    policy.executionBudgetFloor > 162_533_100_000_000n
-      ? policy.executionBudgetFloor
-      : 162_533_100_000_000n;
-  return client.estimateTransactionFees({
-    leaderTimeunitsAllocation: 100n,
-    validatorTimeunitsAllocation: 200n,
-    appealRounds: 0n,
-    executionBudgetPerRound,
-    executionConsumed: 0n,
-    rotations: [3n],
-    maxPriceGenPerTimeUnit: 2n,
-    storageFeeMaxGasPrice: 300000000n,
-    receiptFeeMaxGasPrice: 300000000n,
-    messageAllocations: [
-      {
-        messageType: MessageType.Internal,
-        onAcceptance: false,
-        parentIndex: ROOT_MESSAGE_PARENT,
-        recipient: CONTRACT,
-        callKey: deriveInternalMessageCallKey("apply_decision"),
-        budget: INTERNAL_MESSAGE_BUDGET,
-        feeParams: encodeInternalMessageFeeParams({
-          leaderTimeunitsAllocation: 100n,
-          validatorTimeunitsAllocation: 200n,
-        }),
-      },
-    ],
-  });
+async function estimateEvaluationFees(client, call) {
+  const estimate = await client.estimateTransactionFeesForWrite(call);
+  const callbackKey = deriveInternalMessageCallKey("apply_decision").toLowerCase();
+  const callbackAllocation = (estimate.messageAllocations ?? []).find(
+    (allocation) =>
+      String(allocation.recipient ?? "").toLowerCase() === CONTRACT.toLowerCase() &&
+      String(allocation.callKey ?? "").toLowerCase() === callbackKey &&
+      allocation.onAcceptance === false &&
+      BigInt(allocation.budget ?? 0) > 0n,
+  );
+  if (!callbackAllocation) {
+    fail("exact evaluation simulation returned no funded finalized apply_decision allocation");
+  }
+  return estimate;
 }
 
 async function submit(label, accountName, functionName, args, value = 0n) {
   const client = clientFor(accountName);
   const call = { address: CONTRACT, functionName, args };
   const estimate = functionName === "evaluate_mission"
-    ? await estimateEvaluationFees(client)
+    ? await estimateEvaluationFees(client, call)
     : MESSAGE_METHODS.has(functionName)
     ? await client.estimateTransactionFeesForWrite({
         ...call,
