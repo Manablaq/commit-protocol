@@ -74,7 +74,11 @@ application release. It is not the current source-bound coordinator.
 
 ## Current source-bound deployment
 
-Repository HEAD: `6fe34484acb4bb21afd8f438ecac00e7780042e1`
+Source-binding release commit: `6fe34484acb4bb21afd8f438ecac00e7780042e1`
+
+The current `main` branch may contain later documentation and verification-only
+commits; the source-binding commit above is the exact code revision that
+introduced the certified frontend anchor.
 
 Base GitHub main before publication:
 
