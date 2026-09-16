@@ -74,7 +74,7 @@ application release. It is not the current source-bound coordinator.
 
 ## Current source-bound deployment
 
-Repository HEAD: `9f3fc999326b15671b175d58ada02862f3dcd97c`
+Repository HEAD: `6fe34484acb4bb21afd8f438ecac00e7780042e1`
 
 Base GitHub main before publication:
 
