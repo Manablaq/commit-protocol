@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / "contracts/commit.py"
 
-EXPECTED_SOURCE_BYTES = 19914
+EXPECTED_SOURCE_BYTES = 19873
 EXPECTED_RUNNER_HEADER = (
     b'# { "Depends": '
     b'"py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng" }'

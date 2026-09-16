@@ -18,8 +18,8 @@ if (!/^0x[0-9a-fA-F]{64}$/.test(TX_HASH)) {
 
 const EXPECTED = {
   sourceSha256:
-    "8b617544e3ad60d3e3f94c38bde309701f6f44795948106591223eee02ecc95f",
-  sourceBytes: 19914,
+    "e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6",
+  sourceBytes: 19873,
   helper: "0x53405950e587Ca4F6232b4596f0992ea5aaD8Ae4",
   worker: "0x1f87Ae197af539253978d435aD45cCf28Fb95024",
   chainId: 61997,

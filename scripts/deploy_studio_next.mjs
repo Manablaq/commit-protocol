@@ -14,8 +14,8 @@ const DEPLOY_MARKER = process.env.COMMIT_DEPLOY_MARKER;
 
 const EXPECTED = {
   sourceSha256:
-    "8b617544e3ad60d3e3f94c38bde309701f6f44795948106591223eee02ecc95f",
-  sourceBytes: 19914,
+    "e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6",
+  sourceBytes: 19873,
   helper: "0x53405950e587Ca4F6232b4596f0992ea5aaD8Ae4",
   worker: "0x1f87Ae197af539253978d435aD45cCf28Fb95024",
   chainId: 61997,
@@ -26,8 +26,8 @@ const EXPECTED = {
   constructorSha256:
     "9829922e2163a437f2d98abf6c1bc269b667125107c0d16a3054e882900d1e34",
   deploymentDataSha256:
-    "1055d7e8a300095d1d742dbdcd19cc2039d402cd470b73c583387c9ae4df5544",
-  deploymentDataBytes: 19950,
+    "6d2280e6e4b0f6d6c8941732e7d4c3a5dd0a48a8e85b7a22ae070a94d74985d1",
+  deploymentDataBytes: 19909,
   executionBudgetPerRound: 153643200000000n,
   maxPriceGenPerTimeUnit: 2n,
   storageFeeMaxGasPrice: 300000000n,
