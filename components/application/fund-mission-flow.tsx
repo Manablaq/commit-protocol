@@ -21,6 +21,7 @@ import {
   type MissionFundingSnapshot,
   type TransactionProgress,
 } from "@/lib/genlayer-browser";
+import { writeBrowserStorage } from "@/lib/browser-storage";
 
 type FundMissionFlowProps = {
   wallet: ConnectedCommitWallet;
@@ -169,7 +170,7 @@ export function FundMissionFlow({
           quote,
         );
 
-      localStorage.setItem(
+      writeBrowserStorage(
         "commit:last-transaction",
         txId,
       );

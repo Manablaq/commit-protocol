@@ -132,7 +132,7 @@ A source-changing hardening release is deployed and certified on Studio Next:
   `dfb564fbd644fae756808fee2afc1f43c35d0dde095e33ad9f4802569e80007a`
 - Direct Runtime: **117 passed**
 - Python non-runtime: **454 passed + 334 subtests**
-- frontend Vitest: **43 passed**
+- frontend Vitest: **46 passed**
 - browser E2E: **12 passed**
 
 The candidate rejects future-dated evidence, exposes the exact helper binding,
@@ -213,12 +213,15 @@ ABORT branches and one-time entitlement consumption. It does not claim
 authenticated proof of downstream external delivery or production-grade
 retry/reconciliation for failed external transfers.
 
-The frontend now provides a fail-closed operator observation of triggered child
-transactions. It reports `DELIVERED` only for an exact one-child match with
-`FINALIZED` plus `FINISHED_WITH_RETURN`, reports `FAILED` only for an exact
-match with `FINISHED_WITH_ERROR`, and otherwise reports `PENDING` or
-`UNVERIFIED`. This read-only observation does not change the contract boundary
-or authorize a retry.
+The frontend now provides a fail-closed operator observation of claim parents,
+their exact native outbound message, and any triggered child transaction. It
+reports `DELIVERED` only after the parent is independently bound to the
+certified coordinator, exact `claim_mission` call, connected beneficiary, and
+one exact outbound message, followed by an exact child match with `FINALIZED`
+plus `FINISHED_WITH_RETURN`. A finalized child execution error is reported as
+`FINALIZED_ERROR`, not proof of terminal non-delivery. Missing, ambiguous, or
+unreadable child data remains `UNVERIFIED`. This read-only observation does not
+change the contract boundary or authorize a retry.
 
 See [`docs/OPEN_QUESTIONS.md`](./docs/OPEN_QUESTIONS.md) for the concise submission boundary.
 

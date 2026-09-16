@@ -24,6 +24,10 @@ import {
   type FinalizedClaimProof,
 } from "@/lib/genlayer-claim";
 import {
+  CURRENT_DEPLOYMENT_ANCHOR,
+} from "@/lib/deployment-anchor";
+import {
+  isTransactionHash,
   observeExternalDelivery,
   persistClaimTransaction,
   readPersistedClaimTransaction,
@@ -84,6 +88,12 @@ export function ClaimMissionFlow({
       wallet.address,
     ),
   );
+  const [claimTransactionId, setClaimTransactionId] = useState(() =>
+    readPersistedClaimTransaction(
+      initialMissionId,
+      wallet.address,
+    )?.transactionId ?? "",
+  );
   const [
     delivery,
     setDelivery,
@@ -101,6 +111,11 @@ export function ClaimMissionFlow({
     && claimRecord.beneficiary.toLowerCase() === wallet.address.toLowerCase()
       ? claimRecord
       : null;
+  const activeParentClaimTransactionId = isTransactionHash(
+    claimTransactionId.trim(),
+  )
+    ? claimTransactionId.trim()
+    : null;
 
   function resetReview() {
     setQuote(null);
@@ -162,6 +177,7 @@ export function ClaimMissionFlow({
         transactionId: txId,
         amount: quote.snapshot.missionClaimable,
       });
+      setClaimTransactionId(txId);
       persistClaimTransaction(
         quote.snapshot.mission.missionId,
         quote.snapshot.beneficiary,
@@ -181,6 +197,8 @@ export function ClaimMissionFlow({
             wallet.client,
             txId,
             {
+              coordinator: CURRENT_DEPLOYMENT_ANCHOR.contractAddress,
+              missionId: quote.snapshot.mission.missionId,
               recipient: quote.snapshot.beneficiary,
               amount: quote.snapshot.missionClaimable,
             },
@@ -215,10 +233,7 @@ export function ClaimMissionFlow({
   }
 
   async function refreshDelivery() {
-    if (
-      activeClaimRecord === null
-      || deliveryBusy
-    ) {
+    if (activeParentClaimTransactionId === null || deliveryBusy) {
       return;
     }
 
@@ -228,17 +243,19 @@ export function ClaimMissionFlow({
       setDelivery(
         await observeExternalDelivery(
           wallet.client,
-          activeClaimRecord.transactionId,
+          activeParentClaimTransactionId,
           {
+            coordinator: CURRENT_DEPLOYMENT_ANCHOR.contractAddress,
+            missionId,
             recipient: wallet.address,
-            amount: activeClaimRecord.amount,
+            amount: activeClaimRecord?.amount,
           },
         ),
       );
     } catch (caught: unknown) {
       setDelivery(
         unverifiedExternalDelivery(
-          activeClaimRecord.transactionId,
+          activeParentClaimTransactionId,
           caught instanceof Error
             ? caught.message
             : "The delivery observation could not be completed. No delivery outcome is claimed.",
@@ -254,8 +271,8 @@ export function ClaimMissionFlow({
   ): string {
     return phase === "DELIVERED"
       ? "DELIVERED"
-      : phase === "FAILED"
-        ? "FAILED — NO AUTOMATIC RETRY"
+      : phase === "FINALIZED_ERROR"
+        ? "FINALIZED EXECUTION ERROR — DELIVERY UNRESOLVED"
         : phase === "PENDING"
           ? "PENDING"
           : "UNVERIFIED";
@@ -285,16 +302,30 @@ export function ClaimMissionFlow({
               setMissionId(
                 nextMissionId,
               );
-              setClaimRecord(
-                readPersistedClaimTransaction(
-                  nextMissionId,
-                  wallet.address,
-                ),
+              const persisted = readPersistedClaimTransaction(
+                nextMissionId,
+                wallet.address,
               );
+              setClaimRecord(persisted);
+              setClaimTransactionId(persisted?.transactionId ?? "");
               resetReview();
             }}
             placeholder="Mission ID"
             maxLength={512}
+          />
+        </label>
+
+        <label className="claim-mission-input">
+          <span>Parent claim transaction (optional recovery)</span>
+          <input
+            value={claimTransactionId}
+            onChange={(event) => {
+              setClaimTransactionId(event.target.value);
+              setDelivery(null);
+              setError(null);
+            }}
+            placeholder="0x… paste a finalized claim transaction"
+            spellCheck={false}
           />
         </label>
 
@@ -522,7 +553,7 @@ export function ClaimMissionFlow({
           </div>
         ) : null}
 
-        {activeClaimRecord !== null ? (
+        {activeParentClaimTransactionId !== null ? (
           <div className="claim-delivery">
             <div className="claim-delivery-heading">
               <div>
@@ -559,7 +590,16 @@ export function ClaimMissionFlow({
             <dl>
               <div>
                 <dt>Parent claim</dt>
-                <dd>{activeClaimRecord.transactionId}</dd>
+                <dd>{activeParentClaimTransactionId}</dd>
+              </div>
+              <div>
+                <dt>Outbound message</dt>
+                <dd>
+                  {delivery?.outboundMessage === null
+                    || delivery?.outboundMessage === undefined
+                    ? "Not verified"
+                    : `${delivery.outboundMessage.recipient} · ${delivery.outboundMessage.amount.toString()} wei`}
+                </dd>
               </div>
               <div>
                 <dt>Triggered child</dt>
@@ -587,8 +627,9 @@ export function ClaimMissionFlow({
               <small>{delivery.reason}</small>
             ) : (
               <small>
-                Select “Observe child transaction” to read the exact child
-                transaction. No delivery outcome is assumed before then.
+                Select “Observe child transaction” to verify the parent claim,
+                outbound message, and any exact child transaction exposed by
+                Studio Next. No delivery outcome is assumed before then.
               </small>
             )}
           </div>

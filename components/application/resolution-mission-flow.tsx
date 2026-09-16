@@ -35,6 +35,7 @@ import {
   type RepairEvidenceQuote,
   type ResolutionInspection,
 } from "@/lib/genlayer-resolution";
+import { writeBrowserStorage } from "@/lib/browser-storage";
 
 type ResolutionMissionFlowProps = {
   wallet: ConnectedCommitWallet;
@@ -249,7 +250,7 @@ export function ResolutionMissionFlow({
           evaluateQuote,
         );
 
-      localStorage.setItem(
+      writeBrowserStorage(
         `commit:evaluation:${missionId}`,
         txId,
       );

@@ -61,13 +61,14 @@ registration, sealing, and cancellation.
 
 External claim dispatch is intentionally not blindly retried. The entitlement
 is consumed before dispatch to prevent double payment. The frontend can follow
-the exact triggered child transaction and reports
-delivery only after exact recipient/value binding plus `FINALIZED` and
-`FINISHED_WITH_RETURN`; it reports finalized `FINISHED_WITH_ERROR` as failure
-and all other cases as pending or unverified. This is an operator-side read,
-not contract state. The current revision does not provide a trustless
-reconciliation or retry write because a timeout-based restoration could race a
-delayed original transfer.
+the exact parent claim, its exact outbound message, and any triggered child
+transaction. It reports delivery only after parent target/caller/method/mission
+binding, exact recipient/value binding, `FINALIZED`, and
+`FINISHED_WITH_RETURN`; it reports finalized `FINISHED_WITH_ERROR` as
+`FINALIZED_ERROR` without claiming terminal non-delivery. All other cases are
+pending or unverified. This is an operator-side read, not contract state. The
+current revision does not provide a trustless reconciliation or retry write
+because a timeout-based restoration could race a delayed original transfer.
 
 No upgrade/admin escape hatch can rewrite a sealed mission or redirect custody.
 The owner can register or deactivate publisher authorities. Each authority ID

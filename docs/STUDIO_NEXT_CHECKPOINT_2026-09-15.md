@@ -227,7 +227,9 @@ coordinator deployment, and fresh COMMIT/ABORT lifecycle proofs be prepared.
 
 ## Public app/frontend status
 
-- stable public URL: `https://commitprotocol-genlayer.vercel.app`
+- historical stable public URL at the time of this checkpoint:
+  `https://commitprotocol-genlayer.vercel.app`
+- current canonical public URL: `https://commit-protocol.vercel.app`
 - this checkpoint does not change the Vercel project or public URL;
 - this checkpoint does not change contract source;
 - this checkpoint does not change frontend source.

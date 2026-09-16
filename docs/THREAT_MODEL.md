@@ -20,7 +20,7 @@ model; the frontend now exposes a strict read-only child-message observation.
 | Leader manipulation | Validator path is bound to the consequential evidence result | Fresh current-source COMMIT and ABORT consensus proofs passed; recovery/stale-callback hosted proof remains separately certifiable |
 | Replay/double allocation | Decision nonce, exact roots, self-callback authentication, terminal allocation flag, recovery race guards | Fresh current-source COMMIT and ABORT callback/claim proofs passed; recovery/stale-callback hosted proof remains separately certifiable |
 | Trapped funds | Permissionless recovery after declared recovery deadline | Requires network liveness and a successful recovery transaction |
-| Indirect claim/reentrancy-style caller confusion | Public claim requires immediate sender == original transaction submitter; entitlement is consumed before dispatch; frontend binds any observed child to the exact beneficiary and value | Downstream chain-layer delivery/reconciliation is outside COMMIT's proven atomic boundary |
+| Indirect claim/reentrancy-style caller confusion | Public claim requires immediate sender == original transaction submitter; entitlement is consumed before dispatch; frontend independently verifies parent target, caller, method, mission, and exact outbound child binding | Downstream chain-layer delivery/reconciliation is outside COMMIT's proven atomic boundary |
 | Fee exhaustion | Fee policy enumerates all message-producing paths and invalidation conditions | Exact live quotes are required before each new message path; the certified deployment and tested lifecycle used measured current-network values |
 | Oversized remote input | 16 KiB response cap and bounded text/reason/graph fields | Target-network resource behavior must still be certified |
 
@@ -45,8 +45,8 @@ success, or automatic reconciliation as part of semantic atomicity.
    already present.
 
 The repository's GitHub Actions `Verification` workflow is active. Run
-`35140950751` completed successfully for the current repository release
-commit `abc5b1883b10eec022875becc8660a724fb8f671`.
+`35142771890` completed successfully for `main` commit
+`d2e46de82b9c269d59ed77d97c1844dc9943b7b3`.
 
 The `main` branch now requires the Frontend checks, Python checks, and Direct
 Runtime checks, with force-push and deletion disabled and conversation

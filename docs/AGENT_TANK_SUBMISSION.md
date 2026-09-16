@@ -138,7 +138,7 @@ The earlier published release has the following historical certification record:
 - helper source SHA-256:
   `dfb564fbd644fae756808fee2afc1f43c35d0dde095e33ad9f4802569e80007a`;
 - Python regression: **450 passed + 334 subtests**;
-- frontend Vitest: **27 passed**;
+- frontend Vitest: **46 passed**;
 - browser E2E: **12 passed**;
 - public `/`, `/app`, `/verify`, `/api/v1/health`: **HTTP 200**;
 - public production bodies matched the promoted production clone during final

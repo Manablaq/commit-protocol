@@ -353,7 +353,7 @@ export function ApplicationShell() {
           </div>
         ) : (
           <CaseRoom
-            key={lastMissionId || "case-room"}
+            key={`${lastMissionId || "case-room"}:${wallet.address}`}
             wallet={wallet}
             initialMissionId={lastMissionId}
           />
@@ -420,7 +420,7 @@ export function ApplicationShell() {
           </div>
         ) : (
           <FundMissionFlow
-            key={lastMissionId || "manual-funding"}
+            key={`${lastMissionId || "manual-funding"}:${wallet.address}`}
             wallet={wallet}
             initialMissionId={lastMissionId}
           />
@@ -443,7 +443,7 @@ export function ApplicationShell() {
           </div>
         ) : (
           <PrepareMissionFlow
-            key={lastMissionId || "manual-prepare"}
+            key={`${lastMissionId || "manual-prepare"}:${wallet.address}`}
             wallet={wallet}
             initialMissionId={lastMissionId}
           />
@@ -466,7 +466,7 @@ export function ApplicationShell() {
           </div>
         ) : (
           <EvidenceMissionFlow
-            key={lastMissionId || "manual-evidence"}
+            key={`${lastMissionId || "manual-evidence"}:${wallet.address}`}
             wallet={wallet}
             initialMissionId={lastMissionId}
           />
@@ -489,7 +489,7 @@ export function ApplicationShell() {
           </div>
         ) : (
           <SealMissionFlow
-            key={lastMissionId || "manual-seal"}
+            key={`${lastMissionId || "manual-seal"}:${wallet.address}`}
             wallet={wallet}
             initialMissionId={lastMissionId}
           />
@@ -512,7 +512,7 @@ export function ApplicationShell() {
           </div>
         ) : (
           <ResolutionMissionFlow
-            key={lastMissionId || "manual-resolution"}
+            key={`${lastMissionId || "manual-resolution"}:${wallet.address}`}
             wallet={wallet}
             initialMissionId={lastMissionId}
           />
@@ -535,7 +535,7 @@ export function ApplicationShell() {
           </div>
         ) : (
           <ClaimMissionFlow
-            key={lastMissionId || "manual-claim"}
+            key={`${lastMissionId || "manual-claim"}:${wallet.address}`}
             wallet={wallet}
             initialMissionId={lastMissionId}
           />
