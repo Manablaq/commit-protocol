@@ -3270,10 +3270,14 @@ a {
   display: grid;
   min-height: 38rem;
   padding: 7rem 1.4rem 4rem;
-  grid-template-columns: 1fr 0.55fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.55fr);
   align-items: end;
   gap: 5rem;
   border-bottom: 1px solid var(--commit-line);
+}
+
+.commit-app-hero > * {
+  min-width: 0;
 }
 
 .commit-app-kicker {
@@ -3286,10 +3290,13 @@ a {
 
 .commit-app-hero h1 {
   display: grid;
+  min-width: 0;
+  max-width: 100%;
   margin: 1.2rem 0 0;
   font-size: clamp(5rem, 9vw, 10rem);
   letter-spacing: -0.05em;
   line-height: 0.75;
+  overflow-wrap: anywhere;
 }
 
 .commit-app-hero h1 span,
@@ -3300,6 +3307,7 @@ a {
 
 .commit-app-hero-copy {
   display: grid;
+  min-width: 0;
   gap: 1.7rem;
 }
 
@@ -3312,11 +3320,14 @@ a {
 
 .commit-app-anchor {
   display: flex;
+  min-width: 0;
+  max-width: 100%;
   flex-wrap: wrap;
   gap: 0.5rem;
 }
 
 .commit-app-anchor span {
+  max-width: 100%;
   padding: 0.48rem 0.62rem;
   border: 1px solid var(--commit-line);
   background: rgb(255 255 255 / 0.025);
@@ -3324,6 +3335,7 @@ a {
   font-size: 0.58rem;
   font-weight: 760;
   letter-spacing: 0.05em;
+  overflow-wrap: anywhere;
 }
 
 .commit-app-status {
@@ -3788,7 +3800,7 @@ a {
 
   .commit-app-hero,
   .commit-app-next {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 2rem;
   }
 
