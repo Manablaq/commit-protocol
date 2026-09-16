@@ -161,7 +161,8 @@ async function waitFinalized(accountName, hash, label) {
     receipt.txExecutionResultName ?? receipt.executionResultName ?? "",
   );
   console.log(`FINALIZED ${label} ${hash} ${execution}`);
-  if (String(receipt.statusName).toUpperCase() !== "FINALIZED") {
+  const statusName = receipt.statusName ?? receipt.status_name;
+  if (String(statusName).toUpperCase() !== "FINALIZED") {
     fail(`${label} did not finalize`);
   }
   if (execution !== "FINISHED_WITH_RETURN") {
@@ -497,25 +498,38 @@ if (PHASE === "attest-seal") {
     if (snapshot.state !== "SEALED") fail(`${mission.missionId} did not enter SEALED`);
   }
   save(state);
-  console.log(jsonSafe({ phase: "attest-seal-complete", missions: state.missions.map((m) => ({ missionId: m.missionId, sealedEvidenceRoot: m.sealedEvidenceRoot, seal: m.seal.hash })) }));
+  console.log(jsonSafe({ phase: "attest-seal-complete", missions: state.missions.map((m) => ({ missionId: m.missionId, sealedEvidenceRoot: m.sealedEvidenceRoot ?? null, seal: m.seal?.hash ?? null, processed: Boolean(m.seal) })) }));
   process.exit(0);
 }
 
 if (PHASE === "evaluate-claim") {
   const evaluations = [];
   for (const mission of targetMissions) {
-    mission.evaluate = await submit(
-      `evaluate ${mission.missionId}`,
-      "worker",
-      "evaluate_mission",
-      [mission.missionId],
-    );
+    if (mission.evaluate?.hash) {
+      console.log(`RESUME evaluate ${mission.missionId} ${mission.evaluate.hash}`);
+    } else {
+      mission.evaluate = await submit(
+        `evaluate ${mission.missionId}`,
+        "worker",
+        "evaluate_mission",
+        [mission.missionId],
+      );
+    }
     evaluations.push(mission);
   }
   save(state);
   const finalized = await Promise.all(
     evaluations.map(async (mission) => {
       mission.evaluationFinalized = await waitFinalized("worker", mission.evaluate.hash, `evaluate ${mission.missionId}`);
+      mission.triggeredTransactions = await clientFor("worker").getTriggeredTransactionIds({ hash: mission.evaluate.hash });
+      if (mission.triggeredTransactions.length !== 1) {
+        fail(`${mission.missionId} evaluation emitted ${mission.triggeredTransactions.length} callback transactions; expected exactly one`);
+      }
+      mission.callbackFinalized = await waitFinalized(
+        "worker",
+        mission.triggeredTransactions[0],
+        `apply_decision ${mission.missionId}`,
+      );
       return mission;
     }),
   );
@@ -531,12 +545,20 @@ if (PHASE === "evaluate-claim") {
     mission.afterEvaluation = snapshot;
   }
   for (const mission of finalized) {
-    mission.claim = await submit(
-      `claim ${mission.missionId}`,
-      "worker",
-      "claim_mission",
-      [mission.missionId],
+    const claimableBeforeClaim = await read(
+      "get_mission_claimable",
+      [mission.missionId, typedAddress(WORKER, CalldataAddress)],
     );
+    if (BigInt(claimableBeforeClaim) === 0n) {
+      mission.claim = { status: "ALREADY_CLAIMED" };
+    } else {
+      mission.claim = await submit(
+        `claim ${mission.missionId}`,
+        "worker",
+        "claim_mission",
+        [mission.missionId],
+      );
+    }
     mission.afterClaim = await read("get_mission", [mission.missionId]);
     mission.missionClaimableAfterClaim = await read(
       "get_mission_claimable",
@@ -560,7 +582,7 @@ if (PHASE === "evaluate-claim") {
       allocationApplied: m.afterClaim.allocation_applied,
       missionClaimableAfterClaim: m.missionClaimableAfterClaim,
       globalClaimableAfterClaim: m.globalClaimableAfterClaim,
-      claim: m.claim.hash,
+      claim: m.claim?.hash ?? m.claim?.status ?? null,
     })),
   }));
   process.exit(0);
