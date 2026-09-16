@@ -24,11 +24,11 @@ uses the SDK's authoritative eligibility, charge, and appeal operations.
 - Public app: `https://commit-protocol.vercel.app`
 - GitHub: `https://github.com/Manablaq/commit-protocol`
 - Production source commit:
-  `f63c0cb19993b0ae79fffb34908fe3571bdfb768`
+  `8726ce7924fd78281a117b92ce4733396501ebac`
 - Production source tree:
-  `31af728d04d39608bfd2c21932a1d201cdae2c73`
+  `997644a9cb62c2ac03296e16106ed3facc243888`
 - Vercel production deployment:
-  `dpl_9KCsNE68QaDZrYLcE9M2FGbH5vzn`
+  `dpl_DWRmgLJVvz8hvQVcxyC25ntmvkfq`
 - Served coordinator:
   `0xEE21cCFF8f3755487f774BFd5Da9Ff51D5688581`
 
@@ -128,9 +128,9 @@ executions of the newer release commit.
 Full historical record:
 [`DEPLOYMENT_LOG_STUDIO_DEV.md`](./DEPLOYMENT_LOG_STUDIO_DEV.md).
 
-## Published-release verification snapshot
+## Historical published-release verification snapshot
 
-The currently published release has the following certification record:
+The earlier published release has the following historical certification record:
 
 - coordinator source SHA-256:
   `be0ef1686314354ac1b87ccd50ab42f0c933c312a4980c0e5479f2d3037e4e58`;

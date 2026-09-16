@@ -43,5 +43,5 @@ success, or automatic reconciliation as part of semantic atomicity.
    already present.
 
 The repository's GitHub Actions `Verification` workflow is active. Run
-`35110066086` completed successfully for documentation release commit
-`a86f4effc219b06378e586beefb88c2d689d9eb4`.
+`35134050898` completed successfully for the deployed source commit
+`8726ce7924fd78281a117b92ce4733396501ebac`.

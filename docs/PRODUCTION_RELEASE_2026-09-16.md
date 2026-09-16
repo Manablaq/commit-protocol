@@ -6,16 +6,16 @@ canonical Vercel alias and the exact Studio Next coordinator it targets.
 ## Release identity
 
 - Repository: `https://github.com/Manablaq/commit-protocol`
-- Deployed application source commit: `f63c0cb19993b0ae79fffb34908fe3571bdfb768`
-- Deployed application source tree: `31af728d04d39608bfd2c21932a1d201cdae2c73`
+- Deployed application source commit: `8726ce7924fd78281a117b92ce4733396501ebac`
+- Deployed application source tree: `997644a9cb62c2ac03296e16106ed3facc243888`
 - Public application: `https://commit-protocol.vercel.app`
 - Vercel project: `mr-albert-s-projects/commitprotocol-genlayer`
-- Vercel production deployment: `dpl_9KCsNE68QaDZrYLcE9M2FGbH5vzn`
+- Vercel production deployment: `dpl_DWRmgLJVvz8hvQVcxyC25ntmvkfq`
 - Deployment state: `READY` / `PRODUCTION`
 
-The later documentation-only commits on `main` do not change the deployed
-application source. The source commit above is the exact release built and
-published by the recorded Vercel deployment.
+The source commit and tree above are the exact release built and published by
+the recorded Vercel deployment. The deployment includes the narrow-viewport
+overflow fix certified by the browser E2E gate.
 
 ## Served contract binding
 
@@ -49,8 +49,8 @@ Read-only checks against `https://commit-protocol.vercel.app` passed:
 - browser rendering of `/app` and `/verify`: passed with no console errors
 - verification-center “Read index” action: passed without a page reload or
   client-side error
-- GitHub Actions `Verification` run `35110066086` for the release documentation:
-  completed successfully
+- GitHub Actions `Verification` run `35134050898` for the deployed source:
+  completed successfully across Python, Direct Runtime, and frontend jobs
 
 The verification API remains read-only. It does not reconstruct chain truth or
 claim that an external GEN transfer was delivered after native-value dispatch.
