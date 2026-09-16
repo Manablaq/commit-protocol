@@ -133,7 +133,10 @@ const keystorePath = path.join(
   `${activeAccount}.json`,
 );
 const keystore = JSON.parse(fs.readFileSync(keystorePath, "utf8"));
-const keystoreAddress = String(keystore.address ?? "").replace(/^0x/, "0x");
+const rawKeystoreAddress = String(keystore.address ?? "");
+const keystoreAddress = rawKeystoreAddress.startsWith("0x")
+  ? rawKeystoreAddress
+  : `0x${rawKeystoreAddress}`;
 if (keystoreAddress.toLowerCase() !== EXPECTED.worker.toLowerCase()) {
   fail(`active keystore is not the authorized worker: ${keystoreAddress}`);
 }
