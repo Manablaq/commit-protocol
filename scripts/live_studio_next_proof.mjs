@@ -171,6 +171,15 @@ async function waitFinalized(accountName, hash, label) {
   return jsonSafe(receipt);
 }
 
+async function waitTriggered(hash, label) {
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const children = await clientFor("worker").getTriggeredTransactionIds({ hash });
+    if (children.length > 0) return children;
+    if (attempt < 11) await new Promise((resolve) => setTimeout(resolve, 5_000));
+  }
+  fail(`${label} emitted no triggered transaction after the finality handoff window`);
+}
+
 const canonicalize = (value) => {
   if (Array.isArray(value)) return value.map(canonicalize);
   if (value && typeof value === "object") {
@@ -521,7 +530,10 @@ if (PHASE === "evaluate-claim") {
   const finalized = await Promise.all(
     evaluations.map(async (mission) => {
       mission.evaluationFinalized = await waitFinalized("worker", mission.evaluate.hash, `evaluate ${mission.missionId}`);
-      mission.triggeredTransactions = await clientFor("worker").getTriggeredTransactionIds({ hash: mission.evaluate.hash });
+      mission.triggeredTransactions = await waitTriggered(
+        mission.evaluate.hash,
+        `evaluate ${mission.missionId}`,
+      );
       if (mission.triggeredTransactions.length !== 1) {
         fail(`${mission.missionId} evaluation emitted ${mission.triggeredTransactions.length} callback transactions; expected exactly one`);
       }
@@ -534,10 +546,20 @@ if (PHASE === "evaluate-claim") {
     }),
   );
   for (const mission of finalized) {
-    let snapshot = await read("get_mission", [mission.missionId]);
+    let snapshot = await readClient.readContract({
+      address: CONTRACT,
+      functionName: "get_mission",
+      args: [mission.missionId],
+      transactionHashVariant: "latest-final",
+    });
     for (let attempt = 0; attempt < 12 && !["COMMITTED", "ABORTED"].includes(snapshot.state); attempt += 1) {
       await new Promise((resolve) => setTimeout(resolve, 5_000));
-      snapshot = await read("get_mission", [mission.missionId]);
+      snapshot = await readClient.readContract({
+        address: CONTRACT,
+        functionName: "get_mission",
+        args: [mission.missionId],
+        transactionHashVariant: "latest-final",
+      });
     }
     if (!["COMMITTED", "ABORTED"].includes(snapshot.state)) fail(`${mission.missionId} did not reach terminal allocation state`);
     const expected = mission.kind === "commit" ? ["COMMITTED", "COMMIT"] : ["ABORTED", "ABORT"];
@@ -545,10 +567,12 @@ if (PHASE === "evaluate-claim") {
     mission.afterEvaluation = snapshot;
   }
   for (const mission of finalized) {
-    const claimableBeforeClaim = await read(
-      "get_mission_claimable",
-      [mission.missionId, typedAddress(WORKER, CalldataAddress)],
-    );
+    const claimableBeforeClaim = await readClient.readContract({
+      address: CONTRACT,
+      functionName: "get_mission_claimable",
+      args: [mission.missionId, typedAddress(WORKER, CalldataAddress)],
+      transactionHashVariant: "latest-final",
+    });
     if (BigInt(claimableBeforeClaim) === 0n) {
       mission.claim = { status: "ALREADY_CLAIMED" };
     } else {
@@ -559,12 +583,24 @@ if (PHASE === "evaluate-claim") {
         [mission.missionId],
       );
     }
-    mission.afterClaim = await read("get_mission", [mission.missionId]);
-    mission.missionClaimableAfterClaim = await read(
-      "get_mission_claimable",
-      [mission.missionId, typedAddress(WORKER, CalldataAddress)],
-    );
-    mission.globalClaimableAfterClaim = await read("get_claimable", [typedAddress(WORKER, CalldataAddress)]);
+    mission.afterClaim = await readClient.readContract({
+      address: CONTRACT,
+      functionName: "get_mission",
+      args: [mission.missionId],
+      transactionHashVariant: "latest-final",
+    });
+    mission.missionClaimableAfterClaim = await readClient.readContract({
+      address: CONTRACT,
+      functionName: "get_mission_claimable",
+      args: [mission.missionId, typedAddress(WORKER, CalldataAddress)],
+      transactionHashVariant: "latest-final",
+    });
+    mission.globalClaimableAfterClaim = await readClient.readContract({
+      address: CONTRACT,
+      functionName: "get_claimable",
+      args: [typedAddress(WORKER, CalldataAddress)],
+      transactionHashVariant: "latest-final",
+    });
     if (String(mission.afterClaim.state) !== (mission.kind === "commit" ? "COMMITTED" : "ABORTED")) fail(`${mission.missionId} state changed unexpectedly after claim`);
     if (BigInt(mission.afterClaim.allocation_applied ? 1 : 0) !== 1n) fail(`${mission.missionId} allocation flag missing after claim`);
     if (BigInt(mission.missionClaimableAfterClaim) !== 0n) fail(`${mission.missionId} claimable balance was not consumed`);
