@@ -9,6 +9,8 @@
   },
   "scripts": {
     "build": "next build",
+    "deploy:studio-next": "node scripts/deploy_studio_next.mjs",
+    "finalize:studio-next": "node scripts/finalize_studio_next.mjs",
     "dev": "next dev",
     "lint": "eslint .",
     "start": "next start",

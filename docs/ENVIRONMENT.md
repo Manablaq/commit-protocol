@@ -32,6 +32,30 @@ deposit must be re-measured against the live Studio Next policy after the
 distribution is set. The deployment preflight must fail closed unless the
 serialized request and finalized transaction prove those values.
 
+## Repository deployment tooling
+
+The repository contains two separate commands so submission and finality cannot
+be conflated:
+
+```text
+npm run deploy:studio-next
+npm run finalize:studio-next
+```
+
+`deploy:studio-next` is read-only by default. It resolves the unlocked worker
+through the GenLayer CLI keychain bridge, binds the exact coordinator source and
+helper, reads the live Studio Next fee policy, recomputes the fee deposit with
+`rotations: [3]`, and prints a preflight summary. Write mode requires both
+`COMMIT_DEPLOY_PREFLIGHT_ONLY=0` and the exact explicit confirmation token
+`COMMIT_DEPLOY_CONFIRM=ONE_STUDIO_NEXT_DEPLOYMENT`, plus a new marker path in
+`COMMIT_DEPLOY_MARKER`. The marker is created before submission and prevents an
+automatic retry after an ambiguous RPC response.
+
+`finalize:studio-next` is run later with the returned transaction hash and an
+evidence directory. It waits for finality, checks successful execution, reads
+the exact deployed bytes, verifies `protocol_info()`, and rejects any receipt
+whose recorded outer or fee-distribution rotation value is not `3`.
+
 ## Currently published deployment
 
 The public application still points at the previously certified coordinator
