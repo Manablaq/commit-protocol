@@ -42,7 +42,13 @@ const repoRequire = createRequire(path.join(REPO, "package.json"));
 const sdkPath = repoRequire.resolve("genlayer-js");
 const chainsPath = repoRequire.resolve("genlayer-js/chains");
 const typesPath = repoRequire.resolve("genlayer-js/types");
-const { createAccount, createClient } = await import(pathToFileURL(sdkPath).href);
+const {
+  createAccount,
+  createClient,
+  MessageType,
+  deriveInternalMessageCallKey,
+  encodeInternalMessageFeeParams,
+} = await import(pathToFileURL(sdkPath).href);
 const { studioDevnet } = await import(pathToFileURL(chainsPath).href);
 const { TransactionStatus } = await import(pathToFileURL(typesPath).href);
 const { CalldataAddress } = await import(pathToFileURL(repoRequire.resolve("genlayer-js/types")).href);
@@ -88,10 +94,48 @@ const readClient = createClient({ chain });
 const read = (functionName, args = []) =>
   readClient.readContract({ address: CONTRACT, functionName, args });
 
+const INTERNAL_MESSAGE_BUDGET = 700_000_000_000_000n;
+const ROOT_MESSAGE_PARENT = (1n << 256n) - 1n;
+
+async function estimateEvaluationFees(client) {
+  const policy = await client.getCurrentFeePolicy();
+  const executionBudgetPerRound =
+    policy.executionBudgetFloor > 162_533_100_000_000n
+      ? policy.executionBudgetFloor
+      : 162_533_100_000_000n;
+  return client.estimateTransactionFees({
+    leaderTimeunitsAllocation: 100n,
+    validatorTimeunitsAllocation: 200n,
+    appealRounds: 0n,
+    executionBudgetPerRound,
+    executionConsumed: 0n,
+    rotations: [3n],
+    maxPriceGenPerTimeUnit: 2n,
+    storageFeeMaxGasPrice: 300000000n,
+    receiptFeeMaxGasPrice: 300000000n,
+    messageAllocations: [
+      {
+        messageType: MessageType.Internal,
+        onAcceptance: false,
+        parentIndex: ROOT_MESSAGE_PARENT,
+        recipient: CONTRACT,
+        callKey: deriveInternalMessageCallKey("apply_decision"),
+        budget: INTERNAL_MESSAGE_BUDGET,
+        feeParams: encodeInternalMessageFeeParams({
+          leaderTimeunitsAllocation: 100n,
+          validatorTimeunitsAllocation: 200n,
+        }),
+      },
+    ],
+  });
+}
+
 async function submit(label, accountName, functionName, args, value = 0n) {
   const client = clientFor(accountName);
   const call = { address: CONTRACT, functionName, args };
-  const estimate = MESSAGE_METHODS.has(functionName)
+  const estimate = functionName === "evaluate_mission"
+    ? await estimateEvaluationFees(client)
+    : MESSAGE_METHODS.has(functionName)
     ? await client.estimateTransactionFeesForWrite({
         ...call,
         ...(value > 0n ? { value } : {}),
@@ -512,7 +556,25 @@ if (PHASE === "attest-seal") {
 if (PHASE === "evaluate-claim") {
   const evaluations = [];
   for (const mission of targetMissions) {
-    if (mission.evaluate?.hash) {
+    const current = mission.evaluate?.hash
+      ? await readClient.readContract({
+          address: CONTRACT,
+          functionName: "get_mission",
+          args: [mission.missionId],
+          transactionHashVariant: "latest-final",
+        })
+      : null;
+    if (mission.evaluate?.hash && current?.state === "SEALED" && !mission.evaluationRetry) {
+      mission.previousEvaluationHash = mission.evaluate.hash;
+      mission.evaluate = await submit(
+        `retry evaluate ${mission.missionId}`,
+        "worker",
+        "evaluate_mission",
+        [mission.missionId],
+      );
+      mission.evaluationRetry = true;
+      save(state);
+    } else if (mission.evaluate?.hash) {
       console.log(`RESUME evaluate ${mission.missionId} ${mission.evaluate.hash}`);
     } else {
       mission.evaluate = await submit(
