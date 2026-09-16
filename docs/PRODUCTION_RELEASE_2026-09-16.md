@@ -49,6 +49,8 @@ Read-only checks against `https://commit-protocol.vercel.app` passed:
 - browser rendering of `/app` and `/verify`: passed with no console errors
 - verification-center “Read index” action: passed without a page reload or
   client-side error
+- GitHub Actions `Verification` run `35110066086` for the release documentation:
+  completed successfully
 
 The verification API remains read-only. It does not reconstruct chain truth or
 claim that an external GEN transfer was delivered after native-value dispatch.

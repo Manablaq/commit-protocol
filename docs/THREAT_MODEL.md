@@ -41,5 +41,7 @@ success, or automatic reconciliation as part of semantic atomicity.
 2. Complete hosted recovery/stale-callback proof if a future submission requires
    that additional live evidence; local state-machine and runtime coverage is
    already present.
-3. Confirm the repository's CI workflow reports on the latest documentation
-   release commit.
+
+The repository's GitHub Actions `Verification` workflow is active. Run
+`35110066086` completed successfully for documentation release commit
+`a86f4effc219b06378e586beefb88c2d689d9eb4`.
