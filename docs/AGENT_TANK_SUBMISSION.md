@@ -24,11 +24,11 @@ uses the SDK's authoritative eligibility, charge, and appeal operations.
 - Public app: `https://commit-protocol.vercel.app`
 - GitHub: `https://github.com/Manablaq/commit-protocol`
 - Production source commit:
-  `8726ce7924fd78281a117b92ce4733396501ebac`
+  `d25e689b0d5c681755751da257700f0d3f7974d1`
 - Production source tree:
-  `997644a9cb62c2ac03296e16106ed3facc243888`
+  `5553aa58ab006c85000c5a2b106988da2b61f002`
 - Vercel production deployment:
-  `dpl_DWRmgLJVvz8hvQVcxyC25ntmvkfq`
+  `dpl_Cwh63QydtcGyVD9MeZ7jrSo3A1QE`
 - Served coordinator:
   `0xEE21cCFF8f3755487f774BFd5Da9Ff51D5688581`
 

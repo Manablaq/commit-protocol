@@ -6,11 +6,11 @@ canonical Vercel alias and the exact Studio Next coordinator it targets.
 ## Release identity
 
 - Repository: `https://github.com/Manablaq/commit-protocol`
-- Deployed application source commit: `8726ce7924fd78281a117b92ce4733396501ebac`
-- Deployed application source tree: `997644a9cb62c2ac03296e16106ed3facc243888`
+- Deployed application source commit: `d25e689b0d5c681755751da257700f0d3f7974d1`
+- Deployed application source tree: `5553aa58ab006c85000c5a2b106988da2b61f002`
 - Public application: `https://commit-protocol.vercel.app`
 - Vercel project: `mr-albert-s-projects/commitprotocol-genlayer`
-- Vercel production deployment: `dpl_DWRmgLJVvz8hvQVcxyC25ntmvkfq`
+- Vercel production deployment: `dpl_Cwh63QydtcGyVD9MeZ7jrSo3A1QE`
 - Deployment state: `READY` / `PRODUCTION`
 
 The source commit and tree above are the exact release built and published by
@@ -49,8 +49,11 @@ Read-only checks against `https://commit-protocol.vercel.app` passed:
 - browser rendering of `/app` and `/verify`: passed with no console errors
 - verification-center “Read index” action: passed without a page reload or
   client-side error
-- GitHub Actions `Verification` run `35134050898` for the deployed source:
-  completed successfully across Python, Direct Runtime, and frontend jobs
+- deployed JavaScript bundle contains the certified coordinator anchor and the
+  strict `EXTERNAL MESSAGE OBSERVATION` claim surface
+- GitHub Actions `Verification` run `35134050898` for the previous deployed
+  source: completed successfully across Python, Direct Runtime, and frontend
+  jobs; CI for this release is recorded after the next push
 
 The verification API remains read-only. It does not reconstruct chain truth or
 claim that an external GEN transfer was delivered after native-value dispatch.
