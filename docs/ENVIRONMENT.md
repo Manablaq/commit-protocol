@@ -78,10 +78,9 @@ application release. It is not the current source-bound coordinator.
 
 Contract source-binding release commit: `6fe34484acb4bb21afd8f438ecac00e7780042e1`
 
-The current `main` branch is `d2e46de82b9c269d59ed77d97c1844dc9943b7b3` at
-this audit base. It contains later frontend, documentation, and verification
-commits; the source-binding commit above identifies the exact contract code
-revision used for the certified deployment.
+The current application release was verified from `main` commit
+`77442659b06f1ddaa7ec1215fae9048671ac0c76`; the source-binding commit above
+identifies the exact contract code revision used for the certified deployment.
 
 Base GitHub main before publication:
 

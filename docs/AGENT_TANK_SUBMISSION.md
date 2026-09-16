@@ -24,14 +24,14 @@ uses the SDK's authoritative eligibility, charge, and appeal operations.
 - Public app: `https://commit-protocol.vercel.app`
 - GitHub: `https://github.com/Manablaq/commit-protocol`
 - Production source commit:
-  `53fb52f2d8d7c5a3636810501b740d859d5a2c14`
+  `77442659b06f1ddaa7ec1215fae9048671ac0c76`
 - Production source tree:
-  `91c5f458dd77f7d38f0c8107f00eb15a74c3ce37`
+  `a52c55fdded8ba096c5f7527aad894943d458809`
 - Vercel production deployment:
-  `dpl_BvXSZgubPSzs3Z9cyck6eY5dzvDt`
+  `dpl_ChVMybCDSWombsWhsikRJPLtagN5`
 - Served coordinator:
   `0xEE21cCFF8f3755487f774BFd5Da9Ff51D5688581`
-- GitHub Actions `Verification` run: `35142284628` — all jobs passed
+- GitHub Actions `Verification` run: `35146518481` — all jobs passed
 
 Production smoke checks and the exact served-bundle binding are recorded in
 [`PRODUCTION_RELEASE_2026-09-16.md`](./PRODUCTION_RELEASE_2026-09-16.md).
