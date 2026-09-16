@@ -34,8 +34,11 @@ and the finalized execution result is `FINISHED_WITH_ERROR`.
 | `UNVERIFIED` | No child ID, malformed/ambiguous child set, unreadable child, mismatched recipient/value, unknown result, or RPC failure. | Show that delivery is unresolved; do not infer success or terminal non-delivery. |
 
 The UI exposes an explicit `Observe child transaction` action and keeps the
-parent claim ID plus exact amount in beneficiary-scoped browser storage. This
-allows re-observation after navigation without a page reload or a new write.
+parent claim ID, exact mission ID, beneficiary, and amount in beneficiary-scoped
+browser storage. This allows re-observation after navigation without a page
+reload or a new write. A record is shown only when both the mission and the
+connected beneficiary match; switching wallets cannot surface another wallet's
+claim observation.
 Browser storage is only a convenience cache; it is not trusted contract state.
 
 ## What this intentionally does not claim
