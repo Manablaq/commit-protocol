@@ -147,6 +147,13 @@ test("COMMIT browser wallet performs the pinned GenLayer Snap preflight", async 
     ),
   ).toBeVisible();
 
+  await expect(
+    page.getByText(
+      "Open a real agreement to begin.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+
   const calls =
     await page.evaluate(() => (
       (
@@ -585,7 +592,7 @@ test("COMMIT application exposes the real wallet entry point", async ({
       "heading",
       {
         level: 1,
-        name: /CREATE\.\s*COMMIT\.\s*VERIFY\./i,
+        name: /RESOLVE\.\s*WITH PROOF\.\s*ENFORCE WITH FINALITY\./i,
       },
     ),
   ).toBeVisible();

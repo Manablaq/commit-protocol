@@ -220,7 +220,7 @@ test("landing application and verification center stay usable without horizontal
         {
           level: 1,
           name:
-            /MAKE THE\s*COMMIT\.\s*PROVE THE\s*OUTCOME\./i,
+            /RESOLVE THE\s*DISPUTE\.\s*PROVE THE\s*OUTCOME\./i,
         },
       ),
     ).toBeVisible();
@@ -249,7 +249,7 @@ test("landing application and verification center stay usable without horizontal
         {
           level: 1,
           name:
-            /CREATE\.\s*COMMIT\.\s*VERIFY\./i,
+            /RESOLVE\.\s*WITH PROOF\.\s*ENFORCE WITH FINALITY\./i,
         },
       ),
     ).toBeVisible();

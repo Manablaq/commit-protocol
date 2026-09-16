@@ -14,31 +14,38 @@ import { CommitMark } from "@/components/brand/commit-mark";
 const protocolPath = [
   {
     number: "01",
-    eyebrow: "Create",
-    title: "Define the mission",
+    eyebrow: "Agreement",
+    title: "Freeze the terms",
     copy:
-      "Start from a precise objective, policy boundary, budget, beneficiary, and recovery window.",
+      "Set the objective, policy boundary, escrow budget, beneficiary, and recovery window before work begins.",
   },
   {
     number: "02",
-    eyebrow: "Bind",
-    title: "Anchor real evidence",
+    eyebrow: "Evidence",
+    title: "Bind authoritative records",
     copy:
-      "Register authority-bound records and preserve provenance before any consequential decision.",
+      "Register versioned records with authenticated issuers and preserve provenance before any verdict.",
   },
   {
     number: "03",
-    eyebrow: "Decide",
-    title: "Let consensus resolve meaning",
+    eyebrow: "Verdict",
+    title: "Let GenLayer adjudicate",
     copy:
-      "Track GenLayer consensus without collapsing provisional acceptance into durable finality.",
+      "Validators evaluate the frozen evidence while the product keeps a provisional decision distinct from finality.",
   },
   {
     number: "04",
-    eyebrow: "Prove",
-    title: "Verify the outcome",
+    eyebrow: "Appeal",
+    title: "Challenge the decision",
     copy:
-      "Keep finality, evidence lineage, and application consequence visible after the transaction lands.",
+      "Use GenLayer's native appeal process while the decision remains eligible for challenge.",
+  },
+  {
+    number: "05",
+    eyebrow: "Enforce",
+    title: "Settle after finality",
+    copy:
+      "Only the finalized outcome moves the declared supplier award or buyer refund entitlement.",
   },
 ] as const;
 
@@ -46,17 +53,17 @@ const trustPoints = [
   {
     icon: Fingerprint,
     title: "Evidence bound",
-    copy: "Authority, identity, freshness, and digest stay attached to consequential state.",
+    copy: "Authority, issuer, identity, freshness, and digest stay attached to every consequential verdict.",
   },
   {
     icon: GitBranch,
-    title: "Consensus legible",
-    copy: "Mission intent, evidence, decision, and consequence remain one inspectable semantic path.",
+    title: "Appeals native",
+    copy: "The app reads the real GenLayer lifecycle and exposes the authoritative appeal charge before signing.",
   },
   {
     icon: ShieldCheck,
     title: "Finality explicit",
-    copy: "Accepted and finalized are intentionally separate states across the product.",
+    copy: "Accepted, appealable, and finalized are intentionally separate states across the product.",
   },
 ] as const;
 
@@ -87,6 +94,7 @@ export function LandingExperience() {
           <div className="commit-nav-links">
             <a href="#product">Product</a>
             <a href="#protocol">How it works</a>
+            <Link href="/app#case-room">Case room</Link>
             <Link href="/verify">Verify</Link>
           </div>
 
@@ -103,22 +111,23 @@ export function LandingExperience() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.65, delay: 0.05 }}
           >
-            <div className="commit-kicker">
-              <Sparkles size={15} aria-hidden="true" />
-              GenLayer / Semantic Atomicity
-            </div>
+          <div className="commit-kicker">
+            <Sparkles size={15} aria-hidden="true" />
+              GenLayer / Onchain Justice
+          </div>
 
             <h1 className="commit-display">
-              MAKE THE
-              <span>COMMIT.</span>
+              RESOLVE THE
+              <span>DISPUTE.</span>
               PROVE THE
               <em>OUTCOME.</em>
             </h1>
 
             <p className="commit-hero-lede">
-              COMMIT turns protocol truth into an application people can
-              understand: define the mission, bind evidence, follow consensus,
-              and verify durable consequence without losing provenance.
+              COMMIT is evidence-bound dispute resolution for autonomous
+              commerce. Freeze terms, hold escrow, let GenLayer adjudicate
+              authenticated evidence, and enforce the outcome only after
+              finality.
             </p>
 
             <div className="commit-hero-actions">
@@ -138,7 +147,7 @@ export function LandingExperience() {
               </div>
               <div>
                 <span>State model</span>
-                <strong>Finality explicit</strong>
+                <strong>Appeal-aware</strong>
               </div>
               <div>
                 <span>Evidence</span>
@@ -161,7 +170,7 @@ export function LandingExperience() {
 
               <div className="poster-topline">
                 <span>LIVE PROTOCOL</span>
-                <span>FINALITY / EVIDENCE / CONSEQUENCE</span>
+                <span>EVIDENCE / APPEAL / FINALITY</span>
               </div>
 
               <div className="poster-mark-wrap">
@@ -180,8 +189,8 @@ export function LandingExperience() {
               <div className="poster-flow">
                 <div>
                   <span>01</span>
-                  <strong>MISSION</strong>
-                  <small>Intent</small>
+                  <strong>AGREEMENT</strong>
+                  <small>Terms</small>
                 </div>
                 <div>
                   <span>02</span>
@@ -190,18 +199,18 @@ export function LandingExperience() {
                 </div>
                 <div>
                   <span>03</span>
-                  <strong>CONSENSUS</strong>
-                  <small>Meaning</small>
+                  <strong>APPEAL</strong>
+                  <small>Challenge</small>
                 </div>
                 <div>
                   <span>04</span>
-                  <strong>FINALITY</strong>
-                  <small>Consequence</small>
+                  <strong>ENFORCEMENT</strong>
+                  <small>Settlement</small>
                 </div>
               </div>
 
               <div className="poster-footer">
-                <span>COMMIT / 0.7</span>
+                <span>COMMIT / STUDIO NEXT</span>
                 <span>PROTOCOL TRUTH, MADE LEGIBLE</span>
               </div>
             </div>
@@ -218,11 +227,13 @@ export function LandingExperience() {
         <div className="commit-section-heading">
           <p>THE PRODUCT</p>
           <h2 className="commit-display">
-            NOT AN EXPLORER.
-            <span>A COMPLETE PROTOCOL EXPERIENCE.</span>
+            NOT JUST AN ESCROW.
+            <span>A JUSTICE LAYER FOR AGENTS.</span>
           </h2>
           <p className="commit-section-copy">
-            The verification surface remains available for power users, but it is no longer the whole product. COMMIT now supports the real user journey: create, fund, prepare, bind evidence, seal, resolve, claim, and verify.
+            COMMIT gives autonomous buyers and suppliers a shared case room:
+            agreement, escrow, authenticated evidence, provisional verdict,
+            native appeal, finality, and enforceable settlement.
           </p>
         </div>
 
@@ -253,8 +264,8 @@ export function LandingExperience() {
         <div className="commit-protocol-heading">
           <p>THE PATH</p>
           <h2 className="commit-display">
-            FROM INTENT
-            <span>TO CONSEQUENCE.</span>
+            FROM AGREEMENT
+            <span>TO JUSTICE.</span>
           </h2>
         </div>
 
@@ -289,7 +300,9 @@ export function LandingExperience() {
         </div>
         <div className="commit-final-actions">
           <p>
-            Inspect the current live deployment, provenance, transaction consequence, and finality, then move into the complete transaction application built on the same frozen coordinator.
+            Inspect the current live deployment, evidence lineage, appeal
+            lifecycle, transaction consequence, and finality, then open a real
+            case against the same frozen coordinator.
           </p>
           <Link className="commit-action commit-action-hot" href="/verify">
             Open verification center

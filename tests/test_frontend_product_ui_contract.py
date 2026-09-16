@@ -118,9 +118,10 @@ def test_original_commit_brand_and_reference_inspired_landing_exist() -> None:
     _assert_contains_all(
         landing,
         (
-            "make the",
+            "resolve the",
             "prove the",
             "semantic atomicity",
+            "onchain justice",
             "protocol truth",
             "verification center",
             "/app",
@@ -634,7 +635,7 @@ def test_playwright_uses_isolated_base_url_and_current_routes() -> None:
         (
             "wallet_getSnaps",
             "wallet_requestSnaps",
-            r"/CREATE\.\s*COMMIT\.\s*VERIFY\./i",
+            r"/RESOLVE\.\s*WITH PROOF\.\s*ENFORCE WITH FINALITY\./i",
             'name: "Verify what the protocol decided."',
         ),
     )

@@ -30,6 +30,19 @@ COMMIT does **not** claim to roll back arbitrary external systems.
 
 COMMIT needs consensus over facts that ordinary deterministic contracts cannot resolve by themselves. GenLayer provides the validator execution model used to fetch and evaluate external evidence while COMMIT keeps the economic consequence deterministic, bounded, and reviewable.
 
+## Onchain Justice product layer
+
+The reference application is **COMMIT — Onchain Justice**. Its Case Room turns
+the protocol into a legible user journey: Agreement → Escrow → Evidence →
+Verdict → Appeal → Finality → Settlement. It reads the certified Studio Next
+coordinator, exposes authenticated evidence bindings, distinguishes provisional
+from final decisions, and uses GenLayer's native appeal APIs when the exact
+evaluation transaction is supplied.
+
+The product does not create fake dispute states or infer finality from a timer.
+The implementation and state vocabulary are documented in
+[`docs/ONCHAIN_JUSTICE_PRODUCT.md`](./docs/ONCHAIN_JUSTICE_PRODUCT.md).
+
 ## Agent Tank proof
 
 ### Historical published exact-source deployment
@@ -154,6 +167,7 @@ COMMIT is designed around the failure modes that matter when AI consensus can mo
 - [`docs/AGENT_TANK_SUBMISSION.md`](./docs/AGENT_TANK_SUBMISSION.md) — submission-facing proof map
 - [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — current contract architecture
 - [`docs/SEMANTIC_ATOMICITY.md`](./docs/SEMANTIC_ATOMICITY.md) — guarantee boundary
+- [`docs/ONCHAIN_JUSTICE_PRODUCT.md`](./docs/ONCHAIN_JUSTICE_PRODUCT.md) — product surfaces, state vocabulary, and native appeals
 - [`docs/STATE_MACHINE.md`](./docs/STATE_MACHINE.md) — lifecycle and recovery
 - [`docs/EVIDENCE_MODEL.md`](./docs/EVIDENCE_MODEL.md) — evidence and consensus model
 - [`docs/ACCOUNTING_MODEL.md`](./docs/ACCOUNTING_MODEL.md) — escrow and conservation

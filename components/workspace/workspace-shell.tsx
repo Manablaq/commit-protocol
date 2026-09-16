@@ -28,6 +28,11 @@ import { SemanticGraph } from "@/components/workspace/semantic-graph";
 import { StateBoundary } from "@/components/workspace/state-boundary";
 import { TransactionInspector } from "@/components/workspace/transaction-inspector";
 import { CommitMark } from "@/components/brand/commit-mark";
+import { AppealPanel } from "@/components/justice/appeal-panel";
+import {
+  readStudioNextAppealLifecycle,
+  type AppealLifecycleSnapshot,
+} from "@/lib/genlayer-appeal";
 
 function errorMessage(value: unknown): string {
   if (value instanceof Error) {
@@ -92,6 +97,9 @@ export function WorkspaceShell() {
   const [transactionState, setTransactionState] = useState<ApiJson | null>(null);
   const [transactionLoading, setTransactionLoading] = useState(false);
   const [transactionError, setTransactionError] = useState<string | null>(null);
+  const [appealState, setAppealState] = useState<AppealLifecycleSnapshot | null>(null);
+  const [appealLoading, setAppealLoading] = useState(false);
+  const [appealError, setAppealError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -155,6 +163,8 @@ export function WorkspaceShell() {
     event.preventDefault();
     setTransactionLoading(true);
     setTransactionError(null);
+    setAppealState(null);
+    setAppealError(null);
 
     try {
       const value = await readTransaction(
@@ -162,11 +172,38 @@ export function WorkspaceShell() {
       );
 
       setTransactionState(value);
+
+      setAppealLoading(true);
+
+      try {
+        const lifecycle = await readStudioNextAppealLifecycle(transactionId);
+        setAppealState(lifecycle);
+      } catch (error: unknown) {
+        setAppealError(errorMessage(error));
+      } finally {
+        setAppealLoading(false);
+      }
     } catch (error: unknown) {
       setTransactionState(null);
       setTransactionError(errorMessage(error));
     } finally {
       setTransactionLoading(false);
+    }
+  }
+
+  async function refreshAppeal() {
+    setAppealLoading(true);
+    setAppealError(null);
+
+    try {
+      setAppealState(
+        await readStudioNextAppealLifecycle(transactionId),
+      );
+    } catch (error: unknown) {
+      setAppealState(null);
+      setAppealError(errorMessage(error));
+    } finally {
+      setAppealLoading(false);
     }
   }
 
@@ -459,6 +496,20 @@ export function WorkspaceShell() {
             )}
           </StateBoundary>
         </div>
+      </section>
+
+      <section className="verify-appeal-section">
+        <div className="result-heading">
+          <span>Decision lifecycle</span>
+          <strong>Native appeal projection · read only</strong>
+        </div>
+        <AppealPanel
+          snapshot={appealState}
+          loading={appealLoading}
+          error={appealError}
+          readOnly
+          onRefresh={refreshAppeal}
+        />
       </section>
 
       <SemanticGraph />

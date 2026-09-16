@@ -1489,6 +1489,755 @@ a {
 }
 
 /* ============================================================
+   ONCHAIN JUSTICE / CASE ROOM
+   The UI is a projection of certified contract state and the
+   authoritative GenLayer lifecycle. No decorative state is used.
+   ============================================================ */
+
+.justice-case-section {
+  width: min(1440px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 2rem 0 1rem;
+}
+
+.justice-case-gate,
+.justice-case-room {
+  border: 1px solid var(--line);
+  border-radius: 1.5rem;
+  background:
+    radial-gradient(circle at 86% 0%, rgb(124 246 199 / 0.08), transparent 26rem),
+    linear-gradient(145deg, rgb(255 255 255 / 0.03), transparent 42%),
+    var(--surface);
+  box-shadow: inset 0 1px rgb(255 255 255 / 0.035);
+}
+
+.justice-case-gate {
+  display: flex;
+  min-height: 20rem;
+  padding: clamp(1.3rem, 4vw, 3rem);
+  align-items: end;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.justice-case-gate > div {
+  max-width: 44rem;
+}
+
+.justice-case-gate p,
+.justice-section-heading p,
+.justice-section-heading > span {
+  color: var(--signal);
+  font-size: 0.65rem;
+  font-weight: 760;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.justice-case-gate h2 {
+  margin: 0.7rem 0 1rem;
+}
+
+.justice-case-gate > div > p:last-child {
+  max-width: 39rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.7;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.justice-case-room {
+  padding: clamp(1.15rem, 3vw, 2rem);
+}
+
+.justice-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 2rem;
+  padding-bottom: 1.3rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.justice-section-heading p {
+  margin: 0;
+}
+
+.justice-section-heading h2 {
+  max-width: 16ch;
+  margin: 0.55rem 0 0;
+  font-size: clamp(1.8rem, 4vw, 3.6rem);
+  letter-spacing: -0.055em;
+  line-height: 0.98;
+}
+
+.justice-section-heading > span {
+  margin-bottom: 0.25rem;
+  color: var(--muted);
+  font-size: 0.58rem;
+  text-align: right;
+}
+
+.justice-case-controls {
+  display: grid;
+  padding: 1.15rem 0;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto;
+  align-items: end;
+  gap: 0.8rem;
+}
+
+.justice-case-controls label {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.justice-case-controls label > span {
+  color: var(--muted);
+  font-size: 0.61rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.justice-case-controls input {
+  width: 100%;
+  min-height: 3.15rem;
+  padding: 0 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 0.78rem;
+  outline: none;
+  background: #080d10;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.74rem;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.justice-case-controls input:focus {
+  border-color: rgb(124 246 199 / 0.48);
+  box-shadow: 0 0 0 3px rgb(124 246 199 / 0.07);
+}
+
+.justice-read-button {
+  min-height: 3.15rem;
+  white-space: nowrap;
+}
+
+.justice-error {
+  display: flex;
+  margin: 0.75rem 0;
+  padding: 0.8rem 0.9rem;
+  align-items: flex-start;
+  gap: 0.6rem;
+  border: 1px solid rgb(255 143 152 / 0.3);
+  border-radius: 0.78rem;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.justice-case-empty {
+  display: flex;
+  min-height: 12rem;
+  padding: 1.25rem;
+  align-items: center;
+  gap: 1rem;
+  border: 1px dashed var(--line);
+  border-radius: 1rem;
+  background: rgb(255 255 255 / 0.018);
+  color: var(--signal);
+}
+
+.justice-case-empty strong,
+.justice-empty-copy strong {
+  color: var(--muted-strong);
+  font-size: 0.82rem;
+}
+
+.justice-case-empty p,
+.justice-empty-copy p {
+  max-width: 42rem;
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.6;
+}
+
+.justice-case-overview {
+  display: grid;
+  padding: 1.2rem 0 1.35rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr);
+  align-items: end;
+  gap: 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.justice-live-label,
+.evidence-record-status,
+.evidence-badge-row span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.justice-live-label {
+  color: var(--signal);
+  font-size: 0.6rem;
+  font-weight: 760;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.justice-case-title h3 {
+  margin: 0.6rem 0 0.3rem;
+  overflow: hidden;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: clamp(1.15rem, 2.3vw, 1.8rem);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.justice-case-title p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.justice-case-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.justice-case-metrics > div {
+  display: grid;
+  min-height: 4.7rem;
+  padding: 0.75rem;
+  align-content: space-between;
+  gap: 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 0.78rem;
+  background: #080d10;
+}
+
+.justice-case-metrics span,
+.settlement-amount span {
+  color: var(--muted);
+  font-size: 0.59rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.justice-case-metrics strong,
+.settlement-amount strong {
+  color: var(--muted-strong);
+  font-size: 0.78rem;
+}
+
+.justice-case-grid {
+  display: grid;
+  margin-top: 1rem;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 1rem;
+}
+
+.justice-case-grid-bottom {
+  align-items: start;
+}
+
+.justice-panel {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1.15rem;
+  background:
+    linear-gradient(145deg, rgb(255 255 255 / 0.025), transparent 46%),
+    rgb(8 13 16 / 0.72);
+}
+
+.justice-panel-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.justice-panel-heading h3 {
+  margin: 0.25rem 0 0;
+  font-size: 0.96rem;
+}
+
+.justice-panel-heading > svg {
+  color: var(--signal);
+}
+
+.justice-timeline {
+  display: grid;
+  margin-top: 0.9rem;
+  gap: 0.2rem;
+}
+
+.justice-timeline-step {
+  position: relative;
+  display: grid;
+  min-height: 3.6rem;
+  padding: 0.65rem 0.7rem;
+  grid-template-columns: 1.4rem 1fr;
+  align-items: start;
+  gap: 0.6rem;
+  border-radius: 0.75rem;
+  color: var(--muted);
+  opacity: 0.68;
+}
+
+.justice-timeline-step::before {
+  position: absolute;
+  top: 1.6rem;
+  bottom: -0.2rem;
+  left: 1.35rem;
+  width: 1px;
+  background: var(--line);
+  content: "";
+}
+
+.justice-timeline-step:last-child::before {
+  display: none;
+}
+
+.justice-timeline-step.is-complete,
+.justice-timeline-step.is-active {
+  opacity: 1;
+}
+
+.justice-timeline-step.is-active {
+  background: var(--provisional-soft);
+  color: var(--provisional);
+}
+
+.justice-timeline-step.is-complete {
+  color: var(--finalized);
+}
+
+.justice-timeline-marker {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 1.4rem;
+  height: 1.4rem;
+  place-items: center;
+  border-radius: 50%;
+  background: #080d10;
+}
+
+.justice-timeline-step > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.justice-timeline-step strong {
+  color: var(--muted-strong);
+  font-size: 0.74rem;
+}
+
+.justice-timeline-step span:not(.justice-timeline-marker) {
+  color: var(--muted);
+  font-size: 0.64rem;
+  line-height: 1.45;
+}
+
+.justice-verdict-banner {
+  display: flex;
+  margin-top: 0.9rem;
+  padding: 0.9rem;
+  align-items: start;
+  gap: 0.65rem;
+  border: 1px solid rgb(243 200 106 / 0.23);
+  border-radius: 0.82rem;
+  background: var(--provisional-soft);
+  color: var(--provisional);
+}
+
+.justice-verdict-banner.is-final {
+  border-color: rgb(124 246 199 / 0.24);
+  background: var(--finalized-soft);
+  color: var(--finalized);
+}
+
+.justice-verdict-banner > div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.justice-verdict-banner strong {
+  color: var(--muted-strong);
+  font-size: 0.76rem;
+}
+
+.justice-verdict-banner span {
+  color: var(--muted);
+  font-size: 0.65rem;
+  line-height: 1.45;
+}
+
+.justice-fact-grid {
+  display: grid;
+  margin: 0.85rem 0 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.justice-fact-grid > div {
+  min-width: 0;
+  padding: 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  background: #080d10;
+}
+
+.justice-fact-grid dt {
+  color: var(--muted);
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.justice-fact-grid dd {
+  margin: 0.3rem 0 0;
+  overflow: hidden;
+  color: var(--muted-strong);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.62rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.justice-inline-status,
+.justice-submission-note,
+.justice-read-only-note {
+  display: flex;
+  margin-top: 0.8rem;
+  padding: 0.75rem;
+  align-items: start;
+  gap: 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 0.72rem;
+  color: var(--muted);
+  font-size: 0.66rem;
+  line-height: 1.5;
+}
+
+.justice-inline-status.is-success {
+  border-color: rgb(124 246 199 / 0.24);
+  color: var(--finalized);
+}
+
+.justice-appeal-button,
+.justice-refresh-button {
+  width: 100%;
+  margin-top: 0.8rem;
+}
+
+.justice-refresh-button {
+  justify-content: center;
+}
+
+.justice-read-only-note {
+  display: block;
+  border-style: dashed;
+}
+
+.justice-submission-note {
+  display: grid;
+  gap: 0.25rem;
+  color: var(--signal);
+}
+
+.justice-submission-note strong {
+  color: var(--muted-strong);
+  font-size: 0.7rem;
+}
+
+.justice-submission-note code {
+  overflow: hidden;
+  color: var(--evidence);
+  font-size: 0.6rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.justice-submission-note span {
+  color: var(--muted);
+  font-size: 0.63rem;
+}
+
+.justice-success-icon {
+  color: var(--finalized) !important;
+}
+
+.evidence-record-list {
+  display: grid;
+  margin-top: 0.9rem;
+  gap: 0.7rem;
+}
+
+.evidence-record-card {
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 0.85rem;
+  background: #080d10;
+}
+
+.evidence-record-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.evidence-record-index {
+  display: block;
+  color: var(--evidence);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.58rem;
+}
+
+.evidence-record-heading h4 {
+  margin: 0.25rem 0 0;
+  overflow: hidden;
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.evidence-record-status {
+  flex: 0 0 auto;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid rgb(124 246 199 / 0.2);
+  border-radius: 999px;
+  color: var(--finalized);
+  font-size: 0.56rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.evidence-record-subject {
+  margin: 0.7rem 0 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+.evidence-badge-row {
+  display: flex;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.evidence-badge-row span {
+  padding: 0.35rem 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted-strong);
+  font-size: 0.57rem;
+}
+
+.evidence-badge-row span.is-good {
+  border-color: rgb(124 246 199 / 0.22);
+  color: var(--finalized);
+}
+
+.evidence-badge-row span.is-bad {
+  border-color: rgb(255 143 152 / 0.25);
+  color: var(--danger);
+}
+
+.evidence-record-facts {
+  display: grid;
+  margin: 0.75rem 0 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.evidence-record-facts dt,
+.evidence-technical-proof dt {
+  color: var(--muted);
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.evidence-record-facts dd,
+.evidence-technical-proof dd {
+  margin: 0.25rem 0 0;
+  overflow: hidden;
+  color: var(--muted-strong);
+  font-size: 0.61rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.evidence-technical-proof {
+  margin-top: 0.8rem;
+  border-top: 1px solid var(--line);
+}
+
+.evidence-technical-proof summary {
+  padding-top: 0.7rem;
+  cursor: pointer;
+  color: var(--evidence);
+  font-size: 0.62rem;
+}
+
+.evidence-technical-proof dl {
+  display: grid;
+  margin: 0.7rem 0;
+  gap: 0.55rem;
+}
+
+.evidence-technical-proof dl > div {
+  min-width: 0;
+}
+
+.evidence-technical-proof dd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.evidence-technical-proof a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--signal);
+  font-size: 0.62rem;
+  text-decoration: none;
+}
+
+.evidence-technical-proof a:hover {
+  text-decoration: underline;
+}
+
+.settlement-amount {
+  display: grid;
+  margin-top: 1rem;
+  padding: 1.1rem;
+  gap: 0.35rem;
+  border: 1px solid rgb(124 246 199 / 0.2);
+  border-radius: 0.85rem;
+  background: var(--finalized-soft);
+}
+
+.settlement-amount strong {
+  color: var(--finalized);
+  font-size: 1.65rem;
+  letter-spacing: -0.04em;
+}
+
+.settlement-panel > p {
+  margin: 0.8rem 0 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.6;
+}
+
+.verify-appeal-section {
+  margin-top: 1.5rem;
+}
+
+.verify-appeal-section .justice-panel {
+  min-height: 17rem;
+}
+
+.commit-app-hero h1 small {
+  display: block;
+  margin-top: 0.55rem;
+  color: var(--muted);
+  font-size: clamp(1rem, 1.7vw, 1.6rem);
+  font-weight: 620;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+
+@media (max-width: 960px) {
+  .justice-case-gate,
+  .justice-section-heading,
+  .justice-case-overview {
+    align-items: start;
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+
+  .justice-section-heading > span {
+    text-align: left;
+  }
+
+  .justice-case-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .justice-read-button {
+    grid-column: 1 / -1;
+  }
+
+  .justice-case-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .justice-case-metrics {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .justice-case-section {
+    width: min(100% - 1rem, 1440px);
+  }
+
+  .justice-case-gate {
+    min-height: 18rem;
+  }
+
+  .justice-case-controls,
+  .justice-case-metrics,
+  .justice-fact-grid,
+  .evidence-record-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .justice-case-controls {
+    display: grid;
+  }
+
+  .justice-read-button {
+    grid-column: auto;
+  }
+
+  .justice-case-metrics > div {
+    min-height: 4.2rem;
+  }
+
+  .justice-case-title h3 {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .justice-case-empty {
+    align-items: flex-start;
+  }
+
+  .evidence-record-heading {
+    flex-direction: column;
+  }
+
+  .evidence-record-status {
+    align-self: flex-start;
+  }
+}
+
+/* ============================================================
    COMMIT F2 — ORIGINAL CINEMATIC / DIAGONAL PRODUCT SYSTEM
    Visual composition informed by the supplied sport-landing reference.
    No template assets or sports branding are copied.

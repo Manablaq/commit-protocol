@@ -249,6 +249,11 @@ export function ResolutionMissionFlow({
           evaluateQuote,
         );
 
+      localStorage.setItem(
+        `commit:evaluation:${missionId}`,
+        txId,
+      );
+
       setEvaluateProgress({
         phase: "submitted",
         txId,

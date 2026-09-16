@@ -4,9 +4,9 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "COMMIT — Semantic Atomicity",
+  title: "COMMIT — Onchain Justice for Agent Commerce",
   description:
-    "A provenance-first interface for COMMIT protocol state and finality.",
+    "Evidence-bound dispute resolution for autonomous commerce, adjudicated by GenLayer and enforced after finality.",
 };
 
 export default function RootLayout({

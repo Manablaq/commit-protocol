@@ -9,12 +9,15 @@ This is the shortest reviewer path through the final COMMIT release.
 
 ## Project
 
-**COMMIT — semantic atomicity for autonomous economic workflows**
+**COMMIT — Onchain Justice for autonomous commerce**
 
 COMMIT freezes a mission's economic intent, evidence identities, and prepared
-effects before semantic adjudication. GenLayer validators evaluate the bounded
-external evidence. Only a finalized decision can allocate the escrowed
-COMMIT/ABORT settlement rights.
+effects before semantic adjudication. Its Case Room makes the complete path
+visible: Agreement → Escrow → Evidence → Verdict → Appeal → Finality →
+Settlement. GenLayer validators evaluate the bounded external evidence, and
+only a finalized decision can allocate the escrowed COMMIT/ABORT settlement
+rights. The native appeal surface reads the exact evaluation transaction and
+uses the SDK's authoritative eligibility, charge, and appeal operations.
 
 ## Live application
 
@@ -154,6 +157,7 @@ COMMIT claims:
 - exact evidence/mission/effect binding;
 - repairable evidence acquisition and integrity failures;
 - exact validator agreement on consequential values;
+- native appeal lifecycle visibility and exact-charge appeal submission;
 - finality-gated allocation;
 - deadline recovery for locked value;
 - idempotent decision application;

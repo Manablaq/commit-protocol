@@ -39,6 +39,9 @@ import {
   ClaimMissionFlow,
 } from "@/components/application/claim-mission-flow";
 import {
+  CaseRoom,
+} from "@/components/justice/case-room";
+import {
   preflightCommitWallet,
   STUDIO_NEXT_CHAIN_ID,
   type ConnectedCommitWallet,
@@ -182,6 +185,7 @@ export function ApplicationShell() {
         </Link>
 
         <nav className="commit-app-nav" aria-label="Application">
+          <a href="#case-room">Case room</a>
           <a href="#create">Create</a>
           <a href="#fund">Fund</a>
           <a href="#prepare">Prepare</a>
@@ -242,16 +246,17 @@ export function ApplicationShell() {
             LIVE APPLICATION / STUDIO NEXT
           </p>
           <h1 className="commit-display">
-            CREATE.
-            <span>COMMIT.</span>
-            VERIFY.
+            RESOLVE.
+            <span>WITH PROOF.</span>
+            <small>ENFORCE WITH FINALITY.</small>
           </h1>
         </div>
         <div className="commit-app-hero-copy">
           <p>
-            Use the deployed COMMIT coordinator directly from your wallet.
-            Every write is quoted before signing, tracked through consensus,
-            and checked again at finalization.
+            COMMIT is an Onchain Justice protocol for agent commerce. Freeze
+            the agreement, hold escrow, bind authenticated evidence, let
+            GenLayer adjudicate the outcome, and enforce the result only after
+            finality.
           </p>
           <div className="commit-app-anchor">
             <span>
@@ -303,7 +308,7 @@ export function ApplicationShell() {
           />
           <span>Lifecycle</span>
           <strong>Quote → sign → finality</strong>
-          <small>Consensus and execution both checked</small>
+          <small>Provisional verdicts stay visibly appealable</small>
         </article>
       </section>
 
@@ -319,6 +324,41 @@ export function ApplicationShell() {
           </div>
         </div>
       ) : null}
+
+      <section className="justice-case-section">
+        {wallet === null ? (
+          <div className="justice-case-gate">
+            <div>
+              <p>ONCHAIN JUSTICE / CASE ROOM</p>
+              <h2 className="commit-display">
+                AGREEMENT.
+                <span>EVIDENCE.</span>
+                FINALITY.
+              </h2>
+              <p>
+                Connect a wallet to inspect a live agreement, its authenticated
+                evidence, provisional verdict, native appeal window, and
+                finalized settlement consequence.
+              </p>
+            </div>
+            <button
+              className="commit-action commit-action-hot"
+              type="button"
+              onClick={connectWallet}
+              disabled={connecting}
+            >
+              <WalletCards size={18} aria-hidden="true" />
+              {connecting ? "Connecting wallet…" : "Connect to open a case"}
+            </button>
+          </div>
+        ) : (
+          <CaseRoom
+            key={lastMissionId || "case-room"}
+            wallet={wallet}
+            initialMissionId={lastMissionId}
+          />
+        )}
+      </section>
 
       <section id="create" className="commit-app-create">
         {wallet === null ? (
@@ -511,7 +551,11 @@ export function ApplicationShell() {
         </div>
         <div className="commit-app-next-copy">
           <p>
-            The complete mission lifecycle is represented against the frozen coordinator: create, fund, authorize, prepare, attest, register, seal, evaluate, repair, recover, inspect allocation, claim, and verify the finalized withdrawal record. This release candidate is fully certified; use the Verification Center to inspect deployment identity, provenance, transaction consequence, and finality.
+            The complete case lifecycle is represented against the frozen
+            coordinator: agreement, escrow, evidence, verdict, native appeal,
+            finality, enforcement, claim, and independent verification. The
+            Case Room makes each protocol boundary legible without inventing
+            contract states.
           </p>
           <Link href="/verify">
             Open advanced verification
@@ -524,7 +568,7 @@ export function ApplicationShell() {
       </section>
 
       <footer className="commit-app-footer">
-        <span>COMMIT / SEMANTIC ATOMICITY</span>
+        <span>COMMIT / ONCHAIN JUSTICE</span>
         <Link href="/">
           Back to product
           <ArrowRight
