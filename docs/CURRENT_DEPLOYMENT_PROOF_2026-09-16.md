@@ -83,9 +83,10 @@ It does not rewrite history. The earlier Studio diagnostic in
 `STUDIO_NEXT_CHECKPOINT_2026-09-15.md` genuinely failed before a transaction
 was submitted. That checkpoint is retained as historical evidence. The later
 reviewer-hardening candidate deployment is recorded separately in
-[`STUDIO_NEXT_DEPLOYMENT_ENVELOPE.md`](./STUDIO_NEXT_DEPLOYMENT_ENVELOPE.md)
-because its zero-rotation envelope prevents it from being certified as the
-replacement submission.
+[`LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md`](./LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md)
+because this file is intentionally retained as historical proof for the former
+published release. The zero-rotation diagnostic deployment remains historical
+failure evidence only; it is not the certified replacement.
 
 The older v0.7 Studio Dev deployment in
 [`DEPLOYMENT_LOG_STUDIO_DEV.md`](./DEPLOYMENT_LOG_STUDIO_DEV.md) remains the

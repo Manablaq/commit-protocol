@@ -3,7 +3,7 @@
 Status: structural authority/path enforcement, snapshot binding, bounded
 remote input, v2 schema checks, and full decision-envelope comparison are
 implemented and locally tested in revision `0.7.0-reviewable-manifest`. The
-source-matched Studio Dev deployment proves both the live COMMIT and ABORT
+source-matched Studio Next deployment proves both the live COMMIT and ABORT
 semantic paths with independent remote records. The new
 `get_mission_manifest` read exposes the frozen mission terms, exact ordered
 effect/evidence inputs, sealed roots, current decision/allocation state, and

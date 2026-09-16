@@ -3,8 +3,8 @@
 Status: the reviewer-hardening candidate passes local static, Direct Runtime,
 backend, frontend, and browser verification. The exact coordinator is finalized
 and byte-matched on Studio Next, with fresh COMMIT and ABORT lifecycle proofs.
-Production frontend rebinding and downstream external-transfer reconciliation
-remain explicitly bounded work.
+Production frontend rebinding is complete. Downstream external-transfer
+reconciliation remains explicitly bounded work.
 
 | Threat | Current control | Remaining limitation / proof |
 | --- | --- | --- |
@@ -33,14 +33,13 @@ For Agent Tank, COMMIT will prove the EOA claim/refund paths it actually uses.
 It does not represent generic EVM-contract delivery, downstream application
 success, or automatic reconciliation as part of semantic atomicity.
 
-## Remaining release gates
+## Remaining bounded items
 
-1. Rebind the frontend and read-only production configuration to the certified
-   Studio Next coordinator, then run an isolated preview verification.
-2. Promote that verified frontend release to production and verify `/`, `/app`,
-   `/verify`, health, security headers, wallet-network messaging, and the exact
-   coordinator address from the served production bundle.
-3. Keep downstream GEN delivery/retry/reconciliation explicitly outside the
+1. Keep downstream GEN delivery/retry/reconciliation explicitly outside the
    guarantee unless a native, authenticated delivery receipt and safe retry
    protocol is added and separately proven.
-4. Confirm the repository's CI workflow reports on the release commit.
+2. Complete hosted recovery/stale-callback proof if a future submission requires
+   that additional live evidence; local state-machine and runtime coverage is
+   already present.
+3. Confirm the repository's CI workflow reports on the latest documentation
+   release commit.

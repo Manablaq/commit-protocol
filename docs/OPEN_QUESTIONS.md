@@ -1,7 +1,7 @@
 # Submission boundaries
 
-COMMIT is explicit about what is already proven and what remains to be
-certified before Agent Tank submission.
+COMMIT is explicit about what is already proven and what remains bounded for
+Agent Tank submission.
 
 ## Proven locally for the hardening candidate
 
@@ -23,9 +23,10 @@ certified before Agent Tank submission.
 
 ## Current live evidence
 
-The currently published `e9858985495111cf2f21db6dc847c7f75b79c0da` release has an exact-source finalized
-coordinator deployment at `0x7C1e450333D97CD4E02F48c3424BF10112697A60`. Historical v0.7 missions
-008/009 remain the existing live COMMIT/ABORT behavior proof.
+The previously published `e9858985495111cf2f21db6dc847c7f75b79c0da` release has
+an exact-source finalized coordinator deployment at
+`0x7C1e450333D97CD4E02F48c3424BF10112697A60`. Historical v0.7 missions 008/009
+remain historical live COMMIT/ABORT behavior proof.
 
 The current hardening source is deployed and byte-verified on Studio Next at
 `0xEE21cCFF8f3755487f774BFd5Da9Ff51D5688581` with deployment transaction
@@ -37,14 +38,12 @@ state through one finalized self-callback and one finalized claim. Full hashes
 are recorded in
 [`LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md`](./LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md).
 
-## Still bounded or separately certifiable before submission
+## Still bounded or separately certifiable
 
 - current-source recovery/stale-callback proof on the hosted network (the
   state-machine and runtime suites cover these cases locally);
 - an explicit live proof of downstream external GEN delivery/reconciliation;
-- isolated Vercel preview certification of the repaired `/verify` data path;
-- final production promotion and frontend re-binding, if the public app is to
-  use the replacement coordinator directly.
+- the documented external GEN delivery/retry/reconciliation limitation.
 
 ## Not claimed
 

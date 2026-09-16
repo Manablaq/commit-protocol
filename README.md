@@ -53,10 +53,10 @@ submission deployment:
 - Release commit: `e9858985495111cf2f21db6dc847c7f75b79c0da`
 
 The current-source Agent Tank submission target is **Studio Next** at
-`https://studio-next.genlayer.com/api` on chain `61997`. The SDK's
-`studioDevnet` endpoint is retained only as a compatibility alias. The current
-source-bound deployment and lifecycle proof use the explicit three-rotation
-Studio Next envelope.
+`https://studio-next.genlayer.com/api` on chain `61997`. The browser integration
+uses an explicit Studio Next chain object and does not select the SDK's
+historical Studio Dev endpoint. The current source-bound deployment and
+lifecycle proof use the explicit three-rotation Studio Next envelope.
 
 See
 [`docs/LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md`](./docs/LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md).
@@ -88,18 +88,20 @@ See
 
 ### Published application release
 
-- Deployed application commit:
-  `e9858985495111cf2f21db6dc847c7f75b79c0da`
-- Deployed application tree:
-  `3627b57a0baaebda07b15da76cb8b594ee4a18f9`
-- Public application:
-  `https://commitprotocol-genlayer.vercel.app`
+- Public application: `https://commit-protocol.vercel.app`
+- Deployed application source commit:
+  `f63c0cb19993b0ae79fffb34908fe3571bdfb768`
+- Deployed application source tree:
+  `31af728d04d39608bfd2c21932a1d201cdae2c73`
 - Vercel production deployment:
-  `dpl_6x9XzgAxPsRX8jXr7d6KonmEmL6S`
-- Final Python regression: **450 passed + 334 subtests**
-- Frontend Vitest: **27 passed**
-- Browser E2E: **12 passed**
-- Current deployment exact-source/finality gate: **passed**
+  `dpl_9KCsNE68QaDZrYLcE9M2FGbH5vzn`
+- Served coordinator: `0xEE21cCFF8f3755487f774BFd5Da9Ff51D5688581`
+- Production smoke checks: `/`, `/app`, `/verify`, health, typed index lookup,
+  typed transaction lookup, security headers, and browser verification action:
+  **passed**
+
+The complete production release record is in
+[`docs/PRODUCTION_RELEASE_2026-09-16.md`](./docs/PRODUCTION_RELEASE_2026-09-16.md).
 
 
 ### Current reviewer-hardening release
@@ -187,7 +189,10 @@ For the exact certified runtime/environment record, see [`docs/LOCAL_VERIFICATIO
 
 COMMIT's guarantee covers settlement rights held by the protocol. External systems are modeled as reservations, idempotent adapters, or compensatable effects rather than magically reversible operations.
 
-The current public Studio Dev proof demonstrates finalized COMMIT and ABORT branches and one-time entitlement consumption. It does not claim authenticated proof of downstream external delivery or production-grade retry/reconciliation for failed external transfers.
+The current source-bound Studio Next proof demonstrates finalized COMMIT and
+ABORT branches and one-time entitlement consumption. It does not claim
+authenticated proof of downstream external delivery or production-grade
+retry/reconciliation for failed external transfers.
 
 See [`docs/OPEN_QUESTIONS.md`](./docs/OPEN_QUESTIONS.md) for the concise submission boundary.
 

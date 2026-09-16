@@ -79,3 +79,6 @@ transaction, wallet signature, remote Git push, or Vercel deployment record.
 The current source-bound Studio Next deployment, exact source match, and fresh
 COMMIT/ABORT lifecycle evidence are recorded separately in
 [`LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md`](./LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md).
+The hosted Vercel release, served contract anchor, route-capture handling, and
+production smoke checks are recorded in
+[`PRODUCTION_RELEASE_2026-09-16.md`](./PRODUCTION_RELEASE_2026-09-16.md).

@@ -18,14 +18,19 @@ COMMIT/ABORT settlement rights.
 
 ## Live application
 
-- Public app: `https://commitprotocol-genlayer.vercel.app`
+- Public app: `https://commit-protocol.vercel.app`
 - GitHub: `https://github.com/Manablaq/commit-protocol`
-- Final release commit:
-  `e9858985495111cf2f21db6dc847c7f75b79c0da`
-- Release tree:
-  `3627b57a0baaebda07b15da76cb8b594ee4a18f9`
+- Production source commit:
+  `f63c0cb19993b0ae79fffb34908fe3571bdfb768`
+- Production source tree:
+  `31af728d04d39608bfd2c21932a1d201cdae2c73`
 - Vercel production deployment:
-  `dpl_6x9XzgAxPsRX8jXr7d6KonmEmL6S`
+  `dpl_9KCsNE68QaDZrYLcE9M2FGbH5vzn`
+- Served coordinator:
+  `0xEE21cCFF8f3755487f774BFd5Da9Ff51D5688581`
+
+Production smoke checks and the exact served-bundle binding are recorded in
+[`PRODUCTION_RELEASE_2026-09-16.md`](./PRODUCTION_RELEASE_2026-09-16.md).
 
 ## Current source-bound Studio Next deployment
 
@@ -75,9 +80,10 @@ The current-source deployment targets **Studio Next**:
 - Required outer rotation budget: `3`
 - Required fee-distribution rotations: `[3]`
 
-The SDK chain name `studioDevnet` and its `studio-dev` endpoint are compatibility
-details. They do not change the submission target. The finalized deployment and
-three-rotation envelope are certified in the current lifecycle proof.
+The browser integration builds an explicit Studio Next chain object from neutral
+SDK Studio metadata. It does not select the historical `studioDevnet` endpoint,
+and the finalized deployment plus three-rotation envelope are certified in the
+current lifecycle proof.
 
 Full proof:
 [`LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md`](./LIVE_STUDIO_NEXT_LIFECYCLE_2026-09-16.md).

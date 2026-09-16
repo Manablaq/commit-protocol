@@ -12,13 +12,14 @@ The accepted current-source deployment target is **GenLayer Studio Next**:
 - Chain ID: `61997` / `0xf22d`
 - Explorer: `https://explorer-studio-dev.genlayer.com/`
 
-The `genlayer-js` chain definition is named `studioDevnet` and uses
-`https://studio-dev.genlayer.com/api` as its SDK endpoint. Read-only checks show
-that endpoint and the Studio Next submission endpoint currently expose the same
-chain ID. The SDK endpoint is therefore a compatibility alias, not the
-submission target. A deployment is certified only when it is submitted through
-the Studio Next endpoint and its transaction records chain ID `61997` plus the
-required non-zero rotation budget.
+The application constructs an explicit Studio Next chain object from the SDK's
+neutral Studio chain metadata and overrides its name, chain ID, RPC, and
+explorer behavior. The active wallet and read paths therefore target only
+`https://studio-next.genlayer.com/api`. The SDK still ships historical chain
+metadata internally, but that metadata is not the application's submission
+target. A deployment is certified only when it is submitted through the Studio
+Next endpoint and its transaction records chain ID `61997` plus the required
+non-zero rotation budget.
 
 ## Deployment-envelope invariant
 
@@ -58,9 +59,10 @@ whose recorded outer or fee-distribution rotation value is not `3`.
 
 ## Previously published deployment
 
-The public application still points at the previously certified coordinator
-until the hardening candidate is replaced and re-certified. That historical
-release was recorded through the SDK-compatible Studio Dev endpoint:
+The following is historical evidence for the previously published coordinator.
+The current public application is recorded in
+[`PRODUCTION_RELEASE_2026-09-16.md`](./PRODUCTION_RELEASE_2026-09-16.md). The
+historical release was recorded through the SDK-compatible Studio Dev endpoint:
 
 - deployed application release: `e9858985495111cf2f21db6dc847c7f75b79c0da`
 - deployed release tree: `3627b57a0baaebda07b15da76cb8b594ee4a18f9`
