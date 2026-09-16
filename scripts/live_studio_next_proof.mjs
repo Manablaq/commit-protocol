@@ -404,9 +404,13 @@ if (PHASE === "setup") {
 const state = load();
 if (state.coordinator.toLowerCase() !== CONTRACT.toLowerCase()) fail("state coordinator mismatch");
 if (state.rpc !== RPC || Number(state.chainId) !== CHAIN_ID) fail("state network mismatch");
+const targetMissions = process.env.COMMIT_LIVE_KIND
+  ? state.missions.filter((mission) => mission.kind === process.env.COMMIT_LIVE_KIND)
+  : state.missions;
+if (targetMissions.length === 0) fail(`no mission matches COMMIT_LIVE_KIND=${process.env.COMMIT_LIVE_KIND}`);
 
 if (PHASE === "attest-seal") {
-  for (const mission of state.missions) {
+  for (const mission of targetMissions) {
     const authorities = state.authorities;
     for (const [issuerName, authority, suffix] of [
       ["vg-issuer-a-0e2855d", authorities[0], "a"],
@@ -465,7 +469,7 @@ if (PHASE === "attest-seal") {
 
 if (PHASE === "evaluate-claim") {
   const evaluations = [];
-  for (const mission of state.missions) {
+  for (const mission of targetMissions) {
     mission.evaluate = await submit(
       `evaluate ${mission.missionId}`,
       "worker",

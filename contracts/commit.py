@@ -246,7 +246,7 @@ class CommitProtocol(gl.contract.Contract):
     q=self.e(m,r["evidence_id"]);n=(q[13][6]if q[13]else 0)+1;q[13]=[K[7],r["failure_code"],r["evidence_id"],r["record_id"],r["record_version"],r["mission_version"],n];self.M(mission_id,m);return
   if r is None or r.get("outcome")!="DECISION":raise E("invalid consensus outcome")
   if r["decision"]not in("COMMIT","ABORT"):raise E("invalid consensus decision")
-  m[15]=r["decision"];m[16]=r["reason_code"];m[17]+=1;m[13]=r[K[8]];z=D+self.f(mission_id)+self.f(str(m[21]))+self.f(r["decision"])+self.f(r["reason_code"])+self.f(m[5])+self.f(m[6])+self.f(r[K[8]]);m[12]=Keccak256(z.encode()).hexdigest();m[1]=K[0];self.M(mission_id,m);gl.contract.get_at(gl.message.contract_address).emit(on="finalized").apply_decision(mission_id,m[12])
+  m[15]=r["decision"];m[16]=r["reason_code"];m[17]+=1;m[13]=r[K[8]];z=D+self.f(mission_id)+self.f(str(m[21]))+self.f(r["decision"])+self.f(r["reason_code"])+self.f(m[5])+self.f(m[6])+self.f(r[K[8]]);m[12]=Keccak256(z.encode()).hexdigest();m[1]=K[0];self.M(mission_id,m);x=getattr(gl,"get_contract_at",None)or gl.contract.get_at;x(gl.message.contract_address).emit(on="finalized").apply_decision(mission_id,m[12])
  @gl.public.write
  def apply_decision(self,mission_id:str,decision_nonce:str)->None:
   if gl.message.sender_address!=gl.message.contract_address:raise E("self message required")

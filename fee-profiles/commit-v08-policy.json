@@ -8,7 +8,7 @@
   "candidate": "final-reviewer-hardening-predeployment",
   "contract": {
     "path": "contracts/commit.py",
-    "sha256": "e235731ac223ee136b06b8cfc332065927a03553a3b1f5531571cd4d5da119c6"
+    "sha256": "8b617544e3ad60d3e3f94c38bde309701f6f44795948106591223eee02ecc95f"
   },
   "helper_contract": {
     "path": "contracts/commit_helper.py",
