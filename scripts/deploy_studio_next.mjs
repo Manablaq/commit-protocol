@@ -70,6 +70,7 @@ if (!fs.existsSync(path.join(REPO, "package.json"))) {
 if (!CLI_REAL) {
   fail("COMMIT_CLI_REAL must point to the resolved genlayer CLI binary");
 }
+const cliEntry = fs.realpathSync(CLI_REAL);
 
 const worktree = execFileSync("git", ["-C", REPO, "status", "--porcelain"], {
   encoding: "utf8",
@@ -114,7 +115,7 @@ if (
   fail("Studio Next chain override mismatch");
 }
 
-const cliPackage = requirePackage(CLI_REAL, "genlayer");
+const cliPackage = requirePackage(cliEntry, "genlayer");
 const cliRequire = createRequire(cliPackage.path);
 const keytarModule = cliRequire("keytar");
 const keytar = keytarModule.default ?? keytarModule;
