@@ -1,0 +1,21 @@
+{
+  "schema": "commit-evidence-v2",
+  "evidence_id": "r12-abort-1789539407076-874183-a",
+  "authority_id": "r12-issuer-a",
+  "url": "https://raw.githubusercontent.com/Manablaq/commit-protocol/main/evidence/issuer-a/r12-abort-1789539407076-874183.json",
+  "subject": "r12-abort-1789539407076-874183",
+  "expires_at": 1789550207,
+  "mission_id": "r12-abort-1789539407076-874183",
+  "objective": "Current-source Studio Next ABORT lifecycle proof",
+  "policy_digest": "983307fac383ac4a92be6c0c361ea8f3c9d9efa20ad5e6e8bc8dee932f2a6103",
+  "policy_rule": "all-evidence-and-effects-v1",
+  "intent_digest": "d22ee8fecd8415814980b8309a2457c9f5c899f27f1e6cb10986a8ca000be384",
+  "effect_root": "dd14609d0759b3ad92a996956929e2c4df066b004d6e80af8dffcdaa1a1d8966",
+  "payload": {
+    "effect_claims": {
+      "r12-abort-effect": false
+    },
+    "eligible": false,
+    "reason_code": "current_source_abort"
+  }
+}

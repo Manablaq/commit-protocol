@@ -1,0 +1,21 @@
+{
+  "schema": "commit-evidence-v2",
+  "evidence_id": "r12-commit-1789539407076-585803-b",
+  "authority_id": "r12-issuer-b",
+  "url": "https://raw.githubusercontent.com/Manablaq/commit-protocol/main/evidence/issuer-b/r12-commit-1789539407076-585803.json",
+  "subject": "r12-commit-1789539407076-585803",
+  "expires_at": 1789550207,
+  "mission_id": "r12-commit-1789539407076-585803",
+  "objective": "Current-source Studio Next COMMIT lifecycle proof",
+  "policy_digest": "983307fac383ac4a92be6c0c361ea8f3c9d9efa20ad5e6e8bc8dee932f2a6103",
+  "policy_rule": "all-evidence-and-effects-v1",
+  "intent_digest": "4a7ee3c808829457b077f75d6c3af6a4172d5d33534a1e7d85df31c751e2e301",
+  "effect_root": "1288a2866b805a12af43d9ee874fd28a6b7b4c37fb1c31aebfb441f7dc108aee",
+  "payload": {
+    "effect_claims": {
+      "r12-commit-effect": true
+    },
+    "eligible": true,
+    "reason_code": "current_source_commit"
+  }
+}
