@@ -21,6 +21,7 @@ describe("COMMIT product UI", () => {
     rerender(
       <FinalityCard
         finalized
+        executionSuccessful
         statusName="FINALIZED"
         stateBasis="finalized"
       />,
@@ -29,6 +30,25 @@ describe("COMMIT product UI", () => {
     expect(
       screen.getByText("Finalized / durable"),
     ).toBeInTheDocument();
+  });
+
+  it("does not call a finalized execution error durable", () => {
+    render(
+      <FinalityCard
+        finalized
+        executionSuccessful={false}
+        statusName="FINALIZED"
+        stateBasis="finalized"
+      />,
+    );
+
+    expect(
+      screen.getByText("Finalized / execution failed"),
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getAllByText("Durable presentation requires finalized status and successful execution."),
+    ).not.toHaveLength(0);
   });
 
   it("renders provenance from certified read fields", () => {

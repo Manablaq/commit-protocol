@@ -1063,6 +1063,11 @@ a {
   box-shadow: 0 0 18px rgb(124 246 199 / 0.32);
 }
 
+.failed-orb {
+  background: #ff9b9b;
+  box-shadow: 0 0 18px rgb(255 123 123 / 0.3);
+}
+
 .finality-ladder {
   position: relative;
   z-index: 1;
@@ -1867,6 +1872,12 @@ a {
   color: var(--finalized);
 }
 
+.justice-verdict-banner.is-error {
+  border-color: rgb(255 123 123 / 0.3);
+  background: rgb(255 123 123 / 0.08);
+  color: #ff9b9b;
+}
+
 .justice-verdict-banner > div {
   display: grid;
   gap: 0.25rem;
@@ -1933,6 +1944,11 @@ a {
 .justice-inline-status.is-success {
   border-color: rgb(124 246 199 / 0.24);
   color: var(--finalized);
+}
+
+.justice-inline-status.is-error {
+  border-color: rgb(255 123 123 / 0.3);
+  color: #ff9b9b;
 }
 
 .justice-appeal-button,

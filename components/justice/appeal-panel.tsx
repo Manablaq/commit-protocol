@@ -35,6 +35,10 @@ export function AppealPanel({
   onRefresh,
   onAppeal,
 }: AppealPanelProps) {
+  const finalSuccess = snapshot?.phase === "FINALIZED";
+  const finalFailure = snapshot?.phase === "FINALIZED_ERROR";
+  const finalUnknown = snapshot?.phase === "FINALIZED_UNKNOWN";
+
   const title = snapshot === null
     ? "Add the evaluation transaction"
     : appealPhaseLabel(snapshot.phase);
@@ -46,8 +50,10 @@ export function AppealPanel({
           <p className="card-kicker">Native GenLayer appeal</p>
           <h3>{title}</h3>
         </div>
-        {snapshot?.phase === "FINALIZED" ? (
+        {finalSuccess ? (
           <CheckCircle2 className="justice-success-icon" size={20} aria-hidden="true" />
+        ) : finalFailure || finalUnknown ? (
+          <AlertTriangle size={20} aria-hidden="true" />
         ) : (
           <Gavel size={20} aria-hidden="true" />
         )}
@@ -68,22 +74,30 @@ export function AppealPanel({
         </div>
       ) : (
         <>
-          <div className={`justice-verdict-banner ${snapshot.phase === "FINALIZED" ? "is-final" : "is-provisional"}`}>
+          <div className={`justice-verdict-banner ${finalSuccess ? "is-final" : finalFailure || finalUnknown ? "is-error" : "is-provisional"}`}>
             <ShieldCheck size={18} aria-hidden="true" />
             <div>
               <strong>
-                {snapshot.phase === "FINALIZED"
+                {finalSuccess
                   ? "Final verdict"
-                  : snapshot.decisionActive
-                    ? "Provisional verdict"
-                    : "Evaluation is still processing"}
+                  : finalFailure
+                    ? "Finalized execution failed"
+                    : finalUnknown
+                      ? "Finalized result unavailable"
+                      : snapshot.decisionActive
+                        ? "Provisional verdict"
+                        : "Evaluation is still processing"}
               </strong>
               <span>
-                {snapshot.phase === "FINALIZED"
+                {finalSuccess
                   ? "The evaluation transaction is finalized; the appeal window is closed."
-                  : snapshot.canAppeal
-                    ? "Anyone may challenge this decision before finality."
-                    : "No appeal action is currently available from the authoritative lifecycle."}
+                  : finalFailure
+                    ? "The protocol finalized this transaction, but its execution result was not successful. No durable verdict is claimed."
+                    : finalUnknown
+                      ? "The protocol finalized this transaction, but the execution result is unavailable. No durable verdict is claimed."
+                      : snapshot.canAppeal
+                        ? "Anyone may challenge this decision before finality."
+                        : "No appeal action is currently available from the authoritative lifecycle."}
               </span>
             </div>
           </div>
@@ -113,6 +127,22 @@ export function AppealPanel({
               <dt>Appeal availability</dt>
               <dd>{snapshot.canAppeal ? "Available" : "Unavailable"}</dd>
             </div>
+            <div>
+              <dt>Transaction target</dt>
+              <dd>{snapshot.transactionTarget}</dd>
+            </div>
+            <div>
+              <dt>Transaction method</dt>
+              <dd>{snapshot.transactionFunctionName}</dd>
+            </div>
+            <div>
+              <dt>Mission argument</dt>
+              <dd>{snapshot.transactionMissionId}</dd>
+            </div>
+            <div>
+              <dt>Execution result</dt>
+              <dd>{snapshot.executionResultName ?? "Unavailable"}</dd>
+            </div>
           </dl>
 
           {snapshot.phase === "APPEAL_IN_PROGRESS" ? (
@@ -128,6 +158,15 @@ export function AppealPanel({
               <CheckCircle2 size={16} aria-hidden="true" />
               Finality is proven by the stored GenLayer lifecycle, not by a
               frontend timer.
+            </div>
+          ) : null}
+
+          {finalFailure || finalUnknown ? (
+            <div className="justice-inline-status is-error">
+              <AlertTriangle size={16} aria-hidden="true" />
+              This transaction is not presented as a successful durable
+              verdict because finality and successful execution are separate
+              facts.
             </div>
           ) : null}
 

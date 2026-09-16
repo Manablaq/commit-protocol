@@ -72,6 +72,24 @@ as finality, or wait for a decision to finalize before it can display an
 accepted appeal submission. After submission it keeps the same transaction ID
 as the source of truth and refreshes the lifecycle asynchronously.
 
+Before the Case Room enables an appeal, it also reads the transaction metadata
+and fails closed unless all of these facts match the displayed case:
+
+- the transaction target is the certified Studio Next coordinator;
+- the decoded method is exactly `evaluate_mission`;
+- the first method argument is exactly the displayed mission ID.
+
+The read-only Verification Center applies the same method-level gate: it will
+only project an appeal lifecycle for a transaction whose decoded method is
+`evaluate_mission`; it does not turn an arbitrary contract transaction into a
+decision record.
+
+The lifecycle reader separately records `txExecutionResultName`. A protocol
+`FINALIZED` status with `FINISHED_WITH_RETURN` is the only successful final
+verdict. A finalized execution error or an unavailable execution result is
+shown as terminal but not durable, and cannot be presented as a successful
+appeal outcome.
+
 ## State vocabulary
 
 The product intentionally distinguishes these states:
@@ -82,7 +100,9 @@ The product intentionally distinguishes these states:
 | Provisional verdict | active decision, no open appeal | A decision exists but durable finality is not established. |
 | Appeal window open | `canAppeal(txId) === true` | The SDK says a challenge can be submitted now. |
 | Appeal in progress | stored status `AppealCommitting` or `AppealRevealing` | Fresh validator work is underway. |
-| Final verdict | stored status `Finalized` | The protocol lifecycle has reached durable finality. |
+| Final verdict | stored status `Finalized` plus `FINISHED_WITH_RETURN` | The protocol lifecycle and successful execution result establish the durable boundary. |
+| Finalized execution failed | stored status `Finalized` plus a non-success execution result | The transaction is terminal, but no successful durable verdict is claimed. |
+| Finalized result unavailable | stored status `Finalized` without an execution result | Finality is visible, but the application refuses to infer successful execution. |
 
 The Case Room's settlement card is separately bound to the coordinator's
 allocation fields. A provisional verdict is never displayed as a paid

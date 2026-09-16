@@ -6,20 +6,36 @@ import {
 
 interface FinalityCardProps {
   finalized: boolean;
+  executionSuccessful?: boolean | null;
+  executionResultRequired?: boolean;
   statusName?: string;
   stateBasis?: string;
 }
 
 export function FinalityCard({
   finalized,
+  executionSuccessful = null,
+  executionResultRequired = true,
   statusName = "Unknown",
   stateBasis = "Unknown",
 }: FinalityCardProps) {
   const accepted =
     statusName.trim().toLowerCase() === "accepted";
+  const finalizedSuccessfully = finalized
+    && (!executionResultRequired || executionSuccessful === true);
+  const finalizedWithError = finalized
+    && executionResultRequired
+    && executionSuccessful === false;
+  const finalizedWithoutResult = finalized
+    && executionResultRequired
+    && executionSuccessful === null;
 
-  const phase = finalized
+  const phase = finalizedSuccessfully
     ? "Finalized / durable"
+    : finalizedWithError
+      ? "Finalized / execution failed"
+      : finalizedWithoutResult
+        ? "Finalized / result unavailable"
     : accepted
       ? "Accepted / provisional"
       : "Provisional";
@@ -33,8 +49,10 @@ export function FinalityCard({
         </div>
         <span
           className={
-            finalized
+            finalizedSuccessfully
               ? "status-orb finalized-orb"
+              : finalizedWithError
+                ? "status-orb failed-orb"
               : "status-orb provisional-orb"
           }
           aria-hidden="true"
@@ -58,11 +76,11 @@ export function FinalityCard({
           </div>
         </div>
 
-        <div className={finalized ? "finality-step active durable-step" : "finality-step durable-step"}>
+        <div className={finalizedSuccessfully ? "finality-step active durable-step" : "finality-step durable-step"}>
           <LockKeyhole size={17} aria-hidden="true" />
           <div>
             <strong>Durable</strong>
-            <span>Durable presentation is reserved for finalized state.</span>
+            <span>Durable presentation requires finalized status and successful execution.</span>
           </div>
         </div>
       </div>
@@ -70,6 +88,21 @@ export function FinalityCard({
       <div className="fact-strip">
         <span>State basis</span>
         <strong>{stateBasis}</strong>
+      </div>
+
+      <div className="fact-strip">
+        <span>Execution result</span>
+        <strong>
+          {finalizedSuccessfully
+            ? "FINISHED_WITH_RETURN"
+            : finalizedWithError
+              ? "Not successful"
+              : finalizedWithoutResult
+                ? "Unavailable"
+                : !executionResultRequired
+                  ? "Not applicable"
+                : "Not finalized"}
+        </strong>
       </div>
     </article>
   );

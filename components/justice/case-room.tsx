@@ -27,6 +27,7 @@ import {
   type MissionReceiptSnapshot,
   type ResolutionMissionSnapshot,
 } from "@/lib/genlayer-resolution";
+import { CURRENT_DEPLOYMENT_ANCHOR } from "@/lib/deployment-anchor";
 import {
   appealCommitTransaction,
   readAppealLifecycle,
@@ -197,6 +198,10 @@ export function CaseRoom({
           appeal = await readAppealLifecycle(
             wallet.client,
             evaluationTxId.trim(),
+            {
+              coordinator: CURRENT_DEPLOYMENT_ANCHOR.contractAddress,
+              missionId: mission.missionId,
+            },
           );
         } catch (appealReadError: unknown) {
           setAppealError(errorMessage(appealReadError));
@@ -235,6 +240,10 @@ export function CaseRoom({
       const txId = await appealCommitTransaction(
         wallet,
         evaluationTxId.trim(),
+        {
+          coordinator: CURRENT_DEPLOYMENT_ANCHOR.contractAddress,
+          missionId: caseData.mission.missionId,
+        },
       );
 
       setSubmittedAppeal(txId);

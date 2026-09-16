@@ -63,6 +63,17 @@ function boolValue(
   return value?.[key] === true;
 }
 
+function nullableBoolValue(
+  value: ApiJson | null,
+  key: string,
+): boolean | null {
+  const candidate = value?.[key];
+
+  return typeof candidate === "boolean"
+    ? candidate
+    : null;
+}
+
 function textValue(
   value: ApiJson | null,
   key: string,
@@ -215,6 +226,11 @@ export function WorkspaceShell() {
   const transactionStatus = textValue(
     transactionState,
     "status_name",
+  );
+
+  const transactionExecutionSuccessful = nullableBoolValue(
+    transactionState,
+    "final_success",
   );
 
   const indexBasis = textValue(
@@ -453,6 +469,7 @@ export function WorkspaceShell() {
                       textValue(indexState, "state_status").toLowerCase() ===
                       "finalized"
                     }
+                    executionResultRequired={false}
                     stateBasis={indexBasis}
                   />
                   <ProvenanceCard value={indexState} />
@@ -488,6 +505,7 @@ export function WorkspaceShell() {
                 <div className="workspace-grid two">
                   <FinalityCard
                     finalized={transactionFinalized}
+                    executionSuccessful={transactionExecutionSuccessful}
                     statusName={transactionStatus}
                   />
                   <ProvenanceCard value={transactionState} />

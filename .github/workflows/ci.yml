@@ -45,6 +45,12 @@ jobs:
       - name: Production build
         run: npm run build
 
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser E2E
+        run: npm run test:e2e
+
   python:
     name: Python checks
     runs-on: ubuntu-latest
@@ -72,3 +78,39 @@ jobs:
 
       - name: Compile Python sources
         run: uv run python -m py_compile contracts/*.py backend/*.py
+
+  runtime:
+    name: Direct Runtime checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: 0.11.24
+          enable-cache: true
+
+      - name: Cache the pinned GenVM runtime bundle
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/gltest-direct
+          key: genvm-v0.6.0-rc5
+
+      - name: Install locked Python dependencies
+        run: uv sync --frozen
+
+      - name: Prepare and verify the pinned GenVM runtime
+        run: >-
+          runtime_dir=$(uv run python -c 'import hashlib; from gltest.direct import sdk_loader; p=sdk_loader.download_artifacts("v0.6.0-rc5"); digest=hashlib.sha256(p.read_bytes()).hexdigest(); assert digest == "bd30580f911338d5533460eca8ed714dec371de5803c04e41dbb96430aea7b6e", digest; print(sdk_loader._extract_release_tree(p, "v0.6.0-rc5"), end="")');
+          echo "GENVM_PREBUILT_DIR=$runtime_dir" >> "$GITHUB_ENV"
+
+      - name: Run Direct Runtime suite
+        run: uv run python -m pytest -q tests/runtime
